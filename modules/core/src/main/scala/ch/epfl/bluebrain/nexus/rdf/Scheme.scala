@@ -1,5 +1,6 @@
 package ch.epfl.bluebrain.nexus.rdf
 
+import cats.{Eq, Show}
 import ch.epfl.bluebrain.nexus.rdf.predicates._
 import fastparse.all._
 
@@ -29,14 +30,21 @@ final case class Scheme private[rdf] (value: String) {
 object Scheme {
 
   /**
-    * Attempts to construct a scheme from the argument string value.
+    * Attempts to construct a scheme from the argument string value.  The provided value, if correct, will be normalized
+    * such that:
+    * {{{
+    *   Scheme("HTTPS").right.get.value == "https"
+    * }}}
     *
     * @param value the string representation of the scheme
     * @return Right(value) if successful or Left(error) if the string does not conform to the RFC 3987 format
     */
   final def apply(value: String): Either[String, Scheme] =
     (Start ~ `scheme` ~ End).parse(value) match {
-      case Parsed.Success(_, _)      => Right(new Scheme(value))
+      case Parsed.Success(_, _)      => Right(new Scheme(value.toLowerCase))
       case Parsed.Failure(_, idx, _) => Left(s"Illegal scheme format, idx: '$idx'")
     }
+
+  final implicit val schemeShow: Show[Scheme] = Show.show(_.value)
+  final implicit val schemeEq: Eq[Scheme]     = Eq.fromUniversalEquals
 }

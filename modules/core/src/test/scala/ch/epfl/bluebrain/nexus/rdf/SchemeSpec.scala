@@ -1,6 +1,8 @@
 package ch.epfl.bluebrain.nexus.rdf
 
+import cats.kernel.Eq
 import org.scalatest.{EitherValues, Inspectors, Matchers, WordSpecLike}
+import cats.syntax.show._
 
 class SchemeSpec extends WordSpecLike with Matchers with Inspectors with EitherValues {
 
@@ -33,6 +35,18 @@ class SchemeSpec extends WordSpecLike with Matchers with Inspectors with EitherV
           scheme.isHttps shouldEqual isHttps
           scheme.isHttp shouldEqual isHttp
       }
+    }
+
+    val normalized = Scheme("HtTpS").right.value
+
+    "normalizes input during construction" in {
+      normalized.value shouldEqual "https"
+    }
+    "show" in {
+      normalized.show shouldEqual "https"
+    }
+    "eq" in {
+      Eq.eqv(Scheme("https").right.value, normalized) shouldEqual true
     }
   }
 }
