@@ -74,4 +74,43 @@ class HostSpec extends WordSpecLike with Matchers with Inspectors with EitherVal
     }
   }
 
+  "An IPv6Host" should {
+    val one       = Host.ipv6(Array.fill(16)(1.toByte))
+    val oneString = "101:101:101:101:101:101:101:101"
+    "be constructed correctly from array" in {
+      one.right.value.show shouldEqual oneString
+    }
+    "be rendered correctly as mixed ipv4/ipv6" in {
+      one.right.value.asMixedString shouldEqual "101:101:101:101:101:101:1.1.1.1"
+    }
+    "fail to construct from incorrect array length" in {
+      forAll(List(Array.fill(17)(1.toByte), Array.fill(3)(1.toByte), Array.fill(15)(1.toByte))) { arr =>
+        Host.ipv6(arr).left.value should not be 'empty
+      }
+    }
+    "be an IPv6 address" in {
+      one.right.value.isIPv6 shouldEqual true
+    }
+    "return itself as IPv6 address" in {
+      one.right.value.asIPv6 shouldEqual Some(one.right.value)
+    }
+    "not be an IPv4 address" in {
+      one.right.value.isIPv4 shouldEqual false
+    }
+    "not be a named host" in {
+      one.right.value.isNamed shouldEqual false
+    }
+    "not return an IPv4Host" in {
+      one.right.value.asIPv4 shouldEqual None
+    }
+    "not return a NamedHost" in {
+      one.right.value.asNamed shouldEqual None
+    }
+    "show" in {
+      one.right.value.show shouldEqual oneString
+    }
+    "eq" in {
+      Eq.eqv(Host.ipv6(Array.fill(16)(1.toByte)).right.value, one.right.value) shouldEqual true
+    }
+  }
 }

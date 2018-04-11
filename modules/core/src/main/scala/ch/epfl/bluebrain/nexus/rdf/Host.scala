@@ -5,7 +5,7 @@ import cats.{Eq, Show}
 import ch.epfl.bluebrain.nexus.rdf.predicates._
 import fastparse.all._
 
-import scala.collection.immutable
+import scala.collection.{immutable, SeqView}
 
 /**
   * Host part of an Iri as defined in RFC 3987.
@@ -79,6 +79,15 @@ object Host {
     */
   final def ipv4(string: String): Either[String, IPv4Host] =
     IPv4Host(string)
+
+  /**
+    * Attempt to construct a new IPv6Host from its 128bit representation.
+    *
+    * @param bytes a 128bit IPv6 address
+    * @return Right(IPv6Host(bytes)) if the bytes is a 16byte array, Left(error) otherwise
+    */
+  def ipv6(bytes: Array[Byte]): Either[String, IPv6Host] =
+    IPv6Host(bytes)
 }
 
 /**
@@ -87,11 +96,9 @@ object Host {
   * @param bytes the underlying bytes
   */
 final case class IPv4Host private[rdf] (bytes: immutable.Seq[Byte]) extends Host {
-  override lazy val asString: String = bytes.map(_ & 0xFF).mkString(".")
-
-  override def isIPv4: Boolean = true
-
+  override def isIPv4: Boolean          = true
   override def asIPv4: Option[IPv4Host] = Some(this)
+  override lazy val asString: String    = bytes.map(_ & 0xFF).mkString(".")
 }
 
 object IPv4Host {
@@ -146,9 +153,43 @@ object IPv4Host {
     Eq.fromUniversalEquals
 }
 
-trait IPv6Host extends Host
-final case object IPv6Host extends Host {
-  override def asString: String = ""
+final case class IPv6Host private[rdf] (bytes: immutable.Seq[Byte]) extends Host {
+  override def isIPv6: Boolean          = true
+  override def asIPv6: Option[IPv6Host] = Some(this)
+
+  override lazy val asString: String =
+    asString(bytes.view)
+
+  lazy val asMixedString: String =
+    asString(bytes.view(0, 12)) + ":" + bytes.view(12, 16).map(_ & 0xFF).mkString(".")
+
+  private def asString(bytes: SeqView[Byte, immutable.Seq[Byte]]): String =
+    bytes.grouped(2).map(two => Integer.toHexString(BigInt(two.toArray).intValue())).mkString(":")
+}
+
+object IPv6Host {
+
+  /**
+    * Attempt to construct a new IPv6Host from its 128bit representation.
+    *
+    * @param bytes a 128bit IPv6 address
+    * @return Right(IPv6Host(bytes)) if the bytes is a 16byte array, Left(error) otherwise
+    */
+  final def apply(bytes: Array[Byte]): Either[String, IPv6Host] =
+    Either
+      .catchNonFatal(fromBytes(bytes))
+      .leftMap(_ => "Illegal IPv6Host byte representation")
+
+  private def fromBytes(bytes: Array[Byte]): IPv6Host = {
+    require(bytes.length == 16)
+    new IPv6Host(immutable.Seq(bytes: _*))
+  }
+
+  final implicit val ipv6HostShow: Show[IPv6Host] =
+    Show.show(_.asString)
+
+  final implicit val ipv6HostEq: Eq[IPv6Host] =
+    Eq.fromUniversalEquals
 }
 
 trait NamedHost extends Host
