@@ -65,4 +65,10 @@ class IriParser(val input: ParserInput) extends Parser {
   }
 
   def `port` = rule { _port ~ EOI ~> (p => Port(p)) }
+
+  def _userInfo = rule {
+    oneOrMore(_pctEncoded | capture(oneOrMore(`sub-delims` ++ `iunreserved` ++ ':'))) ~> ((seq: Seq[String]) => new UserInfo(seq.mkString))
+  }
+
+  def `iuserinfo` = rule { _userInfo ~ EOI }
 }
