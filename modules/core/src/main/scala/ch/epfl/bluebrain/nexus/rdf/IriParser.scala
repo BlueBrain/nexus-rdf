@@ -59,4 +59,10 @@ class IriParser(val input: ParserInput) extends Parser {
   }
 
   def `ireg-name` = rule { _iRegName ~ EOI }
+
+  def _port = rule {
+    capture((Digit19 ~ (1 to 4).times(Digit).?) | ch('0')) ~> ((str: String) => Integer.parseInt(str))
+  }
+
+  def `port` = rule { _port ~ EOI ~> (p => Port(p)) }
 }
