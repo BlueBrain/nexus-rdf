@@ -113,4 +113,46 @@ class HostSpec extends WordSpecLike with Matchers with Inspectors with EitherVal
       Eq.eqv(Host.ipv6(Array.fill(16)(1.toByte)).right.value, one.right.value) shouldEqual true
     }
   }
+
+  "A NamedHost" should {
+    val pct =
+      "%C2%A3%C2%A4%C2%A5%C2%A6%C2%A7%C2%A8%C2%A9%C2%AA%C2%AB%C2%AC%C2%AD%C2%AE%C2%AF%C2%B0%C2%B1%C2%B2%C2%B3%C2%B4%C2%B5%C2%B6%C2%B7%C2%B8%C2%B9%C2%BA%C2%BB%C2%BC%C2%BD%C2%BE%C2%BF%C3%80%C3%81%C3%82%C3%83%C3%84%C3%85%C3%86"
+    val ucsUp  = "£¤¥¦§¨©ª«¬\u00AD®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆ"
+    val ucsLow = "£¤¥¦§¨©ª«¬\u00AD®¯°±²³´µ¶·¸¹º»¼½¾¿àáâãäåæ"
+    val delims = "!$&'()*+,;="
+    val up     = "ABCD"
+    val low    = "abcd"
+
+    "be parsed correctly from a string" in {
+      Host.named("epfl.ch").right.value.value shouldEqual "epfl.ch"
+    }
+
+    "be parsed correctly from percent encoded string" in {
+      Host.named(pct).right.value.value shouldEqual ucsLow
+    }
+
+    "be parsed correctly from ucs chars" in {
+      Host.named(ucsUp).right.value.value shouldEqual ucsLow
+    }
+
+    "be parsed correctly from delimiters" in {
+      Host.named(delims).right.value.value shouldEqual delims
+    }
+
+    "be parsed correctly from mixed characters" in {
+      Host.named(ucsUp + pct + delims + up).right.value.value shouldEqual (ucsLow + ucsLow + delims + low)
+    }
+
+    "fail for empty" in {
+      Host.named("").left.value
+    }
+
+    "show" in {
+      Host.named(up).right.value.show shouldEqual low
+    }
+
+    "eq" in {
+      Eq.eqv(Host.named(ucsUp).right.value, Host.named(ucsLow).right.value) shouldEqual true
+    }
+  }
 }

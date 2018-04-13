@@ -2,8 +2,7 @@ package ch.epfl.bluebrain.nexus.rdf
 
 import cats.syntax.either._
 import cats.{Eq, Show}
-import ch.epfl.bluebrain.nexus.rdf.predicates._
-import fastparse.all._
+import org.parboiled2.ErrorFormatter
 
 import scala.collection.{immutable, SeqView}
 
@@ -88,6 +87,15 @@ object Host {
     */
   def ipv6(bytes: Array[Byte]): Either[String, IPv6Host] =
     IPv6Host(bytes)
+
+  /**
+    * Attempt to construct a new NamedHost from the argument validating the character encodings as per RFC 3987.
+    *
+    * @param string the string to parse as a named host.
+    * @return Right(NamedHost(value)) if the string conforms to specification, Left(error) otherwise
+    */
+  def named(string: String): Either[String, NamedHost] =
+    NamedHost(string)
 }
 
 /**
@@ -102,9 +110,6 @@ final case class IPv4Host private[rdf] (bytes: immutable.Seq[Byte]) extends Host
 }
 
 object IPv4Host {
-  private val parser = (Start ~ `IPv4address` ~ End).map {
-    case (b1, b2, b3, b4) => apply(b1, b2, b3, b4)
-  }
 
   /**
     * Attempt to construct a new IPv4Host from its 32bit representation.
@@ -123,11 +128,12 @@ object IPv4Host {
     * @param string the string to parse as an IPv4 address.
     * @return Right(IPv4Host(bytes)) if the string conforms to specification, Left(error) otherwise
     */
-  final def apply(string: String): Either[String, IPv4Host] =
-    parser.parse(string) match {
-      case Parsed.Success(host, _)   => Right(host)
-      case Parsed.Failure(_, idx, _) => Left(s"Failed to parse string '$string' as IPv4Host at index '$idx'")
-    }
+  final def apply(string: String): Either[String, IPv4Host] = {
+    import org.parboiled2.Parser.DeliveryScheme.Either
+    new IriParser(string).`IPv4Address`
+      .run()
+      .leftMap(_.format(string, new ErrorFormatter(showExpected = false, showTraces = false)))
+  }
 
   /**
     * Constructs a new IPv4Host from the argument bytes.
@@ -153,6 +159,11 @@ object IPv4Host {
     Eq.fromUniversalEquals
 }
 
+/**
+  * An IPv6 host representation as specified by RFC 3987.
+  *
+  * @param bytes the underlying bytes
+  */
 final case class IPv6Host private[rdf] (bytes: immutable.Seq[Byte]) extends Host {
   override def isIPv6: Boolean          = true
   override def asIPv6: Option[IPv6Host] = Some(this)
@@ -192,7 +203,35 @@ object IPv6Host {
     Eq.fromUniversalEquals
 }
 
-trait NamedHost extends Host
-final case object NamedHost extends Host {
-  override def asString: String = ""
+/**
+  * A named host representation as specified by RFC 3987.
+  *
+  * @param value the underlying string representation
+  */
+final case class NamedHost private[rdf] (value: String) extends Host {
+  override def isNamed: Boolean           = true
+  override def asNamed: Option[NamedHost] = Some(this)
+  override def asString: String           = value
+}
+
+object NamedHost {
+
+  /**
+    * Attempt to construct a new NamedHost from the argument validating the character encodings as per RFC 3987.
+    *
+    * @param string the string to parse as a named host.
+    * @return Right(NamedHost(value)) if the string conforms to specification, Left(error) otherwise
+    */
+  final def apply(string: String): Either[String, NamedHost] = {
+    import org.parboiled2.Parser.DeliveryScheme.Either
+    new IriParser(string).`ireg-name`
+      .run()
+      .leftMap(_.format(string, new ErrorFormatter(showExpected = false, showTraces = false)))
+  }
+
+  final implicit val namedHostShow: Show[NamedHost] =
+    Show.show(_.asString)
+
+  final implicit val namedHostEq: Eq[NamedHost] =
+    Eq.fromUniversalEquals
 }

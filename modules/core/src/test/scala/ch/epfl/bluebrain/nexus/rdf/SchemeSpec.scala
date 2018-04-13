@@ -39,7 +39,7 @@ class SchemeSpec extends WordSpecLike with Matchers with Inspectors with EitherV
 
     val normalized = Scheme("HtTpS").right.value
 
-    "normalizes input during construction" in {
+    "normalize input during construction" in {
       normalized.value shouldEqual "https"
     }
     "show" in {

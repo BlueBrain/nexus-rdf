@@ -1,8 +1,9 @@
 package ch.epfl.bluebrain.nexus.rdf
 
+import cats.syntax.either._
 import cats.{Eq, Show}
-import ch.epfl.bluebrain.nexus.rdf.predicates._
-import fastparse.all._
+import org.parboiled2.Parser.DeliveryScheme.Either
+import org.parboiled2._
 
 /**
   * Scheme part of an Iri as defined by RFC 3987.
@@ -39,11 +40,11 @@ object Scheme {
     * @param value the string representation of the scheme
     * @return Right(value) if successful or Left(error) if the string does not conform to the RFC 3987 format
     */
-  final def apply(value: String): Either[String, Scheme] =
-    (Start ~ `scheme` ~ End).parse(value) match {
-      case Parsed.Success(_, _)      => Right(new Scheme(value.toLowerCase))
-      case Parsed.Failure(_, idx, _) => Left(s"Illegal scheme format, idx: '$idx'")
-    }
+  final def apply(value: String): Either[String, Scheme] = {
+    new IriParser(value).`scheme`
+      .run()
+      .leftMap(_.format(value, new ErrorFormatter(showExpected = false, showTraces = false)))
+  }
 
   final implicit val schemeShow: Show[Scheme] = Show.show(_.value)
   final implicit val schemeEq: Eq[Scheme]     = Eq.fromUniversalEquals
