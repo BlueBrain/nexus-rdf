@@ -127,5 +127,11 @@ class IriParser(val input: ParserInput) extends Parser {
 
   def `iquery` = rule { _query ~ EOI }
 
+  def _fragment: Rule1[Fragment] = rule {
+    oneOrMore(_pctEncoded | capture(oneOrMore(`sub-delims` ++ `iunreserved` ++ CharPredicate(":@/?")))) ~> ((seq: Seq[String]) => new Fragment(seq.mkString))
+  }
+
+  def `ifragment` = rule { _fragment ~ EOI }
+
 }
 // format: on
