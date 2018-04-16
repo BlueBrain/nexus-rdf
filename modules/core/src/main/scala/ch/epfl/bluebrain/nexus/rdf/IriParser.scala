@@ -6,6 +6,7 @@ import org.parboiled2.CharUtils._
 
 //noinspection TypeAnnotation
 // format: off
+@SuppressWarnings(Array("MethodNames"))
 class IriParser(val input: ParserInput) extends Parser {
 
   def _scheme = rule {
@@ -71,5 +72,40 @@ class IriParser(val input: ParserInput) extends Parser {
   }
 
   def `iuserinfo` = rule { _userInfo ~ EOI }
+
+  def _pathAbEmpty: Rule1[Path] = rule {
+    zeroOrMore(ch('/') ~ `isegment`) ~> ((seq: Seq[String]) => seq.foldLeft[Path](Empty) {
+      case (acc, el) if el.length == 0 => Slash(acc)
+      case (acc, el)                   => Segment(el, Slash(acc))
+    })
+  }
+
+  def `ipath-abempty`: Rule1[Path] = rule { _pathAbEmpty ~ EOI }
+
+//  def _pathAbsolute: Rule1[Path] = rule {
+//    (ch('/') ~ `isegment-nz` ~ zeroOrMore(ch('/') ~ `isegment`)) ~> ((str: String, seq: Seq[String]) => seq.foldLeft[Path](Segment(str, Slash(Empty))) {
+//      case (acc, el) if el.length == 0 => Slash(acc)
+//      case (acc, el)                   => Segment(el, Slash(acc))
+//    })
+//  }
+//
+//  def `ipath-absolute`: Rule1[Path] = rule { _pathAbsolute ~ EOI }
+
+//  def `ipath-noscheme` = rule {
+//    `isegment-nz-nc` ~ `ipath-abempty` ~> ((str, path) => Segment(str, Slash(path)))
+//  }
+
+  def `isegment`: Rule1[String] = rule {
+    zeroOrMore(_pctEncoded | capture(oneOrMore(`sub-delims` ++ `iunreserved` ++ ':' ++ '@'))) ~> ((seq: Seq[String]) => seq.mkString)
+  }
+
+//  def `isegment-nz`: Rule1[String] = rule {
+//    oneOrMore(_pctEncoded | capture(oneOrMore(`sub-delims` ++ `iunreserved` ++ ':' ++ '@'))) ~> ((seq: Seq[String]) => seq.mkString)
+//  }
+//
+//  def `isegment-nz-nc`: Rule1[String] = rule {
+//    oneOrMore(_pctEncoded | capture(oneOrMore(`sub-delims` ++ `iunreserved` ++ '@'))) ~> ((seq: Seq[String]) => seq.mkString)
+//  }
+
 }
 // format: on
