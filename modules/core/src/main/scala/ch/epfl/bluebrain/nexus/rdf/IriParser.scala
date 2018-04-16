@@ -4,6 +4,8 @@ import org.parboiled2.CharPredicate._
 import org.parboiled2.{CharPredicate, Parser, ParserInput, Rule1}
 import org.parboiled2.CharUtils._
 
+import scala.collection.immutable.{SortedMap, SortedSet}
+
 //noinspection TypeAnnotation
 // format: off
 @SuppressWarnings(Array("MethodNames"))
@@ -46,6 +48,7 @@ class IriParser(val input: ParserInput) extends Parser {
   def `sub-delims` = CharPredicate("!$&'()*+,;=")
   def `ucschar` = CharPredicate.from(ch => ucscharRanges.exists(_.contains(ch.toInt)))
   def `iunreserved` = AlphaNum ++ CharPredicate("-._~") ++ `ucschar`
+  def `iprivate`: CharPredicate = CharPredicate.from(ch => iprivateRanges.exists(_.contains(ch.toInt)))
 
   def `pct-encoded` = rule {
     ch('%') ~ capture(HexDigit) ~ capture(HexDigit) ~> ((c1, c2) => (hexValue(c1.charAt(0)) * 16 + hexValue(c2.charAt(0))).toByte)
@@ -106,6 +109,23 @@ class IriParser(val input: ParserInput) extends Parser {
 //  def `isegment-nz-nc`: Rule1[String] = rule {
 //    oneOrMore(_pctEncoded | capture(oneOrMore(`sub-delims` ++ `iunreserved` ++ '@'))) ~> ((seq: Seq[String]) => seq.mkString)
 //  }
+
+  def _query: Rule1[Query] = rule {
+    (_queryElement * ch('&')) ~> ((seq: Seq[(String, String)]) => {
+      val map = seq.groupBy(_._1).mapValues(e => SortedSet(e.map(_._2): _*))
+      Query(SortedMap(map.toList: _*))
+    })
+  }
+
+  def _queryElement: Rule1[(String, String)] = rule {
+    _queryElementPart ~ optional(ch('=') ~ _queryElementPart) ~> ((str: String, strOpt: Option[String]) => (str, strOpt.getOrElse("")))
+  }
+
+  def _queryElementPart: Rule1[String] = rule {
+    oneOrMore(_pctEncoded | capture(oneOrMore(`sub-delims` ++ `iunreserved` ++ `iprivate` ++ CharPredicate(":@/?") -- CharPredicate("=&")))) ~> ((seq: Seq[String]) => seq.mkString)
+  }
+
+  def `iquery` = rule { _query ~ EOI }
 
 }
 // format: on
