@@ -9,7 +9,7 @@ import org.parboiled2.ErrorFormatter
   *
   * @param value the underlying string representation
   */
-final case class UserInfo private[rdf](value: String) {
+final case class UserInfo private[rdf] (value: String) {
 
   /**
     * As per the specification the user info is case sensitive.  This method allows comparing two user info values
@@ -38,5 +38,5 @@ object UserInfo {
   }
 
   final implicit val schemeShow: Show[UserInfo] = Show.show(_.value)
-  final implicit val schemeEq: Eq[UserInfo] = Eq.fromUniversalEquals
+  final implicit val schemeEq: Eq[UserInfo]     = Eq.fromUniversalEquals
 }

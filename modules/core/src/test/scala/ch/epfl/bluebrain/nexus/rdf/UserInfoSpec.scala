@@ -16,7 +16,7 @@ class UserInfoSpec extends WordSpecLike with Matchers with Inspectors with Eithe
     val low    = "abcd"
 
     "be parsed correctly from a string" in {
-     UserInfo("aBcd:Efgh").right.value.value shouldEqual "aBcd:Efgh"
+      UserInfo("aBcd:Efgh").right.value.value shouldEqual "aBcd:Efgh"
     }
 
     "equal when compared with ignored casing" in {
@@ -36,7 +36,7 @@ class UserInfoSpec extends WordSpecLike with Matchers with Inspectors with Eithe
     }
 
     "be parsed correctly from mixed characters" in {
-      val in = ucsUp + ucsLow + pct + delims + up
+      val in  = ucsUp + ucsLow + pct + delims + up
       val out = ucsUp + ucsLow + ucsUp + delims + up
       UserInfo(in).right.value.value shouldEqual out
     }

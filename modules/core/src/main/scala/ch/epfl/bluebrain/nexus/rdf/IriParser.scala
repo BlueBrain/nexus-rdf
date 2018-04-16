@@ -72,3 +72,4 @@ class IriParser(val input: ParserInput) extends Parser {
 
   def `iuserinfo` = rule { _userInfo ~ EOI }
 }
+// format: on
