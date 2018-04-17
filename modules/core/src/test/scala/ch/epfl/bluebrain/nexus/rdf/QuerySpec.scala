@@ -12,7 +12,6 @@ class QuerySpec extends WordSpecLike with Matchers with Inspectors with EitherVa
     "be constructed successfully" in {
       // format: off
       val cases = List(
-        "" -> SortedMap.empty[String, SortedSet[String]],
         "a=b&a=b&a=c&a&b&b&b=c&d/&e?" -> SortedMap(
           "a" -> SortedSet("", "b", "c"),
           "b" -> SortedSet("", "c"),
@@ -31,7 +30,7 @@ class QuerySpec extends WordSpecLike with Matchers with Inspectors with EitherVa
       }
     }
     "fail to parse" in {
-      val cases = List("a==b", "a=b&", "a#", "a&&", "a=&b")
+      val cases = List("a==b", "a=b&", "a#", "a&&", "a=&b", "")
       forAll(cases) { str =>
         Query(str).left.value
       }

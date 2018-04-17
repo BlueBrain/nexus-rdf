@@ -111,7 +111,7 @@ class IriParser(val input: ParserInput) extends Parser {
 //  }
 
   def _query: Rule1[Query] = rule {
-    (_queryElement * ch('&')) ~> ((seq: Seq[(String, String)]) => {
+    oneOrMore(_queryElement).separatedBy('&') ~> ((seq: Seq[(String, String)]) => {
       val map = seq.groupBy(_._1).mapValues(e => SortedSet(e.map(_._2): _*))
       Query(SortedMap(map.toList: _*))
     })
