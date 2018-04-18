@@ -67,11 +67,15 @@ class IriParser(val input: ParserInput) extends Parser {
 
   def `ireg-name` = rule { _iRegName ~ EOI }
 
-  def _port = rule {
+  def _portLiteral = rule {
     capture((Digit19 ~ (1 to 4).times(Digit).?) | ch('0')) ~> ((str: String) => Integer.parseInt(str))
   }
 
-  def `port` = rule { _port ~ EOI ~> (p => Port(p)) }
+  def _port = rule {
+    _portLiteral ~> (up => test(Port(up).isRight) ~ push(new Port(up)))
+  }
+
+  def `port` = rule { _port ~ EOI }
 
   def _userInfo = rule {
     oneOrMore(_pctEncoded | capture(oneOrMore(`sub-delims` ++ `iunreserved` ++ ':'))) ~> ((seq: Seq[String]) => new UserInfo(seq.mkString))
@@ -135,6 +139,18 @@ class IriParser(val input: ParserInput) extends Parser {
   }
 
   def `ifragment` = rule { _fragment ~ EOI }
+
+  def _host: Rule1[Host] = rule {
+    _ipv4Address | _iRegName
+  }
+
+  def _authority: Rule1[Authority] = rule {
+    optional(_userInfo ~ ch('@')) ~ _host ~ optional(ch(':') ~ _port) ~> ((ui, h, p) => Authority(ui, h, p))
+  }
+
+  def url: Rule1[Url] = rule {
+    _scheme ~ "://" ~ _authority ~ _pathAbEmpty ~ optional(ch('?') ~ _query) ~ optional(ch('#') ~ _fragment) ~> ((s: Scheme, a: Authority, p: Path, q: Option[Query], f: Option[Fragment]) => Url(s, a, p, q, f))
+  }
 
 }
 // format: on

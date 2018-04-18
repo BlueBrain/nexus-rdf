@@ -40,6 +40,16 @@ sealed abstract class Iri extends Product with Serializable {
 object Iri {
 
   /**
+    * Attempt to construct a new Url from the argument validating the structure and the character encodings as per
+    * RFC 3987.
+    *
+    * @param string the string to parse as an absolute url.
+    * @return Right(url) if the string conforms to specification, Left(error) otherwise
+    */
+  final def url(string: String): Either[String, Url] =
+    Url(string)
+
+  /**
     * An absolute Iri as defined by RFC 3987.
     */
   sealed abstract class AbsoluteIri extends Iri {
@@ -65,6 +75,80 @@ object Iri {
       fragment: Option[Fragment]
   ) extends AbsoluteIri {
     override def asUrl: Option[Url] = Some(this)
+  }
+
+  object Url {
+
+    private val defaultSchemePortMapping: Map[Scheme, Port] = Map(
+      "ftp"    -> 21,
+      "ssh"    -> 22,
+      "telnet" -> 23,
+      "smtp"   -> 25,
+      "domain" -> 53,
+      "tftp"   -> 69,
+      "http"   -> 80,
+      "ws"     -> 80,
+      "pop3"   -> 110,
+      "nntp"   -> 119,
+      "imap"   -> 143,
+      "snmp"   -> 161,
+      "ldap"   -> 389,
+      "https"  -> 443,
+      "wss"    -> 443,
+      "imaps"  -> 993,
+      "nfs"    -> 2049
+    ).map { case (s, p) => (new Scheme(s), new Port(p)) }
+
+    private def normalize(scheme: Scheme, authority: Authority): Authority =
+      if (authority.port == defaultSchemePortMapping.get(scheme)) authority.copy(port = None) else authority
+
+    /**
+      * Constructs an Url from its constituents.
+      *
+      * @param scheme    the scheme part
+      * @param authority the authority part
+      * @param path      the path part
+      * @param query     an optional query part
+      * @param fragment  an optional fragment part
+      */
+    final def apply(
+        scheme: Scheme,
+        authority: Authority,
+        path: Path,
+        query: Option[Query],
+        fragment: Option[Fragment]
+    ): Url = new Url(scheme, normalize(scheme, authority), path, query, fragment)
+
+    /**
+      * Attempt to construct a new Url from the argument validating the structure and the character encodings as per
+      * RFC 3987.
+      *
+      * @param string the string to parse as an absolute url.
+      * @return Right(url) if the string conforms to specification, Left(error) otherwise
+      */
+    final def apply(string: String): Either[String, Url] =
+      new IriParser(string).url
+        .run()
+        .leftMap(_.format(string, new ErrorFormatter(showExpected = false, showTraces = false)))
+
+    final implicit def urlShow(implicit s: Show[Scheme],
+                               a: Show[Authority],
+                               p: Show[Path],
+                               q: Show[Query],
+                               f: Show[Fragment]): Show[Url] = Show.show { url =>
+      import cats.syntax.show._
+      val query = url.query match {
+        case Some(v) => "?" + v.show
+        case _       => ""
+      }
+      val fragment = url.fragment match {
+        case Some(v) => "#" + v.show
+        case _       => ""
+      }
+      s"${url.scheme.show}://${url.authority.show}${p.show(url.path)}$query$fragment"
+    }
+
+    final implicit val urlEq: Eq[Url] = Eq.fromUniversalEquals
   }
 
   /**
@@ -121,6 +205,25 @@ object Iri {
     */
   final case class Authority(userInfo: Option[UserInfo], host: Host, port: Option[Port])
 
+  object Authority {
+
+    final implicit def authorityShow(implicit u: Show[UserInfo], h: Show[Host], p: Show[Port]): Show[Authority] =
+      Show.show { authority =>
+        import cats.syntax.show._
+        val userInfo = authority.userInfo match {
+          case Some(v) => v.show + "@"
+          case _       => ""
+        }
+        val port = authority.port match {
+          case Some(v) => ":" + v.show
+          case _       => ""
+        }
+        s"$userInfo${authority.host.show}$port"
+      }
+
+    final implicit val authorityEq: Eq[Authority] = Eq.fromUniversalEquals
+  }
+
   /**
     * A user info representation as specified by RFC 3987.
     *
@@ -152,8 +255,8 @@ object Iri {
         .run()
         .leftMap(_.format(string, new ErrorFormatter(showExpected = false, showTraces = false)))
 
-    final implicit val schemeShow: Show[UserInfo] = Show.show(_.value)
-    final implicit val schemeEq: Eq[UserInfo]     = Eq.fromUniversalEquals
+    final implicit val userInfoShow: Show[UserInfo] = Show.show(_.value)
+    final implicit val userInfoEq: Eq[UserInfo]     = Eq.fromUniversalEquals
   }
 
   /**
@@ -380,6 +483,14 @@ object Iri {
       final implicit val namedHostEq: Eq[NamedHost] =
         Eq.fromUniversalEquals
     }
+
+    final implicit def hostShow(implicit ipv4: Show[IPv4Host],
+                                ipv6: Show[IPv6Host],
+                                named: Show[NamedHost]): Show[Host] = Show.show {
+      case v: IPv4Host  => ipv4.show(v)
+      case v: IPv6Host  => ipv6.show(v)
+      case v: NamedHost => named.show(v)
+    }
   }
 
   /**
@@ -408,14 +519,12 @@ object Iri {
       * @return Right(port) if successful, Left(error) otherwise
       */
     final def apply(string: String): Either[String, Port] =
-      new IriParser(string).`port`.run() match {
-        case Left(pe)         => Left(pe.format(string, new ErrorFormatter(showExpected = false, showTraces = false)))
-        case Right(Left(err)) => Left(err)
-        case Right(r)         => r
-      }
+      new IriParser(string).`port`
+        .run()
+        .leftMap(_.format(string, new ErrorFormatter(showExpected = false, showTraces = false)))
 
-    final implicit val schemeShow: Show[Port] = Show.show(_.value.toString)
-    final implicit val schemeEq: Eq[Port]     = Eq.fromUniversalEquals
+    final implicit val portShow: Show[Port] = Show.show(_.value.toString)
+    final implicit val portEq: Eq[Port]     = Eq.fromUniversalEquals
   }
 
   /**
