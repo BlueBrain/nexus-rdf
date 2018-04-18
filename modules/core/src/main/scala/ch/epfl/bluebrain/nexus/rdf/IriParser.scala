@@ -1,8 +1,11 @@
 package ch.epfl.bluebrain.nexus.rdf
 
+import ch.epfl.bluebrain.nexus.rdf.Iri.Host.{IPv4Host, NamedHost}
+import ch.epfl.bluebrain.nexus.rdf.Iri._
+import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
 import org.parboiled2.CharPredicate._
-import org.parboiled2.{CharPredicate, Parser, ParserInput, Rule1}
 import org.parboiled2.CharUtils._
+import org.parboiled2.{CharPredicate, Parser, ParserInput, Rule1}
 
 import scala.collection.immutable.{SortedMap, SortedSet}
 
@@ -77,7 +80,7 @@ class IriParser(val input: ParserInput) extends Parser {
   def `iuserinfo` = rule { _userInfo ~ EOI }
 
   def _pathAbEmpty: Rule1[Path] = rule {
-    zeroOrMore(ch('/') ~ `isegment`) ~> ((seq: Seq[String]) => seq.foldLeft[Path](Empty) {
+    zeroOrMore(ch('/') ~ `isegment`) ~> ((seq: Seq[String]) => seq.foldLeft[Path](Path.Empty) {
       case (acc, el) if el.length == 0 => Slash(acc)
       case (acc, el)                   => Segment(el, Slash(acc))
     })

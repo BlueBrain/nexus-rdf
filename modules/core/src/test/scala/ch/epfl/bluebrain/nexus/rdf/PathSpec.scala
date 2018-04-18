@@ -2,6 +2,8 @@ package ch.epfl.bluebrain.nexus.rdf
 
 import cats.kernel.Eq
 import cats.syntax.show._
+import ch.epfl.bluebrain.nexus.rdf.Iri._
+import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
 import org.scalatest.{EitherValues, Inspectors, Matchers, WordSpecLike}
 
 class PathSpec extends WordSpecLike with Matchers with Inspectors with EitherValues {
