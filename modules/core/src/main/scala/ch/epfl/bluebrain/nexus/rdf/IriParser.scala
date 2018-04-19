@@ -92,6 +92,13 @@ class IriParser(val input: ParserInput) extends Parser {
 
   def `ipath-abempty`: Rule1[Path] = rule { _pathAbEmpty ~ EOI }
 
+  def _pathRootless: Rule1[Path] = rule {
+    `isegment-nz` ~ zeroOrMore(ch('/') ~ `isegment`) ~> ((str: String, seq: Seq[String]) => seq.foldLeft[Path](Segment(str, Path.Empty)) {
+      case (acc, el) if el.length == 0 => Slash(acc)
+      case (acc, el)                   => Segment(el, Slash(acc))
+    })
+  }
+
 //  def _pathAbsolute: Rule1[Path] = rule {
 //    (ch('/') ~ `isegment-nz` ~ zeroOrMore(ch('/') ~ `isegment`)) ~> ((str: String, seq: Seq[String]) => seq.foldLeft[Path](Segment(str, Slash(Empty))) {
 //      case (acc, el) if el.length == 0 => Slash(acc)
@@ -109,9 +116,9 @@ class IriParser(val input: ParserInput) extends Parser {
     zeroOrMore(_pctEncoded | capture(oneOrMore(`sub-delims` ++ `iunreserved` ++ ':' ++ '@'))) ~> ((seq: Seq[String]) => seq.mkString)
   }
 
-//  def `isegment-nz`: Rule1[String] = rule {
-//    oneOrMore(_pctEncoded | capture(oneOrMore(`sub-delims` ++ `iunreserved` ++ ':' ++ '@'))) ~> ((seq: Seq[String]) => seq.mkString)
-//  }
+  def `isegment-nz`: Rule1[String] = rule {
+    oneOrMore(_pctEncoded | capture(oneOrMore(`sub-delims` ++ `iunreserved` ++ ':' ++ '@'))) ~> ((seq: Seq[String]) => seq.mkString)
+  }
 //
 //  def `isegment-nz-nc`: Rule1[String] = rule {
 //    oneOrMore(_pctEncoded | capture(oneOrMore(`sub-delims` ++ `iunreserved` ++ '@'))) ~> ((seq: Seq[String]) => seq.mkString)
@@ -129,7 +136,7 @@ class IriParser(val input: ParserInput) extends Parser {
   }
 
   def _queryElementPart: Rule1[String] = rule {
-    oneOrMore(_pctEncoded | capture(oneOrMore(`sub-delims` ++ `iunreserved` ++ `iprivate` ++ CharPredicate(":@/?") -- CharPredicate("=&")))) ~> ((seq: Seq[String]) => seq.mkString)
+    oneOrMore(_pctEncoded | capture(oneOrMore(!"?+" ~ (`sub-delims` ++ `iunreserved` ++ `iprivate` ++ CharPredicate(":@/?") -- CharPredicate("=&"))))) ~> ((seq: Seq[String]) => seq.mkString)
   }
 
   def `iquery` = rule { _query ~ EOI }
@@ -150,6 +157,43 @@ class IriParser(val input: ParserInput) extends Parser {
 
   def url: Rule1[Url] = rule {
     _scheme ~ "://" ~ _authority ~ _pathAbEmpty ~ optional(ch('?') ~ _query) ~ optional(ch('#') ~ _fragment) ~> ((s: Scheme, a: Authority, p: Path, q: Option[Query], f: Option[Fragment]) => Url(s, a, p, q, f))
+  }
+
+  val ldh = AlphaNum ++ '-'
+
+  def _nid: Rule1[Nid] = rule {
+    capture(AlphaNum ~ (1 to 31).times(ldh)) ~> ((chars: String) => test(lastChar.isLetterOrDigit) ~ push(new Nid(chars.toLowerCase)))
+  }
+
+  def `nid`: Rule1[Nid] = rule { _nid ~ EOI }
+
+  def _nss: Rule1[Path] = rule { _pathRootless }
+
+  def `nss`: Rule1[Path] = rule { _nss ~ EOI }
+
+  def _component: Rule1[Component] = rule {
+    oneOrMore(_pctEncoded | capture(oneOrMore(`sub-delims` ++ `iunreserved` ++ ":@/")) | capture('?' ~ &(!(ch('+') | '=')))) ~> ((seq: Seq[String]) => new Component(seq.mkString))
+  }
+
+  def `component`: Rule1[Component] = rule { _component ~ EOI }
+
+  def _rFollowedByOptQ: Rule1[(Option[Component], Option[Query])] = rule {
+    "?+" ~ _component ~ optional("?=" ~ _query) ~> ((c: Component, q: Option[Query]) => Some(c) -> q)
+  }
+
+  def _qFollowedByOptR: Rule1[(Option[Component], Option[Query])] = rule {
+    "?=" ~ _query ~ optional("?+" ~ _component) ~> ((q: Query, r: Option[Component]) => r -> Some(q))
+  }
+
+  def _rqComponents: Rule1[(Option[Component], Option[Query])] = rule {
+    (_rFollowedByOptQ | _qFollowedByOptR).? ~> ((res: Option[(Option[Component], Option[Query])]) => res match {
+      case Some(v) => v
+      case None    => (None, None)
+    })
+  }
+
+  def urn: Rule1[Urn] = rule {
+    "urn:" ~ _nid ~ ":" ~ _nss ~ _rqComponents ~ optional('#' ~ _fragment) ~> ((nid: Nid, nss: Path, rq: (Option[Component], Option[Query]), f: Option[Fragment]) => Urn(nid, nss, rq._1, rq._2, f))
   }
 
 }

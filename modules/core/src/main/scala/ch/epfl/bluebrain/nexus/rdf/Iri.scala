@@ -32,12 +32,28 @@ sealed abstract class Iri extends Product with Serializable {
   def asAbsolute: Option[AbsoluteIri]
 
   /**
+    * @return true if this Iri is an Url, false otherwise
+    */
+  def isUrl: Boolean
+
+  /**
     * @return Some(this) if this Iri is an Url, None otherwise
     */
   def asUrl: Option[Url]
+
+  /**
+    * @return true if this Iri is an Urn, false otherwise
+    */
+  def isUrn: Boolean
+
+  /**
+    * @return Some(this) if this Iri is an Urn, None otherwise
+    */
+  def asUrn: Option[Urn]
 }
 
 object Iri {
+  private val formatter = new ErrorFormatter(showExpected = false, showTraces = false)
 
   /**
     * Attempt to construct a new Url from the argument validating the structure and the character encodings as per
@@ -50,12 +66,30 @@ object Iri {
     Url(string)
 
   /**
+    * Attempt to construct a new Urn from the argument validating the structure and the character encodings as per
+    * RFC 3987 and 8141.
+    *
+    * @param string the string to parse as an Urn.
+    * @return Right(urn) if the string conforms to specification, Left(error) otherwise
+    */
+  final def urn(string: String): Either[String, Urn] =
+    Urn(string)
+
+  /**
+    * Attempt to construct a new AbsoluteIri (Url or Urn) from the argument as per the RFC 3987 and 8141.
+    *
+    * @param string the string to parse as an absolute iri.
+    * @return Right(AbsoluteIri) if the string conforms to specification, Left(error) otherwise
+    */
+  final def absolute(string: String): Either[String, AbsoluteIri] =
+    urn(string) orElse url(string)
+
+  /**
     * An absolute Iri as defined by RFC 3987.
     */
   sealed abstract class AbsoluteIri extends Iri {
     override def isAbsolute: Boolean             = true
     override def asAbsolute: Option[AbsoluteIri] = Some(this)
-    override def asUrl: Option[Url]              = None
   }
 
   /**
@@ -74,7 +108,10 @@ object Iri {
       query: Option[Query],
       fragment: Option[Fragment]
   ) extends AbsoluteIri {
+    override def isUrl: Boolean     = true
     override def asUrl: Option[Url] = Some(this)
+    override def isUrn: Boolean     = false
+    override def asUrn: Option[Urn] = None
   }
 
   object Url {
@@ -129,7 +166,7 @@ object Iri {
     final def apply(string: String): Either[String, Url] =
       new IriParser(string).url
         .run()
-        .leftMap(_.format(string, new ErrorFormatter(showExpected = false, showTraces = false)))
+        .leftMap(_.format(string, formatter))
 
     final implicit def urlShow(implicit s: Show[Scheme],
                                a: Show[Authority],
@@ -189,7 +226,7 @@ object Iri {
     final def apply(value: String): Either[String, Scheme] = {
       new IriParser(value).`scheme`
         .run()
-        .leftMap(_.format(value, new ErrorFormatter(showExpected = false, showTraces = false)))
+        .leftMap(_.format(value, formatter))
     }
 
     final implicit val schemeShow: Show[Scheme] = Show.show(_.value)
@@ -253,7 +290,7 @@ object Iri {
     final def apply(string: String): Either[String, UserInfo] =
       new IriParser(string).`iuserinfo`
         .run()
-        .leftMap(_.format(string, new ErrorFormatter(showExpected = false, showTraces = false)))
+        .leftMap(_.format(string, formatter))
 
     final implicit val userInfoShow: Show[UserInfo] = Show.show(_.value)
     final implicit val userInfoEq: Eq[UserInfo]     = Eq.fromUniversalEquals
@@ -383,7 +420,7 @@ object Iri {
       final def apply(string: String): Either[String, IPv4Host] =
         new IriParser(string).`IPv4Address`
           .run()
-          .leftMap(_.format(string, new ErrorFormatter(showExpected = false, showTraces = false)))
+          .leftMap(_.format(string, formatter))
 
       /**
         * Constructs a new IPv4Host from the argument bytes.
@@ -475,7 +512,7 @@ object Iri {
       final def apply(string: String): Either[String, NamedHost] =
         new IriParser(string).`ireg-name`
           .run()
-          .leftMap(_.format(string, new ErrorFormatter(showExpected = false, showTraces = false)))
+          .leftMap(_.format(string, formatter))
 
       final implicit val namedHostShow: Show[NamedHost] =
         Show.show(_.asString)
@@ -521,7 +558,7 @@ object Iri {
     final def apply(string: String): Either[String, Port] =
       new IriParser(string).`port`
         .run()
-        .leftMap(_.format(string, new ErrorFormatter(showExpected = false, showTraces = false)))
+        .leftMap(_.format(string, formatter))
 
     final implicit val portShow: Show[Port] = Show.show(_.value.toString)
     final implicit val portEq: Eq[Port]     = Eq.fromUniversalEquals
@@ -579,7 +616,7 @@ object Iri {
       * Attempts to parse the argument string as an `ipath-abempty` Path as defined by RFC 3987.
       *
       * @param string the string to parse as a Path
-      * @return Right(Path) if the parse succeeds, Left(error) otherwise
+      * @return Right(Path) if the parsing succeeds, Left(error) otherwise
       */
     final def apply(string: String): Either[String, Path] =
       abempty(string)
@@ -588,12 +625,12 @@ object Iri {
       * Attempts to parse the argument string as an `ipath-abempty` Path as defined by RFC 3987.
       *
       * @param string the string to parse as a Path
-      * @return Right(Path) if the parse succeeds, Left(error) otherwise
+      * @return Right(Path) if the parsing succeeds, Left(error) otherwise
       */
     final def abempty(string: String): Either[String, Path] =
       new IriParser(string).`ipath-abempty`
         .run()
-        .leftMap(_.format(string, new ErrorFormatter(showExpected = false, showTraces = false)))
+        .leftMap(_.format(string, formatter))
 
     /**
       * An empty path.
@@ -662,12 +699,12 @@ object Iri {
       * Attempts to parse the argument string as an `iquery` as defined by RFC 3987 and evaluate the key=value pairs.
       *
       * @param string the string to parse as a Query
-      * @return Right(Query) if the parse succeeds, Left(error) otherwise
+      * @return Right(Query) if the parsing succeeds, Left(error) otherwise
       */
     final def apply(string: String): Either[String, Query] =
       new IriParser(string).`iquery`
         .run()
-        .leftMap(_.format(string, new ErrorFormatter(showExpected = false, showTraces = false)))
+        .leftMap(_.format(string, formatter))
 
     final implicit val queryShow: Show[Query] =
       Show.show(
@@ -699,15 +736,117 @@ object Iri {
       * Attempts to parse the argument string as an `ifragment` as defined by RFC 3987.
       *
       * @param string the string to parse as a Fragment
-      * @return Right(Fragment) if the parse succeeds, Left(error) otherwise
+      * @return Right(Fragment) if the parsing succeeds, Left(error) otherwise
       */
     final def apply(string: String): Either[String, Fragment] =
       new IriParser(string).`ifragment`
         .run()
-        .leftMap(_.format(string, new ErrorFormatter(showExpected = false, showTraces = false)))
+        .leftMap(_.format(string, formatter))
 
     final implicit val fragmentShow: Show[Fragment] = Show.show(_.value)
     final implicit val fragmentEq: Eq[Fragment]     = Eq.fromUniversalEquals
   }
 
+  /**
+    * NID part of an Urn as defined by RFC 8141.
+    *
+    * @param value the string value of the fragment
+    */
+  final case class Nid private[rdf] (value: String)
+
+  object Nid {
+
+    /**
+      * Attempts to parse the argument string as a `NID` as defined by RFC 8141.
+      *
+      * @param string the string to parse as a NID
+      * @return Right(NID) if the parsing succeeds, Left(error) otherwise
+      */
+    final def apply(string: String): Either[String, Nid] =
+      new IriParser(string).`nid`
+        .run()
+        .leftMap(_.format(string, formatter))
+
+    final implicit val nidShow: Show[Nid] = Show.show(_.value)
+    final implicit val nidEq: Eq[Nid]     = Eq.fromUniversalEquals
+  }
+
+  /**
+    * Urn R or Q component as defined by RFC 8141.
+    */
+  final case class Component private[rdf] (value: String)
+
+  object Component {
+
+    /**
+      * Attempts to parse the argument string as a Urn R or Q component as defined by RFC 8141, but with the character
+      * restrictions of RFC 3897.
+      *
+      * @param string the string to parse as a URN component
+      * @return Right(Component) if the parsing succeeds, Left(error) otherwise
+      */
+    final def apply(string: String): Either[String, Component] =
+      new IriParser(string).`component`
+        .run()
+        .leftMap(_.format(string, formatter))
+
+    final implicit val componentShow: Show[Component] = Show.show(_.value)
+    final implicit val componentEq: Eq[Component]     = Eq.fromUniversalEquals
+  }
+
+  /**
+    * An urn as defined by RFC 8141.
+    *
+    * @param nid      the namespace identifier
+    * @param nss      the namespace specific string
+    * @param r        the r component of the urn
+    * @param q        the q component of the urn
+    * @param fragment the f component of the urn, also known as fragment
+    */
+  final case class Urn(nid: Nid, nss: Path, r: Option[Component], q: Option[Query], fragment: Option[Fragment])
+      extends AbsoluteIri {
+    override def isUrl: Boolean     = false
+    override def asUrl: Option[Url] = None
+    override def isUrn: Boolean     = true
+    override def asUrn: Option[Urn] = Some(this)
+  }
+
+  object Urn {
+
+    /**
+      * Attempt to construct a new Urn from the argument validating the structure and the character encodings as per
+      * RFC 3987 and 8141.
+      *
+      * @param string the string to parse as an Urn.
+      * @return Right(urn) if the string conforms to specification, Left(error) otherwise
+      */
+    final def apply(string: String): Either[String, Urn] =
+      new IriParser(string).urn
+        .run()
+        .leftMap(_.format(string, formatter))
+
+    final implicit def urnShow(implicit
+                               ni: Show[Nid],
+                               ns: Show[Path],
+                               c: Show[Component],
+                               q: Show[Query],
+                               f: Show[Fragment]): Show[Urn] = Show.show { urn =>
+      import cats.syntax.show._
+      val rstr = urn.r match {
+        case Some(v) => "?+" + v.show
+        case _       => ""
+      }
+      val qstr = urn.q match {
+        case Some(v) => "?=" + v.show
+        case _       => ""
+      }
+      val fragment = urn.fragment match {
+        case Some(v) => "#" + v.show
+        case _       => ""
+      }
+      s"urn:${urn.nid.show}:${ns.show(urn.nss)}$rstr$qstr$fragment"
+    }
+
+    final implicit val urnEq: Eq[Urn] = Eq.fromUniversalEquals
+  }
 }
