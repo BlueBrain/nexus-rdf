@@ -27,24 +27,23 @@ scalafmt: {
 // Dependency versions
 val catsVersion      = "1.1.0"
 val circeVersion     = "0.9.3"
-val fastparseVersion = "1.0.0"
+val parboiledVersion = "2.1.4"
 val jenaVersion      = "3.6.0"
 val scalaTestVersion = "3.0.5"
 
 // Dependency modules
-lazy val catsCore      = "org.typelevel"   %% "cats-core"      % catsVersion
-lazy val circeCore     = "io.circe"        %% "circe-core"     % circeVersion
-lazy val fastparse     = "com.lihaoyi"     %% "fastparse"      % fastparseVersion
-lazy val fastparseByte = "com.lihaoyi"     %% "fastparse-byte" % fastparseVersion
-lazy val jenaCore      = "org.apache.jena" % "jena-core"       % jenaVersion
-lazy val scalaTest     = "org.scalatest"   %% "scalatest"      % scalaTestVersion
+lazy val catsCore   = "org.typelevel"   %% "cats-core"  % catsVersion
+lazy val circeCore  = "io.circe"        %% "circe-core" % circeVersion
+lazy val jenaCore   = "org.apache.jena" % "jena-core"   % jenaVersion
+lazy val parboiled2 = "org.parboiled"   %% "parboiled"  % parboiledVersion
+lazy val scalaTest  = "org.scalatest"   %% "scalatest"  % scalaTestVersion
 
 lazy val core = project
   .in(file("modules/core"))
   .settings(
     name                := "rdf-core",
     moduleName          := "rdf-core",
-    libraryDependencies ++= Seq(catsCore, fastparse, fastparseByte, scalaTest % Test)
+    libraryDependencies ++= Seq(catsCore, parboiled2, scalaTest % Test)
   )
 
 lazy val circe = project
