@@ -399,10 +399,10 @@ object Node {
     final def apply(value: Double): Literal =
       new Literal(value.toString, xsd.decimal)
 
-    final implicit def literalShow(implicit is: Show[AbsoluteIri]): Show[Literal] = Show.show {
-      case Literal(f, _, Some(LanguageTag(tag))) => s""""$f"@$tag"""
-      case l @ Literal(f, _, _) if l.isString    => s""""$f""""
-      case Literal(f, dt, None)                  => s""""$f"^^<${is.show(dt)}>"""
+    final implicit def literalShow(implicit is: Show[AbsoluteIri], ls: Show[LanguageTag]): Show[Literal] = Show.show {
+      case Literal(f, _, Some(tag))           => s""""$f"@${ls.show(tag)}"""
+      case l @ Literal(f, _, _) if l.isString => s""""$f""""
+      case Literal(f, dt, None)               => s""""$f"^^<${is.show(dt)}>"""
     }
 
     final implicit val literalEq: Eq[Literal] = Eq.fromUniversalEquals

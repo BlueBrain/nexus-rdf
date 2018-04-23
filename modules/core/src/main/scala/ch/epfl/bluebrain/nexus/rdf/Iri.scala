@@ -92,6 +92,14 @@ object Iri {
     override def asAbsolute: Option[AbsoluteIri] = Some(this)
   }
 
+  object AbsoluteIri {
+    final implicit def absoluteIriShow(implicit l: Show[Url], n: Show[Urn]): Show[AbsoluteIri] = Show.show {
+      case u: Url => l.show(u)
+      case u: Urn => n.show(u)
+    }
+    final implicit val absoluteIriEq: Eq[AbsoluteIri] = Eq.fromUniversalEquals
+  }
+
   /**
     * An absolute Url.
     *

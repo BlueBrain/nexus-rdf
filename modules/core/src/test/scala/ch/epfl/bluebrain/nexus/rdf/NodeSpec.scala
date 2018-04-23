@@ -2,7 +2,8 @@ package ch.epfl.bluebrain.nexus.rdf
 
 import cats.kernel.Eq
 import cats.syntax.show._
-import ch.epfl.bluebrain.nexus.rdf.Node.Literal.LanguageTag
+import ch.epfl.bluebrain.nexus.rdf.Node.IriOrBNode
+import ch.epfl.bluebrain.nexus.rdf.Node.Literal.{xsd, LanguageTag}
 import org.scalatest.{EitherValues, Inspectors, Matchers, WordSpecLike}
 
 class NodeSpec extends WordSpecLike with Matchers with EitherValues with Inspectors {
@@ -79,19 +80,62 @@ class NodeSpec extends WordSpecLike with Matchers with EitherValues with Inspect
           node.asLiteral.isDefined shouldEqual isLiteral
       }
     }
-//    "show" in {
-//      val cases = List[(Node, String)](
-//        (Node.blank("123").right.value, "_:123"),
-//        (Node.iri("https://a.b").right.value, "https://a.b"),
-//        (Node.literal(2), """"2"^^http://www.w3.org/2001/XMLSchema#integer"""),
-//        (Node.literal("a"), """"a""""),
-//        (Node.literal("a", LanguageTag("en").right.value), """"a"@en""")
-//      )
-//      forAll(cases) {
-//        case (node: Node, str) =>
-//          pass
-//      }
-//    }
+    "show" in {
+      val cases = List[(Node, String)](
+        (Node.blank("123").right.value, "_:123"),
+        (Node.iri("https://a.b").right.value, "https://a.b"),
+        (Node.iri("urn:ab:$").right.value, "urn:ab:$"),
+        (Node.literal(2), """"2"^^<http://www.w3.org/2001/XMLSchema#integer>"""),
+        (Node.literal(2.toLong), """"2"^^<http://www.w3.org/2001/XMLSchema#long>"""),
+        (Node.literal(2.2), """"2.2"^^<http://www.w3.org/2001/XMLSchema#decimal>"""),
+        (Node.literal(2.2f), """"2.2"^^<http://www.w3.org/2001/XMLSchema#decimal>"""),
+        (Node.literal(true), """"true"^^<http://www.w3.org/2001/XMLSchema#boolean>"""),
+        (Node.literal(2.toShort), """"2"^^<http://www.w3.org/2001/XMLSchema#short>"""),
+        (Node.literal(2.toByte), """"2"^^<http://www.w3.org/2001/XMLSchema#byte>"""),
+        (Node.literal("a"), """"a""""),
+        (Node.literal("a", LanguageTag("en").right.value), """"a"@en""")
+      )
+      forAll(cases) {
+        case (node: Node, str) =>
+          node.show shouldEqual str
+      }
+    }
+    "eq" in {
+      val cases = List[(Either[String, Node], Either[String, Node])](
+        (Node.blank("123"), Node.blank("123")),
+        (Node.iri("https://a.b"), Iri.absolute("https://a.b:443").map(Node.iri)),
+        (Node.iri("urn:ab:$"), Node.iri("urn:ab:%24")),
+        (Right(Node.literal(2)), Right(Node.literal("2", xsd.integer)))
+      )
+      forAll(cases) {
+        case (lhs, rhs) =>
+          Eq.eqv(lhs.right.value, rhs.right.value) shouldEqual true
+      }
+    }
+  }
+
+  "An IriOrBNode" should {
+    "show" in {
+      val cases = List[(IriOrBNode, String)](
+        (Node.blank("123").right.value, "_:123"),
+        (Node.iri("https://a.b").right.value, "https://a.b")
+      )
+      forAll(cases) {
+        case (node: Node, str) =>
+          node.show shouldEqual str
+      }
+    }
+    "eq" in {
+      val cases = List[(Either[String, IriOrBNode], Either[String, IriOrBNode])](
+        (Node.blank("123"), Node.blank("123")),
+        (Node.iri("https://a.b"), Iri.absolute("https://a.b:443").map(Node.iri)),
+        (Node.iri("urn:ab:$"), Node.iri("urn:ab:%24"))
+      )
+      forAll(cases) {
+        case (lhs, rhs) =>
+          Eq.eqv(lhs.right.value, rhs.right.value) shouldEqual true
+      }
+    }
   }
 
   "A Literal" should {
@@ -113,5 +157,4 @@ class NodeSpec extends WordSpecLike with Matchers with EitherValues with Inspect
       Node.literal("a", LanguageTag("en").right.value).isString shouldEqual true
     }
   }
-
 }
