@@ -92,6 +92,14 @@ object Iri {
     override def asAbsolute: Option[AbsoluteIri] = Some(this)
   }
 
+  object AbsoluteIri {
+    final implicit def absoluteIriShow(implicit l: Show[Url], n: Show[Urn]): Show[AbsoluteIri] = Show.show {
+      case u: Url => l.show(u)
+      case u: Urn => n.show(u)
+    }
+    final implicit val absoluteIriEq: Eq[AbsoluteIri] = Eq.fromUniversalEquals
+  }
+
   /**
     * An absolute Url.
     *
@@ -112,6 +120,15 @@ object Iri {
     override def asUrl: Option[Url] = Some(this)
     override def isUrn: Boolean     = false
     override def asUrn: Option[Urn] = None
+
+    /**
+      * Returns a copy of this Url with the fragment value set to the argument fragment.
+      *
+      * @param fragment the fragment to replace
+      * @return a copy of this Url with the fragment value set to the argument fragment
+      */
+    def withFragment(fragment: Fragment): Url =
+      copy(fragment = Some(fragment))
   }
 
   object Url {
@@ -167,6 +184,10 @@ object Iri {
       new IriParser(string).url
         .run()
         .leftMap(_.format(string, formatter))
+
+    @SuppressWarnings(Array("EitherGet"))
+    private[rdf] def unsafe(string: String): Url =
+      new IriParser(string).url.run().right.get
 
     final implicit def urlShow(implicit s: Show[Scheme],
                                a: Show[Authority],
