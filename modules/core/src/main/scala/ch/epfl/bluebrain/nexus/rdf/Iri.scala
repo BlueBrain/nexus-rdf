@@ -22,14 +22,19 @@ sealed abstract class Iri extends Product with Serializable {
   def isAbsolute: Boolean
 
   /**
+    * @return Some(this) if this Iri is absolute, None otherwise
+    */
+  def asAbsolute: Option[AbsoluteIri]
+
+  /**
     * @return true if this Iri is relative, false otherwise
     */
   def isRelative: Boolean = !isAbsolute
 
   /**
-    * @return Some(this) if this Iri is absolute, None otherwise
+    * @return Some(this) if this Iri is relative, None otherwise
     */
-  def asAbsolute: Option[AbsoluteIri]
+  def asRelative: Option[RelativeIri]
 
   /**
     * @return true if this Iri is an Url, false otherwise
@@ -85,11 +90,81 @@ object Iri {
     urn(string) orElse url(string)
 
   /**
+    * Attempt to construct a new RelativeIri from the argument as per the RFC 3987.
+    *
+    * @param string the string to parse as a relative iri
+    * @return Right(RelativeIri) if the string conforms to specification, Left(error) otherwise
+    */
+  final def relative(string: String): Either[String, RelativeIri] =
+    RelativeIri(string)
+
+  /**
+    * A relative IRI.
+    *
+    * @param authority the optional authority part
+    * @param path      the path part
+    * @param query     an optional query part
+    * @param fragment  an optional fragment part
+    */
+  final case class RelativeIri(authority: Option[Authority],
+                               path: Path,
+                               query: Option[Query],
+                               fragment: Option[Fragment])
+      extends Iri {
+    override def isAbsolute: Boolean             = false
+    override def asAbsolute: Option[AbsoluteIri] = None
+    override def isUrl: Boolean                  = false
+    override def isUrn: Boolean                  = false
+    override def asUrn: Option[Urn]              = None
+    override def asUrl: Option[Url]              = None
+    override def asRelative: Option[RelativeIri] = Some(this)
+  }
+  object RelativeIri {
+
+    /**
+      * Attempt to construct a new RelativeIri from the argument validating the structure and the character encodings as per
+      * RFC 3987.
+      *
+      * @param string the string to parse as a relative IRI.
+      * @return Right(url) if the string conforms to specification, Left(error) otherwise
+      */
+    final def apply(string: String): Either[String, RelativeIri] =
+      if (string.isEmpty) Left("Invalid input: Empty")
+      else
+        new IriParser(string).`irelative-ref`
+          .run()
+          .leftMap(_.format(string, formatter))
+
+    final implicit def relativeIriShow(implicit a: Show[Authority],
+                                       p: Show[Path],
+                                       q: Show[Query],
+                                       f: Show[Fragment]): Show[RelativeIri] = Show.show { ref =>
+      import cats.syntax.show._
+      val query = ref.query match {
+        case Some(v) => "?" + v.show
+        case _       => ""
+      }
+      val fragment = ref.fragment match {
+        case Some(v) => "#" + v.show
+        case _       => ""
+      }
+      val authority = ref.authority match {
+        case Some(auth) => "//" + auth.show
+        case _          => ""
+      }
+      s"$authority${p.show(ref.path)}$query$fragment"
+    }
+
+    final implicit val relativeIriEq: Eq[RelativeIri] = Eq.fromUniversalEquals
+  }
+
+  /**
     * An absolute Iri as defined by RFC 3987.
     */
   sealed abstract class AbsoluteIri extends Iri {
     override def isAbsolute: Boolean             = true
     override def asAbsolute: Option[AbsoluteIri] = Some(this)
+    override def asRelative: Option[RelativeIri] = None
   }
 
   object AbsoluteIri {

@@ -49,6 +49,14 @@ class UrnSpec extends WordSpecLike with Matchers with Inspectors with EitherValu
       withHash.value.asUrl shouldEqual None
     }
 
+    "not be a RelativeIri" in {
+      withHash.value.isRelative shouldEqual false
+    }
+
+    "not return a RelativeIri" in {
+      withHash.value.asRelative shouldEqual None
+    }
+
     "eq" in {
       val lhs = Urn("urn:examp-lE:foo-bar-baz-qux?+CCResolve:cc=uk?=a=b#hash").right.value
       val rhs = Urn("urn:examp-le:foo-bar-baz-qux?+CCResolve:cc=uk?=a=b#hash").right.value
