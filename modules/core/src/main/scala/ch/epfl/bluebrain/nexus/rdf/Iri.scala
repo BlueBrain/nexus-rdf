@@ -1,6 +1,7 @@
 package ch.epfl.bluebrain.nexus.rdf
 
 import cats.syntax.either._
+import cats.syntax.show._
 import cats.{Eq, Show}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Host.{IPv4Host, IPv6Host, NamedHost}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
@@ -99,6 +100,15 @@ object Iri {
     RelativeIri(string)
 
   /**
+    * Attempt to construct a new Iri (Url, Urn or RelativeIri) from the argument as per the RFC 3987 and 8141.
+    *
+    * @param string the string to parse as an iri.
+    * @return Right(Iri) if the string conforms to specification, Left(error) otherwise
+    */
+  final def apply(string: String): Either[String, Iri] =
+    urn(string) orElse url(string) orElse relative(string)
+
+  /**
     * A relative IRI.
     *
     * @param authority the optional authority part
@@ -129,11 +139,9 @@ object Iri {
       * @return Right(url) if the string conforms to specification, Left(error) otherwise
       */
     final def apply(string: String): Either[String, RelativeIri] =
-      if (string.isEmpty) Left("Invalid input: Empty")
-      else
-        new IriParser(string).`irelative-ref`
-          .run()
-          .leftMap(_.format(string, formatter))
+      new IriParser(string).`irelative-ref`
+        .run()
+        .leftMap(_.format(string, formatter))
 
     final implicit def relativeIriShow(implicit a: Show[Authority],
                                        p: Show[Path],
@@ -671,6 +679,11 @@ object Iri {
     def isEmpty: Boolean
 
     /**
+      * @return false if the path contains no characters, true otherwise
+      */
+    def nonEmpty: Boolean = !isEmpty
+
+    /**
       * @return true if this path is a [[ch.epfl.bluebrain.nexus.rdf.Iri.Path.Slash]] (ends with a slash '/'), false otherwise
       */
     def isSlash: Boolean
@@ -945,4 +958,12 @@ object Iri {
 
     final implicit val urnEq: Eq[Urn] = Eq.fromUniversalEquals
   }
+
+  final implicit val iriEq: Eq[Iri] = Eq.fromUniversalEquals
+  final implicit def iriShow(implicit urnShow: Show[Urn], urlShow: Show[Url], relShow: Show[RelativeIri]): Show[Iri] =
+    Show.show {
+      case r: RelativeIri => r.show
+      case url: Url       => url.show
+      case urn: Urn       => urn.show
+    }
 }

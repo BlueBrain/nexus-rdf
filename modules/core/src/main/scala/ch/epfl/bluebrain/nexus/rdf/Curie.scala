@@ -1,8 +1,8 @@
 package ch.epfl.bluebrain.nexus.rdf
 
+import cats.syntax.either._
+import cats.syntax.show._
 import cats.{Eq, Show}
-import cats.instances.all._
-import cats.syntax.all._
 import ch.epfl.bluebrain.nexus.rdf.Curie.Prefix
 import ch.epfl.bluebrain.nexus.rdf.Iri.RelativeIri
 import org.parboiled2.ErrorFormatter
@@ -20,13 +20,17 @@ final case class Curie(prefix: Prefix, reference: RelativeIri)
 
 object Curie {
 
-  final def apply(str: String): Either[String, Curie] = {
-    str.split(":", 2) match {
-      case Array(prefix, reference) =>
-        (Prefix(prefix), RelativeIri(reference)).mapN((p, r) => new Curie(p, r))
-      case _ => Left("Invalid input: Missing ':' character")
-    }
-  }
+  /**
+    * Attempt to construct a new [[Curie]] from the argument validating the structure and the character encodings as per
+    * ''CURIE Syntax 1.0''.
+    *
+    * @param string the string to parse as a Curie.
+    * @return Right(Curie) if the string conforms to specification, Left(error) otherwise
+    */
+  final def apply(string: String): Either[String, Curie] =
+    new IriParser(string).`curie`
+      .run()
+      .leftMap(_.format(string, formatter))
 
   /**
     * The Compact URI prefix as defined by W3C in ''CURIE Syntax 1.0''.

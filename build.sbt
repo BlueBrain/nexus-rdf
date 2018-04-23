@@ -28,7 +28,7 @@ scalafmt: {
 val catsVersion      = "1.1.0"
 val circeVersion     = "0.9.3"
 val parboiledVersion = "2.1.4"
-val jenaVersion      = "3.6.0"
+val jenaVersion      = "3.7.0"
 val scalaTestVersion = "3.0.5"
 
 // Dependency modules

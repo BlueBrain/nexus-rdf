@@ -33,7 +33,7 @@ class RelativeIriSpec extends WordSpecLike with Matchers with Inspectors with Ei
         ""
       )
       forAll(cases) {
-        case (in) => RelativeIri(in).left.value should startWith("Invalid input")
+        case (in) => RelativeIri(in).left.value should not be 'empty
       }
     }
     val withHash = Iri.relative("//1.2.3.4:80/a%C2%A3/b%C3%86c//:://#hash").right

@@ -116,8 +116,12 @@ class IriParser(val input: ParserInput) extends Parser {
     optional(relativeWithAuthority | relativeIpathAbsolute | relativeIpathNoScheme) ~> ((opt: Option[(Option[Authority], Path)]) => opt.getOrElse((None, Path.Empty)))
   }
 
-  def _irelativeRef = rule {
-    `irelative-part` ~ optional(ch('?') ~ _query) ~ optional(ch('#') ~ _fragment) ~> ((tuple: (Option[Authority], Path), q: Option[Query], f: Option[Fragment]) => RelativeIri(tuple._1, tuple._2, q, f))
+  def _irelativeRef: Rule1[RelativeIri] = rule {
+    `irelative-part` ~ optional(ch('?') ~ _query) ~ optional(ch('#') ~ _fragment) ~> {
+      (t: (Option[Authority], Path), q: Option[Query], f: Option[Fragment]) =>
+        val (auth, path) = t
+        test(path.nonEmpty || auth.isDefined || q.isDefined || f.isDefined) ~ push(RelativeIri(auth, path, q, f))
+    }
   }
 
   def `irelative-ref`: Rule1[RelativeIri] = rule { _irelativeRef ~ EOI }
@@ -239,6 +243,12 @@ class IriParser(val input: ParserInput) extends Parser {
   }
 
   def `prefix`: Rule1[Prefix] = rule { ncName ~ EOI }
+
+  def _curie: Rule1[Curie] = rule {
+    ncName ~ ch(':') ~ _irelativeRef ~> ((p: Prefix, r: RelativeIri) => new Curie(p, r))
+  }
+
+  def `curie`: Rule1[Curie] = rule { _curie ~ EOI }
 
 }
 // format: on
