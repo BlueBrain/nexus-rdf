@@ -36,6 +36,23 @@ class PathSpec extends WordSpecLike with Matchers with Inspectors with EitherVal
         Path(c).left.value
       }
     }
+    "normalize paths" in {
+      val cases = List(
+        ("/a/b/../c/", Slash(Segment("c", Slash(Segment("a", Slash(Empty))))), "/a/c/"),
+        ("/../../../", Slash(Empty), "/"),
+        ("/a/./b/./c/./", Slash(Segment("c", Slash(Segment("b", Slash(Segment("a", Slash(Empty))))))), "/a/b/c/"),
+        ("/a//../b/./c/./", Slash(Segment("c", Slash(Segment("b", Slash(Segment("a", Slash(Empty))))))), "/a/b/c/"),
+        ("/a/./b/../c/./", Slash(Segment("c", Slash(Segment("a", Slash(Empty))))), "/a/c/"),
+        ("/a/c/../", Slash(Segment("a", Slash(Empty))), "/a/"),
+        ("/a/c/./", Slash(Segment("c", Slash(Segment("a", Slash(Empty))))), "/a/c/")
+      )
+      forAll(cases) {
+        case (str, expected, expectedStr) =>
+          val value = Path(str).right.value
+          value shouldEqual expected
+          value.show shouldEqual expectedStr
+      }
+    }
     "return the correct information about the internal structure" in {
       val cases = List(
         ("", true, false, false, Some(Empty), None, None),

@@ -84,11 +84,17 @@ class IriParser(val input: ParserInput) extends Parser {
 
   def `iuserinfo` = rule { _userInfo ~ EOI }
 
+  private val pathF = (p: Path, e: String)  => (p, e) match {
+    case (Segment(_, Slash(acc)), "..")     => acc
+    case (Slash(acc), "..")                 => acc
+    case (acc, "..")                        => acc
+    case (acc, ".")                         => acc
+    case (acc, el) if el.length == 0        => Slash(acc)
+    case (acc, el)                          => Segment(el, Slash(acc))
+  }
+
   def _pathAbEmpty: Rule1[Path] = rule {
-    zeroOrMore(ch('/') ~ `isegment`) ~> ((seq: Seq[String]) => seq.foldLeft[Path](Path.Empty) {
-      case (acc, el) if el.length == 0 => Slash(acc)
-      case (acc, el)                   => Segment(el, Slash(acc))
-    })
+    zeroOrMore(ch('/') ~ `isegment`) ~> ((seq: Seq[String]) => seq.foldLeft[Path](Path.Empty)(pathF))
   }
 
   def `ipath-abempty`: Rule1[Path] = rule { _pathAbEmpty ~ EOI }
@@ -129,16 +135,17 @@ class IriParser(val input: ParserInput) extends Parser {
   private def _pathAbsoluteStart(optString: Option[String]): Path = optString.map(Segment(_, Slash(Path.Empty))).getOrElse(Slash(Path.Empty))
 
   def _pathAbsolute: Rule1[Path] = rule {
-    (ch('/') ~ optional(`isegment-nz`) ~ optional(zeroOrMore(ch('/') ~ `isegment`))) ~> ((str: Option[String], seq: Option[Seq[String]]) => seq.getOrElse(Seq.empty).foldLeft[Path](_pathAbsoluteStart(str)) {
-      case (acc, el) if el.length == 0 => Slash(acc)
-      case (acc, el)                   => Segment(el, Slash(acc))
-    })
+    (ch('/') ~ optional(`isegment-nz`) ~ optional(zeroOrMore(ch('/') ~ `isegment`))) ~> ((str: Option[String], seq: Option[Seq[String]]) => seq.getOrElse(Seq.empty).foldLeft[Path](_pathAbsoluteStart(str))(pathF))
   }
 
   def `ipath-noscheme` = rule {
     `isegment-nz-nc` ~ zeroOrMore(ch('/') ~ `isegment`) ~> ((str: String, seq: Seq[String]) => seq.foldLeft[Path](Segment(str, Path.Empty)) {
-      case (acc, el) if el.length == 0 => Slash(acc)
-      case (acc, el)                   => Segment(el, Slash(acc))
+      case (Segment(el, Slash(acc)), "..") if el != ".."  => acc
+      case (Segment(el, acc), "..") if el != ".."         => acc
+      case (Slash(acc), "..")                             => acc
+      case (acc, ".")                                     => acc
+      case (acc, el) if el.length == 0                    => Slash(acc)
+      case (acc, el)                                      => Segment(el, Slash(acc))
     })
   }
 
