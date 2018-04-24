@@ -41,6 +41,15 @@ class UrlSpec extends WordSpecLike with Matchers with Inspectors with EitherValu
     "not return a urn" in {
       withHash.value.asUrn shouldEqual None
     }
+
+    "not be a RelativeIri" in {
+      withHash.value.isRelative shouldEqual false
+    }
+
+    "not return a RelativeIri" in {
+      withHash.value.asRelative shouldEqual None
+    }
+
     "eq" in {
       val lhs = Url("hTtp://gooGle.com/?q=asd#1").right.value
       val rhs = Url("http://google.com/?q=asd#1").right.value

@@ -1,11 +1,12 @@
 package ch.epfl.bluebrain.nexus.rdf
 
+import ch.epfl.bluebrain.nexus.rdf.Curie.Prefix
 import ch.epfl.bluebrain.nexus.rdf.Iri.Host.{IPv4Host, NamedHost}
 import ch.epfl.bluebrain.nexus.rdf.Iri._
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
 import org.parboiled2.CharPredicate._
 import org.parboiled2.CharUtils._
-import org.parboiled2.{CharPredicate, Parser, ParserInput, Rule1}
+import org.parboiled2._
 
 import scala.collection.immutable.{SortedMap, SortedSet}
 
@@ -99,18 +100,47 @@ class IriParser(val input: ParserInput) extends Parser {
     })
   }
 
-//  def _pathAbsolute: Rule1[Path] = rule {
-//    (ch('/') ~ `isegment-nz` ~ zeroOrMore(ch('/') ~ `isegment`)) ~> ((str: String, seq: Seq[String]) => seq.foldLeft[Path](Segment(str, Slash(Empty))) {
-//      case (acc, el) if el.length == 0 => Slash(acc)
-//      case (acc, el)                   => Segment(el, Slash(acc))
-//    })
-//  }
-//
-//  def `ipath-absolute`: Rule1[Path] = rule { _pathAbsolute ~ EOI }
+  def relativeWithAuthority: Rule1[(Option[Authority], Path)] = rule {
+    "//" ~ _authority ~ _pathAbEmpty ~> ((a: Authority, p: Path) => Some(a) -> p)
+  }
 
-//  def `ipath-noscheme` = rule {
-//    `isegment-nz-nc` ~ `ipath-abempty` ~> ((str, path) => Segment(str, Slash(path)))
-//  }
+  def relativeIpathAbsolute: Rule1[(Option[Authority], Path)] = rule {
+    _pathAbsolute ~> ((p: Path) => None -> p)
+  }
+
+  def relativeIpathNoScheme: Rule1[(Option[Authority], Path)] = rule {
+    `ipath-noscheme` ~> ((p: Path) => None -> p)
+  }
+
+  def `irelative-part`: Rule1[(Option[Authority], Path)] = rule {
+    optional(relativeWithAuthority | relativeIpathAbsolute | relativeIpathNoScheme) ~> ((opt: Option[(Option[Authority], Path)]) => opt.getOrElse((None, Path.Empty)))
+  }
+
+  def _irelativeRef: Rule1[RelativeIri] = rule {
+    `irelative-part` ~ optional(ch('?') ~ _query) ~ optional(ch('#') ~ _fragment) ~> {
+      (t: (Option[Authority], Path), q: Option[Query], f: Option[Fragment]) =>
+        val (auth, path) = t
+        test(path.nonEmpty || auth.isDefined || q.isDefined || f.isDefined) ~ push(RelativeIri(auth, path, q, f))
+    }
+  }
+
+  def `irelative-ref`: Rule1[RelativeIri] = rule { _irelativeRef ~ EOI }
+
+  private def _pathAbsoluteStart(optString: Option[String]): Path = optString.map(Segment(_, Slash(Path.Empty))).getOrElse(Slash(Path.Empty))
+
+  def _pathAbsolute: Rule1[Path] = rule {
+    (ch('/') ~ optional(`isegment-nz`) ~ optional(zeroOrMore(ch('/') ~ `isegment`))) ~> ((str: Option[String], seq: Option[Seq[String]]) => seq.getOrElse(Seq.empty).foldLeft[Path](_pathAbsoluteStart(str)) {
+      case (acc, el) if el.length == 0 => Slash(acc)
+      case (acc, el)                   => Segment(el, Slash(acc))
+    })
+  }
+
+  def `ipath-noscheme` = rule {
+    `isegment-nz-nc` ~ zeroOrMore(ch('/') ~ `isegment`) ~> ((str: String, seq: Seq[String]) => seq.foldLeft[Path](Segment(str, Path.Empty)) {
+      case (acc, el) if el.length == 0 => Slash(acc)
+      case (acc, el)                   => Segment(el, Slash(acc))
+    })
+  }
 
   def `isegment`: Rule1[String] = rule {
     zeroOrMore(_pctEncoded | capture(oneOrMore(`sub-delims` ++ `iunreserved` ++ ':' ++ '@'))) ~> ((seq: Seq[String]) => seq.mkString)
@@ -119,10 +149,10 @@ class IriParser(val input: ParserInput) extends Parser {
   def `isegment-nz`: Rule1[String] = rule {
     oneOrMore(_pctEncoded | capture(oneOrMore(`sub-delims` ++ `iunreserved` ++ ':' ++ '@'))) ~> ((seq: Seq[String]) => seq.mkString)
   }
-//
-//  def `isegment-nz-nc`: Rule1[String] = rule {
-//    oneOrMore(_pctEncoded | capture(oneOrMore(`sub-delims` ++ `iunreserved` ++ '@'))) ~> ((seq: Seq[String]) => seq.mkString)
-//  }
+
+  def `isegment-nz-nc`: Rule1[String] = rule {
+    oneOrMore(_pctEncoded | capture(oneOrMore(`sub-delims` ++ `iunreserved` ++ '@'))) ~> ((seq: Seq[String]) => seq.mkString)
+  }
 
   def _query: Rule1[Query] = rule {
     oneOrMore(_queryElement).separatedBy('&') ~> ((seq: Seq[(String, String)]) => {
@@ -195,6 +225,30 @@ class IriParser(val input: ParserInput) extends Parser {
   def urn: Rule1[Urn] = rule {
     "urn:" ~ _nid ~ ":" ~ _nss ~ _rqComponents ~ optional('#' ~ _fragment) ~> ((nid: Nid, nss: Path, rq: (Option[Component], Option[Query]), f: Option[Fragment]) => Urn(nid, nss, rq._1, rq._2, f))
   }
+
+  private val nameStartUtfRanges = Set(
+    0xC0 to 0xD6,     0xD8 to 0xF6,     0xF8 to 0x2FF,
+    0x370 to 0x37D,   0x37F to 0x1FFF,  0x200C to 0x200D,
+    0x2070 to 0x218F, 0x2C00 to 0x2FEF, 0x300 to 0xD7FF,
+    0xF900 to 0xFDCF, 0xFDF0 to 0xFFFD, 0x10000 to 0xEFFFF
+  )
+  private val nameStartUtf = CharPredicate.from(ch => nameStartUtfRanges.exists(_.contains(ch.toInt)))
+
+  private def nameStart = rule { capture(LowerAlpha | UpperAlpha | ch('_') | nameStartUtf) }
+  private def name = rule {
+    nameStart | capture(ch('-') | ch('.') | Digit | ch('\u00B7') | CharPredicate('\u0300' to '\u036F') | CharPredicate('\u203F' to '\u2040'))
+  }
+  private def ncName = rule {
+    nameStart ~ zeroOrMore(name) ~> ((s: String, c: Seq[String]) => new Prefix(s"$s${c.mkString}"))
+  }
+
+  def `prefix`: Rule1[Prefix] = rule { ncName ~ EOI }
+
+  def _curie: Rule1[Curie] = rule {
+    ncName ~ ch(':') ~ _irelativeRef ~> ((p: Prefix, r: RelativeIri) => new Curie(p, r))
+  }
+
+  def `curie`: Rule1[Curie] = rule { _curie ~ EOI }
 
 }
 // format: on
