@@ -63,7 +63,7 @@ class IriParser(val input: ParserInput) extends Parser {
   }
 
   def _iRegName: Rule1[NamedHost] = rule {
-    oneOrMore(_pctEncoded | capture(oneOrMore(`sub-delims` ++ `iunreserved`))) ~> ((seq: Seq[String]) => new NamedHost(seq.mkString.toLowerCase))
+    zeroOrMore(_pctEncoded | capture(oneOrMore(`sub-delims` ++ `iunreserved`))) ~> ((seq: Seq[String]) => new NamedHost(seq.mkString.toLowerCase))
   }
 
   def `ireg-name` = rule { _iRegName ~ EOI }
@@ -101,7 +101,7 @@ class IriParser(val input: ParserInput) extends Parser {
   }
 
   def relativeWithAuthority: Rule1[(Option[Authority], Path)] = rule {
-    "//" ~ _authority ~ _pathAbEmpty ~> ((a: Authority, p: Path) => Some(a) -> p)
+    '/' ~ '/' ~ _authority ~ _pathAbEmpty ~> ((a: Authority, p: Path) => Some(a) -> p)
   }
 
   def relativeIpathAbsolute: Rule1[(Option[Authority], Path)] = rule {
@@ -154,11 +154,13 @@ class IriParser(val input: ParserInput) extends Parser {
     oneOrMore(_pctEncoded | capture(oneOrMore(`sub-delims` ++ `iunreserved` ++ '@'))) ~> ((seq: Seq[String]) => seq.mkString)
   }
 
+  private val queryFold = (seq: Seq[(String, String)]) => {
+    val map = seq.groupBy(_._1).mapValues(e => SortedSet(e.map(_._2): _*))
+    Query(SortedMap(map.toList: _*))
+  }
+
   def _query: Rule1[Query] = rule {
-    oneOrMore(_queryElement).separatedBy('&') ~> ((seq: Seq[(String, String)]) => {
-      val map = seq.groupBy(_._1).mapValues(e => SortedSet(e.map(_._2): _*))
-      Query(SortedMap(map.toList: _*))
-    })
+    zeroOrMore(_queryElement).separatedBy('&') ~> queryFold
   }
 
   def _queryElement: Rule1[(String, String)] = rule {
@@ -172,7 +174,7 @@ class IriParser(val input: ParserInput) extends Parser {
   def `iquery` = rule { _query ~ EOI }
 
   def _fragment: Rule1[Fragment] = rule {
-    oneOrMore(_pctEncoded | capture(oneOrMore(`sub-delims` ++ `iunreserved` ++ CharPredicate(":@/?")))) ~> ((seq: Seq[String]) => new Fragment(seq.mkString))
+    zeroOrMore(_pctEncoded | capture(oneOrMore(`sub-delims` ++ `iunreserved` ++ CharPredicate(":@/?")))) ~> ((seq: Seq[String]) => new Fragment(seq.mkString))
   }
 
   def `ifragment` = rule { _fragment ~ EOI }
@@ -185,9 +187,25 @@ class IriParser(val input: ParserInput) extends Parser {
     optional(_userInfo ~ ch('@')) ~ _host ~ optional(ch(':') ~ _port) ~> ((ui, h, p) => Authority(ui, h, p))
   }
 
-  def url: Rule1[Url] = rule {
-    _scheme ~ "://" ~ _authority ~ _pathAbEmpty ~ optional(ch('?') ~ _query) ~ optional(ch('#') ~ _fragment) ~> ((s: Scheme, a: Authority, p: Path, q: Option[Query], f: Option[Fragment]) => Url(s, a, p, q, f))
+  def authorityAndPath: Rule1[(Option[Authority], Path)] = rule {
+    "//" ~ _authority ~ optional(_pathAbEmpty)  ~> ((a: Authority, p: Option[Path]) => Some(a) -> p.getOrElse(Path.Empty))
   }
+
+  def otherPaths: Rule1[(Option[Authority], Path)] = rule {
+    (_pathAbsolute | _pathRootless) ~> ((p: Path) => None -> p)
+  }
+
+  def `hier-part`: Rule1[(Option[Authority], Path)] = rule { authorityAndPath | otherPaths }
+
+  def _url: Rule1[Url] = rule {
+    _scheme ~ ch(':') ~ `hier-part` ~ optional(ch('?') ~ _query) ~ optional(ch('#') ~ _fragment) ~> {
+      (s: Scheme, ap: (Option[Authority],Path), q: Option[Query], f: Option[Fragment]) =>
+        val (a, p) = ap
+        Url(s, a, p, q, f)
+    }
+  }
+
+  def url: Rule1[Url] = rule { _url ~ EOI }
 
   val ldh = AlphaNum ++ '-'
 
@@ -208,11 +226,15 @@ class IriParser(val input: ParserInput) extends Parser {
   def `component`: Rule1[Component] = rule { _component ~ EOI }
 
   def _rFollowedByOptQ: Rule1[(Option[Component], Option[Query])] = rule {
-    "?+" ~ _component ~ optional("?=" ~ _query) ~> ((c: Component, q: Option[Query]) => Some(c) -> q)
+    "?+" ~ _component ~ optional("?=" ~ _queryNonEmpty) ~> ((c: Component, q: Option[Query]) => Some(c) -> q)
+  }
+
+  def _queryNonEmpty: Rule1[Query] = rule {
+    oneOrMore(_queryElement).separatedBy('&') ~> queryFold
   }
 
   def _qFollowedByOptR: Rule1[(Option[Component], Option[Query])] = rule {
-    "?=" ~ _query ~ optional("?+" ~ _component) ~> ((q: Query, r: Option[Component]) => r -> Some(q))
+    "?=" ~ _queryNonEmpty ~ optional("?+" ~ _component) ~> ((q: Query, r: Option[Component]) => r -> Some(q))
   }
 
   def _rqComponents: Rule1[(Option[Component], Option[Query])] = rule {
@@ -222,9 +244,11 @@ class IriParser(val input: ParserInput) extends Parser {
     })
   }
 
-  def urn: Rule1[Urn] = rule {
+  def _urn: Rule1[Urn] = rule {
     "urn:" ~ _nid ~ ":" ~ _nss ~ _rqComponents ~ optional('#' ~ _fragment) ~> ((nid: Nid, nss: Path, rq: (Option[Component], Option[Query]), f: Option[Fragment]) => Urn(nid, nss, rq._1, rq._2, f))
   }
+
+  def urn: Rule1[Urn] = rule { _urn ~ EOI }
 
   private val nameStartUtfRanges = Set(
     0xC0 to 0xD6,     0xD8 to 0xF6,     0xF8 to 0x2FF,

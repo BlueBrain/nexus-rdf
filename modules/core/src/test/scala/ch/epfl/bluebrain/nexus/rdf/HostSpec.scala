@@ -144,10 +144,6 @@ class HostSpec extends WordSpecLike with Matchers with Inspectors with EitherVal
       Host.named(ucsUp + pct + delims + up).right.value.value shouldEqual (ucsLow + ucsLow + delims + low)
     }
 
-    "fail for empty" in {
-      Host.named("").left.value
-    }
-
     "show" in {
       Host.named(up).right.value.show shouldEqual low
     }

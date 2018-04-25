@@ -187,14 +187,14 @@ object Iri {
     * An absolute Url.
     *
     * @param scheme    the scheme part
-    * @param authority the authority part
+    * @param authority an optional authority part
     * @param path      the path part
     * @param query     an optional query part
     * @param fragment  an optional fragment part
     */
   final case class Url(
       scheme: Scheme,
-      authority: Authority,
+      authority: Option[Authority],
       path: Path,
       query: Option[Query],
       fragment: Option[Fragment]
@@ -243,18 +243,18 @@ object Iri {
       * Constructs an Url from its constituents.
       *
       * @param scheme    the scheme part
-      * @param authority the authority part
+      * @param authority an optional authority part
       * @param path      the path part
       * @param query     an optional query part
       * @param fragment  an optional fragment part
       */
     final def apply(
         scheme: Scheme,
-        authority: Authority,
+        authority: Option[Authority],
         path: Path,
         query: Option[Query],
         fragment: Option[Fragment]
-    ): Url = new Url(scheme, normalize(scheme, authority), path, query, fragment)
+    ): Url = new Url(scheme, authority.map(normalize(scheme, _)), path, query, fragment)
 
     /**
       * Attempt to construct a new Url from the argument validating the structure and the character encodings as per
@@ -286,7 +286,7 @@ object Iri {
         case Some(v) => "#" + v.show
         case _       => ""
       }
-      s"${url.scheme.show}://${url.authority.show}${p.show(url.path)}$query$fragment"
+      s"${url.scheme.show}:${url.authority.map("//" + _.show).getOrElse("")}${p.show(url.path)}$query$fragment"
     }
 
     final implicit val urlEq: Eq[Url] = Eq.fromUniversalEquals
