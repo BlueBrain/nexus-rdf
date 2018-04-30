@@ -1,7 +1,7 @@
 package ch.epfl.bluebrain.nexus.rdf
 
 package object akka {
-  object all extends IriOps with UriOps
-  object iri extends IriOps
-  object uri extends UriOps
+  object all extends IriSyntax with UriSyntax
+  object iri extends IriSyntax
+  object uri extends UriSyntax
 }
