@@ -65,7 +65,7 @@ sealed abstract class Iri extends Product with Serializable {
 
   /**
     * @return the string representation of this Iri as a valid Uri
-    *         (using percent-encoding for the non-ASCII characters)
+    *         (using percent-encoding when required acording to rfc3986)
     */
   def asUri: String
 }
@@ -369,7 +369,8 @@ object Iri {
     }
 
     /**
-      * @return the string representation using percent-encoding for the non-ASCII characters
+      * @return the string representation using percent-encoding for any character that
+      *         is not contained in the Set ''pchar''
       */
     lazy val pctEncoded: String = {
       {
@@ -411,7 +412,8 @@ object Iri {
       value
 
     /**
-      * @return the string representation using percent-encoding for the non-ASCII characters
+      * @return the string representation using percent-encoding for any character that
+      *         is not contained in the Set ''pchar''
       */
     lazy val pctEncoded: String =
       pctEncode(value)
@@ -741,8 +743,8 @@ object Iri {
     def asString: String
 
     /**
-      * @return the string representation of this Path
-      *         using percent-encoding for the non-ASCII characters
+      * @return the string representation using percent-encoding for any character that
+      *         is not contained in the Set ''pchar''
       */
     def pctEncoded: String
   }
@@ -853,8 +855,8 @@ object Iri {
         .mkString("&")
 
     /**
-      * @return the string representation of this Query
-      *         using percent-encoding for the non-ASCII characters
+      * @return the string representation using percent-encoding for any character that
+      *         is not contained in the Set ''pchar''
       */
     def pctEncoded: String =
       value
@@ -1043,7 +1045,8 @@ object Iri {
       value
 
     /**
-      * @return the string representation using percent-encoding for the non-ASCII characters
+      * @return the string representation using percent-encoding for any character that
+      *         is not contained in the Set ''pchar''
       */
     lazy val pctEncoded: String =
       pctEncode(value)
