@@ -8,9 +8,10 @@ import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
 import ch.epfl.bluebrain.nexus.rdf.Iri._
 import org.parboiled2.ErrorFormatter
 import org.parboiled2.Parser.DeliveryScheme.{Either => E}
-
+import java.nio.charset.StandardCharsets.UTF_8
 import scala.collection.immutable.SortedSet
 import scala.collection.{immutable, SeqView, SortedMap}
+import org.parboiled2.CharUtils._
 
 /**
   * An Iri as defined by RFC 3987.
@@ -56,6 +57,17 @@ sealed abstract class Iri extends Product with Serializable {
     * @return Some(this) if this Iri is an Urn, None otherwise
     */
   def asUrn: Option[Urn]
+
+  /**
+    * @return the UTF-8 string representation of this Iri
+    */
+  def asString: String
+
+  /**
+    * @return the string representation of this Iri as a valid Uri
+    *         (using percent-encoding for the non-ASCII characters)
+    */
+  def asUri: String
 }
 
 object Iri {
@@ -132,7 +144,24 @@ object Iri {
     override def asUrn: Option[Urn]              = None
     override def asUrl: Option[Url]              = None
     override def asRelative: Option[RelativeIri] = Some(this)
+
+    override lazy val asString: String = {
+      val a = authority.map("//" + _.asString).getOrElse("")
+      val q = query.map("?" + _.asString).getOrElse("")
+      val f = fragment.map("#" + _.asString).getOrElse("")
+
+      s"$a${path.asString}$q$f"
+    }
+
+    override lazy val asUri: String = {
+      val a = authority.map("//" + _.pctEncoded).getOrElse("")
+      val q = query.map("?" + _.pctEncoded).getOrElse("")
+      val f = fragment.map("#" + _.pctEncoded).getOrElse("")
+
+      s"$a${path.pctEncoded}$q$f"
+    }
   }
+
   object RelativeIri {
 
     /**
@@ -147,25 +176,7 @@ object Iri {
         .run()
         .leftMap(_.format(string, formatter))
 
-    final implicit def relativeIriShow(implicit a: Show[Authority],
-                                       p: Show[Path],
-                                       q: Show[Query],
-                                       f: Show[Fragment]): Show[RelativeIri] = Show.show { ref =>
-      import cats.syntax.show._
-      val query = ref.query match {
-        case Some(v) => "?" + v.show
-        case _       => ""
-      }
-      val fragment = ref.fragment match {
-        case Some(v) => "#" + v.show
-        case _       => ""
-      }
-      val authority = ref.authority match {
-        case Some(auth) => "//" + auth.show
-        case _          => ""
-      }
-      s"$authority${p.show(ref.path)}$query$fragment"
-    }
+    final implicit val relativeIriShow: Show[RelativeIri] = Show.show(_.asUri)
 
     final implicit val relativeIriEq: Eq[RelativeIri] = Eq.fromUniversalEquals
   }
@@ -180,11 +191,8 @@ object Iri {
   }
 
   object AbsoluteIri {
-    final implicit def absoluteIriShow(implicit l: Show[Url], n: Show[Urn]): Show[AbsoluteIri] = Show.show {
-      case u: Url => l.show(u)
-      case u: Urn => n.show(u)
-    }
-    final implicit val absoluteIriEq: Eq[AbsoluteIri] = Eq.fromUniversalEquals
+    final implicit val absoluteIriShow: Show[AbsoluteIri] = Show.show(_.asUri)
+    final implicit val absoluteIriEq: Eq[AbsoluteIri]     = Eq.fromUniversalEquals
   }
 
   /**
@@ -216,6 +224,22 @@ object Iri {
       */
     def withFragment(fragment: Fragment): Url =
       copy(fragment = Some(fragment))
+
+    override lazy val asString: String = {
+      val a = authority.map("//" + _.asString).getOrElse("")
+      val q = query.map("?" + _.asString).getOrElse("")
+      val f = fragment.map("#" + _.asString).getOrElse("")
+
+      s"${scheme.value}:$a${path.asString}$q$f"
+    }
+
+    override lazy val asUri: String = {
+      val a = authority.map("//" + _.pctEncoded).getOrElse("")
+      val q = query.map("?" + _.pctEncoded).getOrElse("")
+      val f = fragment.map("#" + _.pctEncoded).getOrElse("")
+
+      s"${scheme.value}:$a${path.pctEncoded}$q$f"
+    }
   }
 
   object Url {
@@ -276,22 +300,7 @@ object Iri {
     private[rdf] def unsafe(string: String): Url =
       new IriParser(string).url.run().right.get
 
-    final implicit def urlShow(implicit s: Show[Scheme],
-                               a: Show[Authority],
-                               p: Show[Path],
-                               q: Show[Query],
-                               f: Show[Fragment]): Show[Url] = Show.show { url =>
-      import cats.syntax.show._
-      val query = url.query match {
-        case Some(v) => "?" + v.show
-        case _       => ""
-      }
-      val fragment = url.fragment match {
-        case Some(v) => "#" + v.show
-        case _       => ""
-      }
-      s"${url.scheme.show}:${url.authority.map("//" + _.show).getOrElse("")}${p.show(url.path)}$query$fragment"
-    }
+    final implicit def urlShow: Show[Url] = Show.show(_.asUri)
 
     final implicit val urlEq: Eq[Url] = Eq.fromUniversalEquals
   }
@@ -348,23 +357,32 @@ object Iri {
     * @param host     the host part
     * @param port     the optional port part
     */
-  final case class Authority(userInfo: Option[UserInfo], host: Host, port: Option[Port])
+  final case class Authority(userInfo: Option[UserInfo], host: Host, port: Option[Port]) {
+
+    /**
+      * @return the UTF-8 representation
+      */
+    lazy val asString: String = {
+      val ui = userInfo.map(_.asString + "@").getOrElse("")
+      val p  = port.map(":" + _.value.toString).getOrElse("")
+      s"$ui${host.asString}$p"
+    }
+
+    /**
+      * @return the string representation using percent-encoding for the non-ASCII characters
+      */
+    lazy val pctEncoded: String = {
+      {
+        val ui = userInfo.map(_.pctEncoded + "@").getOrElse("")
+        val p  = port.map(":" + _.value.toString).getOrElse("")
+        s"$ui${host.pctEncoded}$p"
+      }
+    }
+  }
 
   object Authority {
 
-    final implicit def authorityShow(implicit u: Show[UserInfo], h: Show[Host], p: Show[Port]): Show[Authority] =
-      Show.show { authority =>
-        import cats.syntax.show._
-        val userInfo = authority.userInfo match {
-          case Some(v) => v.show + "@"
-          case _       => ""
-        }
-        val port = authority.port match {
-          case Some(v) => ":" + v.show
-          case _       => ""
-        }
-        s"$userInfo${authority.host.show}$port"
-      }
+    final implicit val authorityShow: Show[Authority] = Show.show(_.asString)
 
     final implicit val authorityEq: Eq[Authority] = Eq.fromUniversalEquals
   }
@@ -385,6 +403,18 @@ object Iri {
       */
     def equalsIgnoreCase(that: UserInfo): Boolean =
       this.value equalsIgnoreCase that.value
+
+    /**
+      * @return the UTF-8 representation
+      */
+    lazy val asString: String =
+      value
+
+    /**
+      * @return the string representation using percent-encoding for the non-ASCII characters
+      */
+    lazy val pctEncoded: String =
+      pctEncode(value)
   }
 
   object UserInfo {
@@ -400,14 +430,14 @@ object Iri {
         .run()
         .leftMap(_.format(string, formatter))
 
-    final implicit val userInfoShow: Show[UserInfo] = Show.show(_.value)
+    final implicit val userInfoShow: Show[UserInfo] = Show.show(_.asString)
     final implicit val userInfoEq: Eq[UserInfo]     = Eq.fromUniversalEquals
   }
 
   /**
     * Host part of an Iri as defined in RFC 3987.
     */
-  sealed abstract class Host extends Product with Serializable {
+  sealed abstract class Host extends Product with Serializable with PctString {
 
     /**
       * @return true if the host is an IPv4 address, false otherwise
@@ -438,11 +468,6 @@ object Iri {
       * @return Some(this) if this is a NamedHost, None otherwise
       */
     def asNamed: Option[NamedHost] = None
-
-    /**
-      * @return a string representation of this host, as specified by RFC 3987.
-      */
-    def asString: String
   }
 
   object Host {
@@ -503,7 +528,7 @@ object Iri {
     final case class IPv4Host private[rdf] (bytes: immutable.Seq[Byte]) extends Host {
       override def isIPv4: Boolean          = true
       override def asIPv4: Option[IPv4Host] = Some(this)
-      override lazy val asString: String    = bytes.map(_ & 0xFF).mkString(".")
+      override lazy val value: String       = bytes.map(_ & 0xFF).mkString(".")
     }
 
     object IPv4Host {
@@ -563,7 +588,7 @@ object Iri {
       override def isIPv6: Boolean          = true
       override def asIPv6: Option[IPv6Host] = Some(this)
 
-      override lazy val asString: String =
+      override lazy val value: String =
         asString(bytes.view)
 
       lazy val asMixedString: String =
@@ -606,7 +631,6 @@ object Iri {
     final case class NamedHost private[rdf] (value: String) extends Host {
       override def isNamed: Boolean           = true
       override def asNamed: Option[NamedHost] = Some(this)
-      override def asString: String           = value
     }
 
     object NamedHost {
@@ -629,13 +653,7 @@ object Iri {
         Eq.fromUniversalEquals
     }
 
-    final implicit def hostShow(implicit ipv4: Show[IPv4Host],
-                                ipv6: Show[IPv6Host],
-                                named: Show[NamedHost]): Show[Host] = Show.show {
-      case v: IPv4Host  => ipv4.show(v)
-      case v: IPv6Host  => ipv6.show(v)
-      case v: NamedHost => named.show(v)
-    }
+    final implicit val hostShow: Show[Host] = Show.show(_.asString)
   }
 
   /**
@@ -716,6 +734,17 @@ object Iri {
       * @return true if this path ends with a slash ('/'), false otherwise
       */
     def endsWithSlash: Boolean = isSlash
+
+    /**
+      * @return the UTF-8 representation of this Path
+      */
+    def asString: String
+
+    /**
+      * @return the string representation of this Path
+      *         using percent-encoding for the non-ASCII characters
+      */
+    def pctEncoded: String
   }
 
   object Path {
@@ -760,6 +789,8 @@ object Iri {
       def asEmpty: Option[Empty]     = Some(this)
       def asSlash: Option[Slash]     = None
       def asSegment: Option[Segment] = None
+      def asString: String           = ""
+      def pctEncoded: String         = ""
     }
 
     /**
@@ -774,6 +805,8 @@ object Iri {
       def asEmpty: Option[Empty]     = None
       def asSlash: Option[Slash]     = Some(this)
       def asSegment: Option[Segment] = None
+      def asString: String           = rest.asString + "/"
+      def pctEncoded: String         = rest.pctEncoded + "/"
     }
 
     /**
@@ -788,13 +821,11 @@ object Iri {
       def asEmpty: Option[Empty]     = None
       def asSlash: Option[Slash]     = None
       def asSegment: Option[Segment] = Some(this)
+      def asString: String           = rest.asString + segment
+      def pctEncoded: String         = rest.pctEncoded + pctEncode(segment)
     }
 
-    final implicit val pathShow: Show[Path] = Show.show {
-      case Empty                  => ""
-      case Slash(rest)            => pathShow.show(rest) + "/"
-      case Segment(segment, rest) => pathShow.show(rest) + segment
-    }
+    final implicit val pathShow: Show[Path] = Show.show(_.asString)
 
     final implicit val pathEq: Eq[Path] = Eq.fromUniversalEquals
   }
@@ -804,7 +835,39 @@ object Iri {
     *
     * @param value a sorted multi map that represents all key -> value pairs
     */
-  final case class Query private[rdf] (value: SortedMap[String, SortedSet[String]])
+  final case class Query private[rdf] (value: SortedMap[String, SortedSet[String]]) {
+
+    /**
+      * @return the UTF-8 representation of this Query
+      */
+    def asString: String =
+      value
+        .map {
+          case (k, s) =>
+            s.map {
+                case v if v.isEmpty => k
+                case v              => s"$k=$v"
+              }
+              .mkString("&")
+        }
+        .mkString("&")
+
+    /**
+      * @return the string representation of this Query
+      *         using percent-encoding for the non-ASCII characters
+      */
+    def pctEncoded: String =
+      value
+        .map {
+          case (k, s) =>
+            s.map {
+                case v if v.isEmpty => pctEncode(k)
+                case v              => s"${pctEncode(k)}=${pctEncode(v)}"
+              }
+              .mkString("&")
+        }
+        .mkString("&")
+  }
 
   object Query {
 
@@ -819,18 +882,7 @@ object Iri {
         .run()
         .leftMap(_.format(string, formatter))
 
-    final implicit val queryShow: Show[Query] =
-      Show.show(
-        _.value
-          .map {
-            case (k, s) =>
-              s.map {
-                  case v if v.isEmpty => k
-                  case v              => s"$k=$v"
-                }
-                .mkString("&")
-          }
-          .mkString("&"))
+    final implicit val queryShow: Show[Query] = Show.show(_.asString)
 
     final implicit val queryEq: Eq[Query] =
       Eq.fromUniversalEquals
@@ -841,7 +893,7 @@ object Iri {
     *
     * @param value the string value of the fragment
     */
-  final case class Fragment private[rdf] (value: String)
+  final case class Fragment private[rdf] (value: String) extends PctString
 
   object Fragment {
 
@@ -856,7 +908,7 @@ object Iri {
         .run()
         .leftMap(_.format(string, formatter))
 
-    final implicit val fragmentShow: Show[Fragment] = Show.show(_.value)
+    final implicit val fragmentShow: Show[Fragment] = Show.show(_.asString)
     final implicit val fragmentEq: Eq[Fragment]     = Eq.fromUniversalEquals
   }
 
@@ -865,7 +917,7 @@ object Iri {
     *
     * @param value the string value of the fragment
     */
-  final case class Nid private[rdf] (value: String)
+  final case class Nid private[rdf] (value: String) extends PctString
 
   object Nid {
 
@@ -880,14 +932,14 @@ object Iri {
         .run()
         .leftMap(_.format(string, formatter))
 
-    final implicit val nidShow: Show[Nid] = Show.show(_.value)
+    final implicit val nidShow: Show[Nid] = Show.show(_.asString)
     final implicit val nidEq: Eq[Nid]     = Eq.fromUniversalEquals
   }
 
   /**
     * Urn R or Q component as defined by RFC 8141.
     */
-  final case class Component private[rdf] (value: String)
+  final case class Component private[rdf] (value: String) extends PctString
 
   object Component {
 
@@ -903,7 +955,7 @@ object Iri {
         .run()
         .leftMap(_.format(string, formatter))
 
-    final implicit val componentShow: Show[Component] = Show.show(_.value)
+    final implicit val componentShow: Show[Component] = Show.show(_.asString)
     final implicit val componentEq: Eq[Component]     = Eq.fromUniversalEquals
   }
 
@@ -922,6 +974,21 @@ object Iri {
     override def asUrl: Option[Url] = None
     override def isUrn: Boolean     = true
     override def asUrn: Option[Urn] = Some(this)
+
+    override lazy val asString: String = {
+      val rstr = r.map("?+" + _.asString).getOrElse("")
+      val qstr = q.map("?=" + _.asString).getOrElse("")
+      val f    = fragment.map("#" + _.asString).getOrElse("")
+      s"urn:${nid.asString}:${nss.asString}$rstr$qstr$f"
+    }
+
+    override lazy val asUri: String = {
+      val rstr = r.map("?+" + _.pctEncoded).getOrElse("")
+      val qstr = q.map("?=" + _.pctEncoded).getOrElse("")
+      val f    = fragment.map("#" + _.pctEncoded).getOrElse("")
+      s"urn:${nid.pctEncoded}:${nss.pctEncoded}$rstr$qstr$f"
+    }
+
   }
 
   object Urn {
@@ -938,27 +1005,7 @@ object Iri {
         .run()
         .leftMap(_.format(string, formatter))
 
-    final implicit def urnShow(implicit
-                               ni: Show[Nid],
-                               ns: Show[Path],
-                               c: Show[Component],
-                               q: Show[Query],
-                               f: Show[Fragment]): Show[Urn] = Show.show { urn =>
-      import cats.syntax.show._
-      val rstr = urn.r match {
-        case Some(v) => "?+" + v.show
-        case _       => ""
-      }
-      val qstr = urn.q match {
-        case Some(v) => "?=" + v.show
-        case _       => ""
-      }
-      val fragment = urn.fragment match {
-        case Some(v) => "#" + v.show
-        case _       => ""
-      }
-      s"urn:${urn.nid.show}:${ns.show(urn.nss)}$rstr$qstr$fragment"
-    }
+    final implicit val urnShow: Show[Urn] = Show.show(_.asUri)
 
     final implicit val urnEq: Eq[Urn] = Eq.fromUniversalEquals
   }
@@ -970,4 +1017,35 @@ object Iri {
       case url: Url       => url.show
       case urn: Urn       => urn.show
     }
+
+  private val `sub-delims` = Set('!', '$', '&', '\'', '(', ')', '*', '+', ',', ';', '=').map(_.toByte)
+  private val unreserverd = Set('-', '_', '.', '~').map(_.toByte) ++ ('a' to 'z').map(_.toByte).toSet ++ ('A' to 'Z')
+    .map(_.toByte)
+    .toSet ++ ('0' to '9').map(_.toByte).toSet
+  private val pchar = `sub-delims` ++ unreserverd + ':'.toByte + '@'.toByte
+
+  private def pctEncode(s: String) = {
+    val in = s.getBytes(UTF_8)
+    in.foldLeft(new StringBuilder()) {
+        case (sb, b) if pchar.contains(b) => sb.append(b.toChar)
+        case (sb, b)                      => sb.append("%").append(upperHexDigit((b >> 4) & 0xF)).append(upperHexDigit(b & 0xF))
+      }
+      .toString()
+  }
+
+  private[rdf] trait PctString {
+    def value: String
+
+    /**
+      * @return the UTF-8 representation
+      */
+    lazy val asString: String =
+      value
+
+    /**
+      * @return the string representation using percent-encoding for the non-ASCII characters
+      */
+    lazy val pctEncoded: String =
+      pctEncode(value)
+  }
 }

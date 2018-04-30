@@ -85,6 +85,7 @@ class NodeSpec extends WordSpecLike with Matchers with EitherValues with Inspect
         (Node.blank("123").right.value, "_:123"),
         (Node.iri("https://a.b").right.value, "https://a.b"),
         (Node.iri("urn:ab:$").right.value, "urn:ab:$"),
+        (Node.iri("urn:ab:£").right.value, "urn:ab:%C2%A3"),
         (Node.literal(2), """"2"^^<http://www.w3.org/2001/XMLSchema#integer>"""),
         (Node.literal(2.toLong), """"2"^^<http://www.w3.org/2001/XMLSchema#long>"""),
         (Node.literal(2.2), """"2.2"^^<http://www.w3.org/2001/XMLSchema#decimal>"""),
@@ -129,7 +130,7 @@ class NodeSpec extends WordSpecLike with Matchers with EitherValues with Inspect
       val cases = List[(Either[String, IriOrBNode], Either[String, IriOrBNode])](
         (Node.blank("123"), Node.blank("123")),
         (Node.iri("https://a.b"), Iri.absolute("https://a.b:443").map(Node.iri)),
-        (Node.iri("urn:ab:$"), Node.iri("urn:ab:%24"))
+        (Node.iri("urn:ab:£"), Node.iri("urn:ab:%C2%A3"))
       )
       forAll(cases) {
         case (lhs, rhs) =>

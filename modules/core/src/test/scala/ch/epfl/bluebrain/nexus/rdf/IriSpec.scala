@@ -12,9 +12,16 @@ class IriSpec extends WordSpecLike with Matchers with Inspectors with EitherValu
       "//me:me@hOst#frag"                   -> "//me:me@host#frag",
       "/some/:/path"                        -> "/some/:/path"
     )
+    val casesRelativeEncoded = List(
+      "/some/!/path/€/other" -> "/some/!/path/%E2%82%AC/other"
+    )
     val casesUrn = List(
       "urn:uUid:6e8bc430-9c3a-11d9-9669-0800200c9a66"      -> "urn:uuid:6e8bc430-9c3a-11d9-9669-0800200c9a66",
       "urn:example:a%C2%A3/b%C3%86c//:://?=a=b"            -> "urn:example:a£/bÆc//:://?=a=b",
+      "urn:lex:eu:council:directive:2010-03-09;2010-19-UE" -> "urn:lex:eu:council:directive:2010-03-09;2010-19-UE"
+    )
+    val casesUrnEncoded = List(
+      "urn:example:a%C2%A3/b%C3%86c//:://?=a=£"            -> "urn:example:a%C2%A3/b%C3%86c//:://?=a=%C2%A3",
       "urn:lex:eu:council:directive:2010-03-09;2010-19-UE" -> "urn:lex:eu:council:directive:2010-03-09;2010-19-UE"
     )
     val casesUrl = List(
@@ -23,12 +30,16 @@ class IriSpec extends WordSpecLike with Matchers with Inspectors with EitherValu
       "hTtp://hOst%C2%A3:80/a%C2%A3/b%C3%86c//:://" -> "http://host£/a£/bÆc//:://"
     )
 
+    val casesUrlEncoded = List(
+      "hTtp://hOst%C2%A3:80/a%C2%A3/b%C3%86c//%3A%3A//" -> "http://host%C2%A3/a%C2%A3/b%C3%86c//:://"
+    )
+
     "be parsed correctly into a relative uri" in {
       forAll(casesRelative) {
         case (in, expected) =>
           val iri = Iri(in).right.value
           iri shouldEqual Iri.relative(in).right.value
-          iri.show shouldEqual expected
+          iri.asString shouldEqual expected
       }
     }
 
@@ -37,7 +48,7 @@ class IriSpec extends WordSpecLike with Matchers with Inspectors with EitherValu
         case (in, expected) =>
           val iri = Iri(in).right.value
           iri shouldEqual Iri.urn(in).right.value
-          iri.show shouldEqual expected
+          iri.asString shouldEqual expected
       }
     }
 
@@ -46,7 +57,28 @@ class IriSpec extends WordSpecLike with Matchers with Inspectors with EitherValu
         case (in, expected) =>
           val iri = Iri(in).right.value
           iri shouldEqual Iri.url(in).right.value
-          iri.show shouldEqual expected
+          iri.asString shouldEqual expected
+      }
+    }
+
+    "show url" in {
+      forAll(casesUrlEncoded) {
+        case (in, expected) =>
+          Iri(in).right.value.show shouldEqual expected
+      }
+    }
+
+    "show urn" in {
+      forAll(casesUrnEncoded) {
+        case (in, expected) =>
+          Iri(in).right.value.show shouldEqual expected
+      }
+    }
+
+    "show relative url" in {
+      forAll(casesRelativeEncoded) {
+        case (in, expected) =>
+          Iri(in).right.value.show shouldEqual expected
       }
     }
 
