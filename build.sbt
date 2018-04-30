@@ -25,18 +25,22 @@ scalafmt: {
  */
 
 // Dependency versions
-val catsVersion      = "1.1.0"
-val circeVersion     = "0.9.3"
-val parboiledVersion = "2.1.4"
-val jenaVersion      = "3.7.0"
-val scalaTestVersion = "3.0.5"
+val akkaHttpVersion   = "10.1.1"
+val akkaStreamVersion = "2.5.12"
+val catsVersion       = "1.1.0"
+val circeVersion      = "0.9.3"
+val parboiledVersion  = "2.1.4"
+val jenaVersion       = "3.7.0"
+val scalaTestVersion  = "3.0.5"
 
 // Dependency modules
-lazy val catsCore   = "org.typelevel"   %% "cats-core"  % catsVersion
-lazy val circeCore  = "io.circe"        %% "circe-core" % circeVersion
-lazy val jenaCore   = "org.apache.jena" % "jena-core"   % jenaVersion
-lazy val parboiled2 = "org.parboiled"   %% "parboiled"  % parboiledVersion
-lazy val scalaTest  = "org.scalatest"   %% "scalatest"  % scalaTestVersion
+lazy val akkaHttpCore = "com.typesafe.akka" %% "akka-http-core" % akkaHttpVersion
+lazy val akkaStream   = "com.typesafe.akka" %% "akka-stream"    % akkaStreamVersion
+lazy val catsCore     = "org.typelevel"     %% "cats-core"      % catsVersion
+lazy val circeCore    = "io.circe"          %% "circe-core"     % circeVersion
+lazy val jenaCore     = "org.apache.jena"   % "jena-core"       % jenaVersion
+lazy val parboiled2   = "org.parboiled"     %% "parboiled"      % parboiledVersion
+lazy val scalaTest    = "org.scalatest"     %% "scalatest"      % scalaTestVersion
 
 lazy val core = project
   .in(file("modules/core"))
@@ -64,6 +68,15 @@ lazy val jena = project
     libraryDependencies ++= Seq(jenaCore, scalaTest % Test)
   )
 
+lazy val akka = project
+  .in(file("modules/akka"))
+  .dependsOn(core)
+  .settings(
+    name                := "rdf-akka",
+    moduleName          := "rdf-akka",
+    libraryDependencies ++= Seq(akkaHttpCore, akkaStream, scalaTest % Test)
+  )
+
 lazy val root = project
   .in(file("."))
   .settings(noPublish)
@@ -71,7 +84,7 @@ lazy val root = project
     name       := "rdf",
     moduleName := "rdf"
   )
-  .aggregate(core, circe, jena)
+  .aggregate(core, circe, jena, akka)
 
 /* ********************************************************
  ******************** Grouped Settings ********************
