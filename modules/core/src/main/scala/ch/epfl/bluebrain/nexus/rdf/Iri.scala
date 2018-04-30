@@ -108,6 +108,10 @@ object Iri {
   final def apply(string: String): Either[String, Iri] =
     urn(string) orElse url(string) orElse relative(string)
 
+  @SuppressWarnings(Array("EitherGet"))
+  private[rdf] final def unsafe(string: String): Iri =
+    apply(string).right.get
+
   /**
     * A relative IRI.
     *
