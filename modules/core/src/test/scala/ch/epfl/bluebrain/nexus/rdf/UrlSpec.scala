@@ -12,12 +12,17 @@ class UrlSpec extends WordSpecLike with Matchers with Inspectors with EitherValu
       val cases = List(
         "hTtps://me:me@hOst:443/a/b?a&e=f&b=c#frag"   -> "https://me:me@host/a/b?a&b=c&e=f#frag",
         "hTtps://me:me@hOst#frag"                     -> "https://me:me@host#frag",
+        "hTtps://me:me@hOst?"                         -> "https://me:me@host?",
         "hTtp://hOst%C2%A3:80/a%C2%A3/b%C3%86c//:://" -> "http://host£/a£/bÆc//:://",
-        "hTtp://1.2.3.4:80/a%C2%A3/b%C3%86c//:://"    -> "http://1.2.3.4/a£/bÆc//:://"
+        "hTtp://1.2.3.4:80/a%C2%A3/b%C3%86c//:://"    -> "http://1.2.3.4/a£/bÆc//:://",
+        "hTtp://1.2.3.4:80/a%C2%A3/b%C3%86c//:://"    -> "http://1.2.3.4/a£/bÆc//:://",
+        "http://google.com/#"                         -> "http://google.com/#",
+        "FiLe:///bin/bash"                            -> "file:///bin/bash",
+        "FiLe:/bin/bash"                              -> "file:/bin/bash",
+        "MailtO:test@example.com"                     -> "mailto:test@example.com"
       )
       forAll(cases) {
-        case (in, expected) =>
-          Url(in).right.value.show shouldEqual expected
+        case (in, expected) => Url(in).right.value.show shouldEqual expected
       }
     }
     val withHash = Iri.absolute("hTtp://1.2.3.4:80/a%C2%A3/b%C3%86c//:://#hash").right

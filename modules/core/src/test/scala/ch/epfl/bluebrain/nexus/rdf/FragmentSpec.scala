@@ -18,8 +18,8 @@ class FragmentSpec extends WordSpecLike with Matchers with Inspectors with Eithe
       Fragment(pct + ucs + delims + rest).right.value.value shouldEqual ucs + ucs + delims + rest
     }
 
-    "fail for empty" in {
-      Fragment("").left.value
+    "succeed for empty" in {
+      Fragment("").right.value
     }
 
     "show" in {
