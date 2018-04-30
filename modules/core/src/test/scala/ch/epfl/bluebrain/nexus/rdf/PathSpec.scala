@@ -80,6 +80,12 @@ class PathSpec extends WordSpecLike with Matchers with Inspectors with EitherVal
     "not be slash" in {
       abcd.right.value.isSlash shouldEqual false
     }
+    "end with slash" in {
+      Path("/a/b//c/d/").right.value.endsWithSlash shouldEqual true
+    }
+    "not end with slash" in {
+      abcd.right.value.endsWithSlash shouldEqual false
+    }
     "show decoded" in {
       Path("/a%C2%A3/b%C3%86c//:://").right.value.show shouldEqual "/a£/bÆc//:://"
     }

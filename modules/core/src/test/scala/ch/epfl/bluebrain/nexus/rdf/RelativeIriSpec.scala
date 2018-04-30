@@ -59,6 +59,10 @@ class RelativeIriSpec extends WordSpecLike with Matchers with Inspectors with Ei
       withHash.value.isAbsolute shouldEqual false
     }
 
+    "not return an absolute Iri" in {
+      withHash.value.asAbsolute shouldEqual None
+    }
+
     "not be an Url" in {
       withHash.value.isUrl shouldEqual false
     }
