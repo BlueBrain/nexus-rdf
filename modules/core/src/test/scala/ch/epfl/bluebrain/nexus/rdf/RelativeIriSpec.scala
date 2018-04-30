@@ -10,15 +10,20 @@ class RelativeIriSpec extends WordSpecLike with Matchers with Inspectors with Ei
   "A RelativeIri" should {
     "be parsed correctly" in {
       val cases = List(
-        "//me:me@hOst:443/a/b?a&e=f&b=c#frag"    -> "//me:me@host:443/a/b?a&b=c&e=f#frag",
-        "//me:me@hOst#frag"                      -> "//me:me@host#frag",
-        "/some/:/path"                           -> "/some/:/path",
-        "/:/some/path"                           -> "/:/some/path",
-        "some/:/path"                            -> "some/:/path",
-        "?q=v"                                   -> "?q=v",
-        "#frag"                                  -> "#frag",
-        "//hOst%C2%A3:80/a%C2%A3/b%C3%86c//:://" -> "//host£:80/a£/bÆc//:://",
-        "//1.2.3.4:80/a%C2%A3/b%C3%86c//:://"    -> "//1.2.3.4:80/a£/bÆc//:://"
+        "//me:me@hOst:443/a/b?a&e=f&b=c#frag" -> "//me:me@host:443/a/b?a&b=c&e=f#frag",
+        "//me:me@hOst#frag"                   -> "//me:me@host#frag",
+        "/some/:/path"                        -> "/some/:/path",
+        "a/../b/./c"                          -> "/b/c",
+        "../../../"                           -> "../../../",
+        "/../../"                             -> "/",
+        "/:/some/path"                        -> "/:/some/path",
+        "some/:/path"                         -> "some/:/path",
+        "?q=v"                                -> "?q=v",
+        "#frag"                               -> "#frag",
+        "//hOst:443/a/b/../c"                 -> "//host:443/a/c",
+        "//1.2.3.4:80/a%C2%A3/b%C3%86c//:://" -> "//1.2.3.4:80/a£/bÆc//:://",
+        "//1.2.3.4:80/a%C2%A3/b%C3%86c//:://" -> "//1.2.3.4:80/a£/bÆc//:://",
+        "//1.2.3.4:80/a%C2%A3/b%C3%86c//:://" -> "//1.2.3.4:80/a£/bÆc//:://"
       )
       forAll(cases) {
         case (in, expected) => RelativeIri(in).right.value.show shouldEqual expected
@@ -63,8 +68,8 @@ class RelativeIriSpec extends WordSpecLike with Matchers with Inspectors with Ei
     }
 
     "eq" in {
-      val lhs = RelativeIri("/?q=asd#1").right.value
-      val rhs = RelativeIri("/?q=asd#1").right.value
+      val lhs = RelativeIri("a/./b/../?q=asd#1").right.value
+      val rhs = RelativeIri("a/?q=asd#1").right.value
       Eq.eqv(lhs, rhs) shouldEqual true
     }
   }

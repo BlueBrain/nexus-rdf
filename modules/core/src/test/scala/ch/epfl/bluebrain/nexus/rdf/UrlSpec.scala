@@ -19,7 +19,11 @@ class UrlSpec extends WordSpecLike with Matchers with Inspectors with EitherValu
         "http://google.com/#"                         -> "http://google.com/#",
         "FiLe:///bin/bash"                            -> "file:///bin/bash",
         "FiLe:/bin/bash"                              -> "file:/bin/bash",
-        "MailtO:test@example.com"                     -> "mailto:test@example.com"
+        "MailtO:test@example.com"                     -> "mailto:test@example.com",
+        "http://google.com/.."                        -> "http://google.com",
+        "http://google.com/./"                        -> "http://google.com/",
+        "http://google.com/a/../search/."             -> "http://google.com/search",
+        "http://google.com/a/../search/.."            -> "http://google.com"
       )
       forAll(cases) {
         case (in, expected) => Url(in).right.value.show shouldEqual expected
@@ -56,8 +60,8 @@ class UrlSpec extends WordSpecLike with Matchers with Inspectors with EitherValu
     }
 
     "eq" in {
-      val lhs = Url("hTtp://gooGle.com/?q=asd#1").right.value
-      val rhs = Url("http://google.com/?q=asd#1").right.value
+      val lhs = Url("hTtp://gooGle.com/a/../search?q=asd#1").right.value
+      val rhs = Url("http://google.com/search?q=asd#1").right.value
       Eq.eqv(lhs, rhs) shouldEqual true
     }
   }
