@@ -26,7 +26,7 @@ class UrlSpec extends WordSpecLike with Matchers with Inspectors with EitherValu
         "http://google.com/a/../search/.."            -> "http://google.com"
       )
       forAll(cases) {
-        case (in, expected) => Url(in).right.value.show shouldEqual expected
+        case (in, expected) => Url(in).right.value.asString shouldEqual expected
       }
     }
     val withHash = Iri.absolute("hTtp://1.2.3.4:80/a%C2%A3/b%C3%86c//:://#hash").right
@@ -39,8 +39,20 @@ class UrlSpec extends WordSpecLike with Matchers with Inspectors with EitherValu
       withHash.value.isUrl shouldEqual true
     }
 
+    "show" in {
+      Iri
+        .absolute("hTtp://1.2.3.4:80/a%C2%A3/b%C3%86c/£/#hash")
+        .right
+        .value
+        .show shouldEqual "http://1.2.3.4/a%C2%A3/b%C3%86c/%C2%A3/#hash"
+    }
+
     "return an optional self" in {
       withHash.value.asUrl shouldEqual Some(withHash.value)
+    }
+
+    "return an optional self from asAbsolute" in {
+      withHash.value.asAbsolute shouldEqual Some(withHash.value)
     }
 
     "not be an Urn" in {

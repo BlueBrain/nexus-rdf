@@ -1,7 +1,6 @@
 package ch.epfl.bluebrain.nexus.rdf
 
 import cats.kernel.Eq
-import cats.syntax.show._
 import ch.epfl.bluebrain.nexus.rdf.Iri._
 import org.scalatest.{EitherValues, Inspectors, Matchers, WordSpecLike}
 
@@ -26,7 +25,7 @@ class RelativeIriSpec extends WordSpecLike with Matchers with Inspectors with Ei
         "//1.2.3.4:80/a%C2%A3/b%C3%86c//:://" -> "//1.2.3.4:80/a£/bÆc//:://"
       )
       forAll(cases) {
-        case (in, expected) => RelativeIri(in).right.value.show shouldEqual expected
+        case (in, expected) => RelativeIri(in).right.value.asString shouldEqual expected
       }
     }
 
@@ -53,6 +52,14 @@ class RelativeIriSpec extends WordSpecLike with Matchers with Inspectors with Ei
 
     "not be an Urn" in {
       withHash.value.isUrn shouldEqual false
+    }
+
+    "not be an absolute Iri" in {
+      withHash.value.isAbsolute shouldEqual false
+    }
+
+    "not return an absolute Iri" in {
+      withHash.value.asAbsolute shouldEqual None
     }
 
     "not be an Url" in {
