@@ -24,7 +24,7 @@ class UrnSpec extends WordSpecLike with Matchers with Inspectors with EitherValu
       // format: on
       forAll(cases) {
         case (in, expected) =>
-          Urn(in).right.value.show shouldEqual expected
+          Urn(in).right.value.asString shouldEqual expected
       }
     }
 
@@ -45,8 +45,20 @@ class UrnSpec extends WordSpecLike with Matchers with Inspectors with EitherValu
       withHash.value.isUrn shouldEqual true
     }
 
+    "show" in {
+      Iri
+        .absolute("urn:example:a£/bÆc//:://?=a=b#")
+        .right
+        .value
+        .show shouldEqual "urn:example:a%C2%A3/b%C3%86c//:://?=a=b#"
+    }
+
     "return an optional self" in {
       withHash.value.asUrn shouldEqual Some(withHash.value)
+    }
+
+    "return an optional self from asAbsolute" in {
+      withHash.value.asAbsolute shouldEqual Some(withHash.value)
     }
 
     "not be an Url" in {

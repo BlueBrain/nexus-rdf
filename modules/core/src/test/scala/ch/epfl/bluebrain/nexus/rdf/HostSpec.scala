@@ -148,6 +148,14 @@ class HostSpec extends WordSpecLike with Matchers with Inspectors with EitherVal
       Host.named(up).right.value.show shouldEqual low
     }
 
+    "be named" in {
+      Host.named(up).right.value.isNamed shouldEqual true
+    }
+
+    "return an optional self" in {
+      Host.named(up).right.value.asNamed shouldEqual Some(Host.named(up).right.value)
+    }
+
     "eq" in {
       Eq.eqv(Host.named(ucsUp).right.value, Host.named(ucsLow).right.value) shouldEqual true
     }
