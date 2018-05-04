@@ -31,6 +31,7 @@ val catsVersion       = "1.1.0"
 val circeVersion      = "0.9.3"
 val parboiledVersion  = "2.1.4"
 val jenaVersion       = "3.7.0"
+val scalaGraphVersion = "1.12.5"
 val scalaTestVersion  = "3.0.5"
 
 // Dependency modules
@@ -40,6 +41,7 @@ lazy val catsCore     = "org.typelevel"     %% "cats-core"      % catsVersion
 lazy val circeCore    = "io.circe"          %% "circe-core"     % circeVersion
 lazy val jenaCore     = "org.apache.jena"   % "jena-core"       % jenaVersion
 lazy val parboiled2   = "org.parboiled"     %% "parboiled"      % parboiledVersion
+lazy val scalaGraph   = "org.scala-graph"   %% "graph-core"     % scalaGraphVersion
 lazy val scalaTest    = "org.scalatest"     %% "scalatest"      % scalaTestVersion
 
 lazy val core = project
@@ -47,7 +49,7 @@ lazy val core = project
   .settings(
     name                := "rdf-core",
     moduleName          := "rdf-core",
-    libraryDependencies ++= Seq(catsCore, parboiled2, scalaTest % Test)
+    libraryDependencies ++= Seq(catsCore, parboiled2, scalaGraph, scalaTest % Test)
   )
 
 lazy val circe = project
