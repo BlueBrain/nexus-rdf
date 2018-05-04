@@ -77,8 +77,10 @@ final class Graph private[rdf] (private val underlying: G[Node, LkDiEdge]) {
     * @param spo the triple to add
     * @return a new graph made up of all of the triples of this graph and the argument triple
     */
-  def +(spo: (IriOrBNode, IriNode, Node)): Graph =
-    add(spo._1, spo._2, spo._3)
+  def +(spo: (IriOrBNode, IriNode, Node)): Graph = {
+    val (s, p, o) = spo
+    add(s, p, o)
+  }
 
   /**
     * Removes the triple identified by (s, p, o) arguments if it's contained.
@@ -99,8 +101,10 @@ final class Graph private[rdf] (private val underlying: G[Node, LkDiEdge]) {
     * @param spo the triple to remove
     * @return a new graph made up of all of the triples of this graph except the argument triple
     */
-  def -(spo: (IriOrBNode, IriNode, Node)): Graph =
-    remove(spo._1, spo._2, spo._3)
+  def -(spo: (IriOrBNode, IriNode, Node)): Graph = {
+    val (s, p, o) = spo
+    remove(s, p, o)
+  }
 
   /**
     * Joins this graph with that graph.

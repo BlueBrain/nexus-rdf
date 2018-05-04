@@ -78,9 +78,9 @@ class GraphSpec extends WordSpecLike with Matchers with EitherValues {
     }
 
     "be cyclic" in {
-      val g = Graph((a, hasa, b"1"), (b"1", isa, string), (b"1", hasa, a))
-      g.isCyclic shouldEqual true
-      g.isAcyclic shouldEqual false
+      val g3 = Graph((a, hasa, b"1"), (b"1", isa, string), (b"1", hasa, a))
+      g3.isCyclic shouldEqual true
+      g3.isAcyclic shouldEqual false
     }
 
     "be acyclic" in {
@@ -117,8 +117,16 @@ class GraphSpec extends WordSpecLike with Matchers with EitherValues {
     }
 
     "eq" in {
-      val fst = Graph((b"1", p.other, true): Triple)
-      val snd = Graph((b"1", p.other, true): Triple)
+      val fst = Graph(
+        (b"1", p.other, true),
+        (b"2", p.other, 2),
+        (b"3", p.other, 3)
+      )
+      val snd = Graph(
+        (b"1", p.other, true),
+        (b"3", p.other, 3),
+        (b"2", p.other, 2)
+      )
       Eq.eqv(fst, snd) shouldEqual true
     }
 
