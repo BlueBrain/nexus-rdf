@@ -51,11 +51,11 @@ object jena {
         .getOrElse(Literal(literal.getLexicalForm))
 
   final implicit def jenaRDFNodeToNode(rdfNode: RDFNode): Node = {
-    if (rdfNode.isLiteral) {
+    if (rdfNode.isLiteral)
       jenaLiteralToLiteral(rdfNode.asLiteral())
-    } else {
+    else
       url"${rdfNode.asResource.getURI}"
-    }
+
   }
 
   final implicit def toJena(graph: Graph): Model =
