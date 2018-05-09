@@ -1,13 +1,11 @@
 package ch.epfl.bluebrain.nexus.rdf.syntax
 
-import ch.epfl.bluebrain.nexus.rdf.Node.Literal.{rdfsyntax, xsd, LanguageTag}
-import ch.epfl.bluebrain.nexus.rdf.{Graph, Node}
+import ch.epfl.bluebrain.nexus.rdf.Node.Literal.{LanguageTag, rdfsyntax, xsd}
 import ch.epfl.bluebrain.nexus.rdf.Node.{BNode, IriNode, IriOrBNode, Literal}
-import org.apache.jena.rdf.model._
-import org.apache.jena.rdf.model.{Literal => JenaLiteral}
-import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
+import ch.epfl.bluebrain.nexus.rdf.{Graph, Node}
 import org.apache.jena.datatypes.BaseDatatype
 import org.apache.jena.rdf.model.impl.ResourceImpl
+import org.apache.jena.rdf.model.{Literal => JenaLiteral, _}
 
 import scala.collection.JavaConverters._
 
