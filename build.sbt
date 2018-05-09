@@ -40,6 +40,7 @@ lazy val akkaStream   = "com.typesafe.akka" %% "akka-stream"    % akkaStreamVers
 lazy val catsCore     = "org.typelevel"     %% "cats-core"      % catsVersion
 lazy val circeCore    = "io.circe"          %% "circe-core"     % circeVersion
 lazy val jenaCore     = "org.apache.jena"   % "jena-core"       % jenaVersion
+lazy val jenaArq      = "org.apache.jena"   % "jena-arq"        % jenaVersion
 lazy val parboiled2   = "org.parboiled"     %% "parboiled"      % parboiledVersion
 lazy val scalaGraph   = "org.scala-graph"   %% "graph-core"     % scalaGraphVersion
 lazy val scalaTest    = "org.scalatest"     %% "scalatest"      % scalaTestVersion
@@ -67,7 +68,7 @@ lazy val jena = project
   .settings(
     name                := "rdf-jena",
     moduleName          := "rdf-jena",
-    libraryDependencies ++= Seq(jenaCore, scalaTest % Test)
+    libraryDependencies ++= Seq(jenaCore, jenaArq, scalaTest % Test)
   )
 
 lazy val akka = project

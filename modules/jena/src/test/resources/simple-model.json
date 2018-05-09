@@ -1,0 +1,7 @@
+{
+  "@context": "http://schema.org/",
+  "@type": "Person",
+  "@id": "http://nexus.example.com/john-doe",
+  "name": "John Doe",
+  "birthDate": "1999-04-09T20:00Z"
+}
