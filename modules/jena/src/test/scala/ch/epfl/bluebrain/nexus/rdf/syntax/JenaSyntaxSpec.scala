@@ -39,7 +39,6 @@ class JenaSyntaxSpec extends WordSpecLike with Matchers {
     }
 
     "convert blank node to Jena model" in {
-
       val id = UUID.randomUUID().toString
       (b"$id": model.Resource).getId.getLabelString shouldEqual id
     }
@@ -49,38 +48,31 @@ class JenaSyntaxSpec extends WordSpecLike with Matchers {
         "http://nexus.example.com/example-property")
     }
 
+    // format: off
     "convert Graph to Jena Model" in {
       val graph: Model = Graph(
-        (url"http://nexus.example.com/john-doe", url"http://schema.org/name", "John Doe"),
-        (url"http://nexus.example.com/john-doe",
-         url"http://schema.org/birthDate",
-         Literal("1999-04-09T20:00Z", url"http://schema.org/Date".value)),
-        (url"http://nexus.example.com/john-doe",
-         url"http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
-         url"http://schema.org/Person")
+        (url"http://nexus.example.com/john-doe", url"http://schema.org/name",                           "John Doe"),
+        (url"http://nexus.example.com/john-doe", url"http://schema.org/birthDate",                      Literal("1999-04-09T20:00Z", url"http://schema.org/Date".value)),
+        (url"http://nexus.example.com/john-doe", url"http://www.w3.org/1999/02/22-rdf-syntax-ns#type",  url"http://schema.org/Person")
       )
       val model = ModelFactory.createDefaultModel()
       model.read(getClass.getResourceAsStream("/simple-model.json"), "http://nexus.example.com/", "JSONLD")
 
       graph.triples shouldEqual model.triples
-
     }
+    // format: on
 
     "convert string literal from Jena model" in {
       (ResourceFactory.createStringLiteral("testLiteral"): Literal) shouldEqual Literal("testLiteral")
-
     }
 
     "convert typed literal from Jena model" in {
-
-      (ResourceFactory.createTypedLiteral("1999-04-09T20:00Z", new BaseDatatype("http://schema.org/Date")): Literal) shouldEqual Literal(
-        "1999-04-09T20:00Z",
-        url"http://schema.org/Date".value)
-
+      val convertedLiteral: Literal =
+        ResourceFactory.createTypedLiteral("1999-04-09T20:00Z", new BaseDatatype("http://schema.org/Date"))
+      convertedLiteral shouldEqual Literal("1999-04-09T20:00Z", url"http://schema.org/Date".value)
     }
 
     "convert literal with lang from Jena model" in {
-
       (ResourceFactory.createLangLiteral("bonjour", "fr"): Literal) shouldEqual Literal("bonjour",
                                                                                         LanguageTag("fr").toOption.get)
     }
@@ -101,20 +93,16 @@ class JenaSyntaxSpec extends WordSpecLike with Matchers {
     }
 
     "convert Jena Model to Graph" in {
-
       val model = ModelFactory.createDefaultModel()
       model.read(getClass.getResourceAsStream("/simple-model.json"), "http://nexus.example.com/", "JSONLD")
 
+      // format: off
       model.triples shouldEqual Set[Graph.Triple](
-        (url"http://nexus.example.com/john-doe", url"http://schema.org/name", "John Doe"),
-        (url"http://nexus.example.com/john-doe",
-         url"http://schema.org/birthDate",
-         Literal("1999-04-09T20:00Z", url"http://schema.org/Date".value)),
-        (url"http://nexus.example.com/john-doe",
-         url"http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
-         url"http://schema.org/Person")
+        (url"http://nexus.example.com/john-doe", url"http://schema.org/name",                           "John Doe"),
+        (url"http://nexus.example.com/john-doe", url"http://schema.org/birthDate",                      Literal("1999-04-09T20:00Z", url"http://schema.org/Date".value)),
+        (url"http://nexus.example.com/john-doe", url"http://www.w3.org/1999/02/22-rdf-syntax-ns#type",  url"http://schema.org/Person")
       )
-
+      // format: off
     }
 
   }
