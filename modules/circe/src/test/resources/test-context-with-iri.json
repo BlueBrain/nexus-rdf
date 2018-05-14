@@ -1,0 +1,24 @@
+{
+  "@context": [
+    "http://schema.org/",
+    {
+      "Person": {
+        "@id": "http://schema.org/Person"
+      },
+      "birthDate": {
+        "@id": "http://schema.org/birthDate",
+        "@type": "http://schema.org/Date"
+      },
+      "name": {
+        "@id": "http://schema.org/name"
+      },
+      "sp": {
+        "@id": "http://example.com/stringProperty"
+      },
+      "knows": {
+        "@id": "http://schema.org/knows",
+        "@type": "@id"
+      }
+    }
+  ]
+}
