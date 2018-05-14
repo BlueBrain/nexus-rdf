@@ -47,13 +47,11 @@ object circe {
       * @param context context to filter
       * @return Some if the context is not a string, None otherwise
       */
-    private def filterIriContext(context: Json): Option[Json] =
-      if (context.isString)
-        None
-      else if (context.isArray)
-        Some(context.mapArray(arr => arr.filterNot(_.isString)))
-      else
-        Some(context)
+    private def filterIriContext(context: Json): Option[Json] = (context.asString, context.asArray) match {
+      case (Some(_), _) => None
+      case (_, Some(_)) => Some(context.mapArray(arr => arr.filterNot(_.isString)))
+      case (_, _)       => Some(context)
+    }
 
     /**
       * Convert [[Graph]] into JSON-LD representation using provided context. Beware, that currently IRI contexts are
