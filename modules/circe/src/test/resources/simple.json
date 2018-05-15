@@ -1,0 +1,18 @@
+{
+  "@context": {
+    "Person": {
+      "@id": "http://schema.org/Person"
+    },
+    "birthDate": {
+      "@id": "http://schema.org/birthDate",
+      "@type": "http://schema.org/Date"
+    },
+    "name": {
+      "@id": "http://schema.org/name"
+    }
+  },
+  "@type": "Person",
+  "@id": "http://nexus.example.com/john-doe",
+  "name": "John Doe",
+  "birthDate": "1999-04-09T20:00Z"
+}

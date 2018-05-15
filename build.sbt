@@ -39,6 +39,7 @@ lazy val akkaHttpCore = "com.typesafe.akka" %% "akka-http-core" % akkaHttpVersio
 lazy val akkaStream   = "com.typesafe.akka" %% "akka-stream"    % akkaStreamVersion
 lazy val catsCore     = "org.typelevel"     %% "cats-core"      % catsVersion
 lazy val circeCore    = "io.circe"          %% "circe-core"     % circeVersion
+lazy val circeParser  = "io.circe"          %% "circe-parser"   % circeVersion
 lazy val jenaCore     = "org.apache.jena"   % "jena-core"       % jenaVersion
 lazy val jenaArq      = "org.apache.jena"   % "jena-arq"        % jenaVersion
 lazy val parboiled2   = "org.parboiled"     %% "parboiled"      % parboiledVersion
@@ -55,16 +56,16 @@ lazy val core = project
 
 lazy val circe = project
   .in(file("modules/circe"))
-  .dependsOn(core)
+  .dependsOn(jena)
   .settings(
     name                := "rdf-circe",
     moduleName          := "rdf-circe",
-    libraryDependencies ++= Seq(circeCore, scalaTest % Test)
+    libraryDependencies ++= Seq(circeCore, circeParser, scalaTest % Test)
   )
 
 lazy val jena = project
   .in(file("modules/jena"))
-  .dependsOn(circe)
+  .dependsOn(core)
   .settings(
     name                := "rdf-jena",
     moduleName          := "rdf-jena",
