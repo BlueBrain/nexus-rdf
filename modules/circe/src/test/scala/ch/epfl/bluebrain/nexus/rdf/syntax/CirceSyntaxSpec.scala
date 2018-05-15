@@ -1,15 +1,17 @@
 package ch.epfl.bluebrain.nexus.rdf.syntax
 
-import ch.epfl.bluebrain.nexus.commons.test.Resources
 import ch.epfl.bluebrain.nexus.rdf.Graph
 import ch.epfl.bluebrain.nexus.rdf.Node.Literal
 import ch.epfl.bluebrain.nexus.rdf.syntax.circe._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
+import io.circe.Json
 import io.circe.parser._
-import org.scalatest.{EitherValues, Matchers, TryValues, WordSpecLike}
+import org.scalatest._
 
-class CirceSyntaxSpec extends WordSpecLike with Matchers with Resources with TryValues with EitherValues {
+import scala.io.Source
+
+class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with EitherValues with OptionValues {
 
   "CirceSyntax" should {
 
@@ -31,10 +33,10 @@ class CirceSyntaxSpec extends WordSpecLike with Matchers with Resources with Try
         (url"http://nexus.example.com/john-doe", url"http://www.w3.org/1999/02/22-rdf-syntax-ns#type",  url"http://schema.org/Person")
       )
       // format: on
-      val json = graph.asJson.asObject.get
-      json("@id").get.asString.get shouldEqual "http://nexus.example.com/john-doe"
-      json("birthDate").get.asString.get shouldEqual "1999-04-09T20:00Z"
-      json("name").get.asString.get shouldEqual "John Doe"
+      val json = graph.asJson.asObject.value
+      json("@id").value.asString.value shouldEqual "http://nexus.example.com/john-doe"
+      json("birthDate").value.asString.value shouldEqual "1999-04-09T20:00Z"
+      json("name").value.asString.value shouldEqual "John Doe"
     }
 
     "convert Graph to Json-LD ignoring the IRI context" in {
@@ -47,10 +49,10 @@ class CirceSyntaxSpec extends WordSpecLike with Matchers with Resources with Try
       // format: on
       val context = parse("{\"@context\": \"http://schema.org/\"}").right.value
 
-      val json = graph.asJson(context).success.value.asObject.get
-      json("@id").get.asString.get shouldEqual "http://nexus.example.com/john-doe"
-      json("birthDate").get.asString.get shouldEqual "1999-04-09T20:00Z"
-      json("name").get.asString.get shouldEqual "John Doe"
+      val json = graph.asJson(context).success.value.asObject.value
+      json("@id").value.asString.value shouldEqual "http://nexus.example.com/john-doe"
+      json("birthDate").value.asString.value shouldEqual "1999-04-09T20:00Z"
+      json("name").value.asString.value shouldEqual "John Doe"
     }
 
     "convert Graph to Json-LD ignoring the IRI context in an array" in {
@@ -63,10 +65,10 @@ class CirceSyntaxSpec extends WordSpecLike with Matchers with Resources with Try
       // format: on
       val context = jsonContentOf("/test-context-with-iri.json")
 
-      val json = graph.asJson(context).success.value.asObject.get
-      json("@id").get.asString.get shouldEqual "http://nexus.example.com/john-doe"
-      json("birthDate").get.asString.get shouldEqual "1999-04-09T20:00Z"
-      json("name").get.asString.get shouldEqual "John Doe"
+      val json = graph.asJson(context).success.value.asObject.value
+      json("@id").value.asString.value shouldEqual "http://nexus.example.com/john-doe"
+      json("birthDate").value.asString.value shouldEqual "1999-04-09T20:00Z"
+      json("name").value.asString.value shouldEqual "John Doe"
     }
 
     "convert Graph to Json-LD  with context" in {
@@ -80,11 +82,11 @@ class CirceSyntaxSpec extends WordSpecLike with Matchers with Resources with Try
       // format: on
       val context = jsonContentOf("/test-context.json")
 
-      val json = graph.asJson(context).success.value.asObject.get
-      json("@id").get.asString.get shouldEqual "http://nexus.example.com/john-doe"
-      json("birthDate").get.asString.get shouldEqual "1999-04-09T20:00Z"
-      json("name").get.asString.get shouldEqual "John Doe"
-      json("sp").get.asString.get shouldEqual "Some property"
+      val json = graph.asJson(context).success.value.asObject.value
+      json("@id").value.asString.value shouldEqual "http://nexus.example.com/john-doe"
+      json("birthDate").value.asString.value shouldEqual "1999-04-09T20:00Z"
+      json("name").value.asString.value shouldEqual "John Doe"
+      json("sp").value.asString.value shouldEqual "Some property"
     }
 
     "convert Graph with multiple entities to Json-LD  with context" in {
@@ -122,5 +124,8 @@ class CirceSyntaxSpec extends WordSpecLike with Matchers with Resources with Try
     }
 
   }
+
+  final def jsonContentOf(resourcePath: String): Json =
+    parse(Source.fromInputStream(getClass.getResourceAsStream(resourcePath)).mkString).toTry.success.value
 
 }

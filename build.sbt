@@ -33,20 +33,18 @@ val parboiledVersion  = "2.1.4"
 val jenaVersion       = "3.7.0"
 val scalaGraphVersion = "1.12.5"
 val scalaTestVersion  = "3.0.5"
-val commonsVersion    = "0.10.10"
 
 // Dependency modules
-lazy val akkaHttpCore = "com.typesafe.akka"       %% "akka-http-core" % akkaHttpVersion
-lazy val akkaStream   = "com.typesafe.akka"       %% "akka-stream"    % akkaStreamVersion
-lazy val catsCore     = "org.typelevel"           %% "cats-core"      % catsVersion
-lazy val circeCore    = "io.circe"                %% "circe-core"     % circeVersion
-lazy val circeParser  = "io.circe"                %% "circe-parser"   % circeVersion
-lazy val jenaCore     = "org.apache.jena"         % "jena-core"       % jenaVersion
-lazy val jenaArq      = "org.apache.jena"         % "jena-arq"        % jenaVersion
-lazy val parboiled2   = "org.parboiled"           %% "parboiled"      % parboiledVersion
-lazy val scalaGraph   = "org.scala-graph"         %% "graph-core"     % scalaGraphVersion
-lazy val scalaTest    = "org.scalatest"           %% "scalatest"      % scalaTestVersion
-lazy val commonsTest  = "ch.epfl.bluebrain.nexus" %% "commons-test"   % commonsVersion
+lazy val akkaHttpCore = "com.typesafe.akka" %% "akka-http-core" % akkaHttpVersion
+lazy val akkaStream   = "com.typesafe.akka" %% "akka-stream"    % akkaStreamVersion
+lazy val catsCore     = "org.typelevel"     %% "cats-core"      % catsVersion
+lazy val circeCore    = "io.circe"          %% "circe-core"     % circeVersion
+lazy val circeParser  = "io.circe"          %% "circe-parser"   % circeVersion
+lazy val jenaCore     = "org.apache.jena"   % "jena-core"       % jenaVersion
+lazy val jenaArq      = "org.apache.jena"   % "jena-arq"        % jenaVersion
+lazy val parboiled2   = "org.parboiled"     %% "parboiled"      % parboiledVersion
+lazy val scalaGraph   = "org.scala-graph"   %% "graph-core"     % scalaGraphVersion
+lazy val scalaTest    = "org.scalatest"     %% "scalatest"      % scalaTestVersion
 
 lazy val core = project
   .in(file("modules/core"))
@@ -62,7 +60,7 @@ lazy val circe = project
   .settings(
     name                := "rdf-circe",
     moduleName          := "rdf-circe",
-    libraryDependencies ++= Seq(circeCore, circeParser, scalaTest % Test, commonsTest % Test)
+    libraryDependencies ++= Seq(circeCore, circeParser, scalaTest % Test)
   )
 
 lazy val jena = project
