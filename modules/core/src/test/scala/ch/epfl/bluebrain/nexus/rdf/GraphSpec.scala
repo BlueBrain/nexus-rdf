@@ -103,12 +103,37 @@ class GraphSpec extends WordSpecLike with Matchers with EitherValues {
       g.subjects shouldEqual Set[IriOrBNode](a, b"1")
     }
 
+    "return the correct subject" in {
+      g.subject(isa, string) shouldEqual Some(a)
+    }
+
+    "return no subject" in {
+      g.subject(a, b"10") shouldEqual None
+    }
+
     "return the correct predicates" in {
       g.predicates shouldEqual Set[IriNode](isa, hasa, p.string, p.int, p.bool)
     }
 
+    "return the correct predicate" in {
+      g.predicate(a, string) shouldEqual Some(isa)
+    }
+
+    "return no predicate" in {
+      g.predicate(a, b"10") shouldEqual None
+    }
+
     "return the correct objects" in {
       g.objects shouldEqual Set[Node](string, bool, b"1", "asd", 2, true)
+    }
+
+    "return the filtered objects" in {
+      g.objects(a, isa) shouldEqual Set(string, bool)
+      g.objects(b"1", p.string) shouldEqual Set("asd")
+    }
+
+    "return an empty list of filtered objects" in {
+      g.objects(b"50", p.string) shouldEqual Set()
     }
 
     "show" in {

@@ -81,6 +81,15 @@ lazy val akka = project
     libraryDependencies ++= Seq(akkaHttpCore, akkaStream, scalaTest % Test)
   )
 
+lazy val nexus = project
+  .in(file("modules/nexus"))
+  .dependsOn(circe)
+  .settings(
+    name                := "rdf-nexus",
+    moduleName          := "rdf-nexus",
+    libraryDependencies ++= Seq(scalaTest % Test)
+  )
+
 lazy val root = project
   .in(file("."))
   .settings(noPublish)
@@ -88,7 +97,7 @@ lazy val root = project
     name       := "rdf",
     moduleName := "rdf"
   )
-  .aggregate(core, circe, jena, akka)
+  .aggregate(core, circe, jena, akka, nexus)
 
 /* ********************************************************
  ******************** Grouped Settings ********************

@@ -37,12 +37,28 @@ final class Graph private[rdf] (private val underlying: G[Node, LkDiEdge]) {
     underlying.isConnected
 
   /**
+    * @param p the triple predicate
+    * @param o the triple object
+    * @return an optional subject found from the provided predicate and object
+    */
+  def subject(p: IriNode, o: Node): Option[IriOrBNode] =
+    underlying.edges.find(e => p == e.predicate && o == e.obj).map(_.subject)
+
+  /**
     * @return the set of nodes in subject position
     */
   def subjects: Set[IriOrBNode] =
     foldLeft(Set.empty[IriOrBNode]) {
       case (acc, (s, _, _)) => acc + s
     }
+
+  /**
+    * @param s the triple subject
+    * @param o the triple object
+    * @return an optional predicate found from the provided subject and object
+    */
+  def predicate(s: IriOrBNode, o: Node): Option[IriNode] =
+    underlying.edges.find(e => s == e.subject && o == e.obj).map(_.predicate)
 
   /**
     * @return the set of predicates
@@ -59,6 +75,14 @@ final class Graph private[rdf] (private val underlying: G[Node, LkDiEdge]) {
     foldLeft(Set.empty[Node]) {
       case (acc, (_, _, o)) => acc + o
     }
+
+  /**
+    * @param s the triple subject
+    * @param p the triple predicate
+    * @return the objects found from the provided subject and predicate
+    */
+  def objects(s: IriOrBNode, p: IriNode): Set[Node] =
+    underlying.edges.filter(e => s == e.subject && p == e.predicate).map(_.obj).toSet
 
   /**
     * Adds the triple identified by (s, p, o) arguments to this graph.
@@ -144,8 +168,14 @@ final class Graph private[rdf] (private val underlying: G[Node, LkDiEdge]) {
 
   private def foldLeft[Z](z: Z)(f: (Z, (IriOrBNode, IriNode, Node)) => Z): Z =
     underlying.edges.foldLeft(z) {
-      case (acc, e) => f(acc, (e.from.toOuter.asInstanceOf[IriOrBNode], e.label.asInstanceOf[IriNode], e.to))
+      case (acc, e) => f(acc, (e.subject, e.predicate, e.obj))
     }
+
+  private implicit class EdgeOps(e: underlying.EdgeT) {
+    def subject: IriOrBNode = e.from.toOuter.asInstanceOf[IriOrBNode]
+    def predicate: IriNode  = e.label.asInstanceOf[IriNode]
+    def obj: Node           = e.to
+  }
 
   override def toString: String = underlying.toString()
   override def hashCode(): Int  = underlying.hashCode()
