@@ -129,7 +129,7 @@ class GraphSpec extends WordSpecLike with Matchers with EitherValues {
 
     "return the filtered objects" in {
       g.objects(a, isa) shouldEqual Set(string, bool)
-      g.objects(b"1", p.string) shouldEqual Set("asd")
+      g.objects(b"1", p.string) shouldEqual Set[Node]("asd")
     }
 
     "return an empty list of filtered objects" in {
