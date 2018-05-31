@@ -1,8 +1,9 @@
 package ch.epfl.bluebrain.nexus.rdf.syntax
 
-import ch.epfl.bluebrain.nexus.rdf.Node.IriOrBNode
+import ch.epfl.bluebrain.nexus.rdf.Graph
+import ch.epfl.bluebrain.nexus.rdf.Graph._
+import ch.epfl.bluebrain.nexus.rdf.Node.{BNode, IriNode, IriOrBNode}
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
-import ch.epfl.bluebrain.nexus.rdf.{Graph, Node}
 
 object nexus {
 
@@ -13,26 +14,23 @@ object nexus {
     /**
       * @return The optionally available root ''subject'' of the Graph. This is, the subject which is not used as an object
       */
-    def id: Option[IriOrBNode] =
-      (graph.subjects -- graph.objects.collect {
-        case iri: IriOrBNode => iri
-      }).toList match {
-        case head :: Nil => Some(head)
-        case _           => idWithoutBlankNodes
-      }
-
-    private def idWithoutBlankNodes: Option[IriOrBNode] =
-      (graph.subjects -- graph.objects(_.isIri).collect {
-        case iri: IriOrBNode => iri
-      }).toList match {
+    def primaryNode: Option[IriOrBNode] =
+      (graph.subjects() -- graph.objects().collect { case iri: IriOrBNode => iri }).toList match {
         case head :: Nil => Some(head)
         case _           => None
       }
 
     /**
+      * @return The optionally available blank node root ''subject'' of the Graph. This is, the subject which is not used as an object
+      */
+    def primaryBNode: Option[BNode] =
+      primaryNode.flatMap(_.asBlank)
+
+    /**
       * @return the list of objects which have the subject found from the method ''id'' and the predicate rdf:type
       */
-    def types: Set[Node] = id.map(i => graph.objects(i, rdfType)).getOrElse(Set.empty)
+    def primaryTypes: Set[IriNode] =
+      primaryNode.map(i => graph.objects(i, rdfType).collect { case n: IriNode => n }).getOrElse(Set.empty)
 
   }
 }

@@ -37,54 +37,39 @@ final class Graph private[rdf] (private val underlying: G[Node, LkDiEdge]) {
     underlying.isConnected
 
   /**
+    * @param s the triple subject used to test matches
+    * @param p the triple predicate used to test matches
+    * @param o the triple objects used to test matches
+    * @return the triples found from the provided subject, predicate and object functions
+    */
+  def select(s: IriOrBNode => Boolean = _ => true,
+             p: IriNode => Boolean = _ => true,
+             o: Node => Boolean = _ => true): Set[(IriOrBNode, IriNode, Node)] =
+    underlying.edges.filter(e => s(e.s) && p(e.p) && o(e.o)).map(e => (e.s, e.p, e.o)).toSet
+
+  /**
     * @param p the triple predicate
     * @param o the triple object
     * @return the subjects found from the provided predicate and object
     */
-  def subjects(p: IriNode, o: Node): Set[IriOrBNode] =
-    underlying.edges.filter(e => p == e.predicate && o == e.obj).map(_.subject).toSet
-
-  /**
-    * @return the set of nodes in subject position
-    */
-  def subjects: Set[IriOrBNode] =
-    triples.map { case (s, _, _) => s }
+  def subjects(p: IriNode => Boolean = _ => true, o: Node => Boolean = _ => true): Set[IriOrBNode] =
+    select(_ => true, p, o).map { case (s, _, _) => s }
 
   /**
     * @param s the triple subject
     * @param o the triple object
     * @return the predicates found from the provided subject and object
     */
-  def predicates(s: IriOrBNode, o: Node): Set[IriNode] =
-    underlying.edges.filter(e => s == e.subject && o == e.obj).map(_.predicate).toSet
-
-  /**
-    * @return the set of predicates
-    */
-  def predicates: Set[IriNode] =
-    triples.map { case (_, p, _) => p }
-
-  /**
-    * @return the set of nodes in object position
-    */
-  def objects: Set[Node] =
-    triples.map { case (_, _, o) => o }
-
-  /**
-    * @param s the triple subject
-    * @param p the triple predicate
-    * @return the objects found from the provided subject and predicate
-    */
-  def objects(s: IriOrBNode, p: IriNode): Set[Node] =
-    objects(s2 => s2 == s, p2 => p2 == p)
+  def predicates(s: IriOrBNode => Boolean = _ => true, o: Node => Boolean = _ => true): Set[IriNode] =
+    select(s, _ => true, o).map { case (_, p, _) => p }
 
   /**
     * @param s the triple subject used to test matches
     * @param p the triple predicate used to test matches
     * @return the objects found from the provided subject and predicate
     */
-  def objects(s: IriOrBNode => Boolean = (n) => true, p: IriNode => Boolean = (n) => true): Set[Node] =
-    underlying.edges.filter(e => s(e.subject) && p(e.predicate)).map(_.obj).toSet
+  def objects(s: IriOrBNode => Boolean = _ => true, p: IriNode => Boolean = _ => true): Set[Node] =
+    select(s, p, _ => true).map { case (_, _, o) => o }
 
   /**
     * Adds the triple identified by (s, p, o) arguments to this graph.
@@ -170,13 +155,13 @@ final class Graph private[rdf] (private val underlying: G[Node, LkDiEdge]) {
 
   private def foldLeft[Z](z: Z)(f: (Z, (IriOrBNode, IriNode, Node)) => Z): Z =
     underlying.edges.foldLeft(z) {
-      case (acc, e) => f(acc, (e.subject, e.predicate, e.obj))
+      case (acc, e) => f(acc, (e.s, e.p, e.o))
     }
 
   private implicit class EdgeOps(e: underlying.EdgeT) {
-    def subject: IriOrBNode = e.from.toOuter.asInstanceOf[IriOrBNode]
-    def predicate: IriNode  = e.label.asInstanceOf[IriNode]
-    def obj: Node           = e.to
+    def s: IriOrBNode = e.from.toOuter.asInstanceOf[IriOrBNode]
+    def p: IriNode    = e.label.asInstanceOf[IriNode]
+    def o: Node       = e.to
   }
 
   override def toString: String = underlying.toString()
@@ -219,4 +204,8 @@ object Graph {
         .mkString("\n"))
 
   final implicit val graphEq: Eq[Graph] = Eq.fromUniversalEquals
+
+  final implicit def sToEq(s: IriOrBNode): IriOrBNode => Boolean = _ == s
+  final implicit def oToEq(o: Node): Node => Boolean             = _ == o
+  final implicit def pToEq(p: IriNode): IriNode => Boolean       = _ == p
 }

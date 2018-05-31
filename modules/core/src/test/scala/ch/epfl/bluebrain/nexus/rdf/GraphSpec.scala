@@ -2,7 +2,7 @@ package ch.epfl.bluebrain.nexus.rdf
 
 import cats.kernel.Eq
 import cats.syntax.show._
-import ch.epfl.bluebrain.nexus.rdf.Graph.Triple
+import ch.epfl.bluebrain.nexus.rdf.Graph.{Triple, _}
 import ch.epfl.bluebrain.nexus.rdf.Node.{IriNode, IriOrBNode, Literal}
 import ch.epfl.bluebrain.nexus.rdf.syntax.node._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
@@ -100,11 +100,17 @@ class GraphSpec extends WordSpecLike with Matchers with EitherValues {
     }
 
     "return the correct subjects" in {
-      g.subjects shouldEqual Set[IriOrBNode](a, b"1")
+      g.subjects() shouldEqual Set[IriOrBNode](a, b"1")
     }
 
     "return the correct subject" in {
       g.subjects(isa, string) shouldEqual Set(a)
+    }
+
+    "return the correct filtered subjects" in {
+      g.subjects(p.string) shouldEqual Set[IriOrBNode](a)
+      g.subjects(hasa) shouldEqual Set[IriOrBNode](b"1")
+      g.subjects(n => n == p.string || n == hasa) shouldEqual Set[IriOrBNode](a, b"1")
     }
 
     "return no subject" in {
@@ -112,11 +118,15 @@ class GraphSpec extends WordSpecLike with Matchers with EitherValues {
     }
 
     "return the correct predicates" in {
-      g.predicates shouldEqual Set[IriNode](isa, hasa, p.string, p.int, p.bool)
+      g.predicates() shouldEqual Set[IriNode](isa, hasa, p.string, p.int, p.bool)
     }
 
     "return the correct predicate" in {
       g.predicates(a, string) shouldEqual Set(isa)
+    }
+
+    "return the correct filtered predicates" in {
+      g.predicates(a) shouldEqual Set(isa, hasa)
     }
 
     "return no predicate" in {
@@ -124,7 +134,7 @@ class GraphSpec extends WordSpecLike with Matchers with EitherValues {
     }
 
     "return the correct objects" in {
-      g.objects shouldEqual Set[Node](string, bool, b"1", "asd", 2, true)
+      g.objects() shouldEqual Set[Node](string, bool, b"1", "asd", 2, true)
     }
 
     "return the filtered objects" in {
