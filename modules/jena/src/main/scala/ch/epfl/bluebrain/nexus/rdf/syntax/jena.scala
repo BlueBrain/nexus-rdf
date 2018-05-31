@@ -53,6 +53,8 @@ object jena {
   final implicit def jenaRDFNodeToNode(rdfNode: RDFNode): Node = {
     if (rdfNode.isLiteral)
       jenaLiteralToLiteral(rdfNode.asLiteral())
+    else if (rdfNode.isAnon)
+      b"${rdfNode.asResource}"
     else
       url"${rdfNode.asResource.getURI}"
 

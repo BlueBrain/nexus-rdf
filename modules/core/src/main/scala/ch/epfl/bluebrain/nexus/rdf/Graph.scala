@@ -37,28 +37,39 @@ final class Graph private[rdf] (private val underlying: G[Node, LkDiEdge]) {
     underlying.isConnected
 
   /**
-    * @return the set of nodes in subject position
+    * @param s the triple subject used to test matches
+    * @param p the triple predicate used to test matches
+    * @param o the triple objects used to test matches
+    * @return the triples found from the provided subject, predicate and object functions
     */
-  def subjects: Set[IriOrBNode] =
-    foldLeft(Set.empty[IriOrBNode]) {
-      case (acc, (s, _, _)) => acc + s
-    }
+  def select(s: IriOrBNode => Boolean = _ => true,
+             p: IriNode => Boolean = _ => true,
+             o: Node => Boolean = _ => true): Set[(IriOrBNode, IriNode, Node)] =
+    underlying.edges.filter(e => s(e.s) && p(e.p) && o(e.o)).map(e => (e.s, e.p, e.o)).toSet
 
   /**
-    * @return the set of predicates
+    * @param p the triple predicate
+    * @param o the triple object
+    * @return the subjects found from the provided predicate and object
     */
-  def predicates: Set[IriNode] =
-    foldLeft(Set.empty[IriNode]) {
-      case (acc, (_, p, _)) => acc + p
-    }
+  def subjects(p: IriNode => Boolean = _ => true, o: Node => Boolean = _ => true): Set[IriOrBNode] =
+    select(_ => true, p, o).map { case (s, _, _) => s }
 
   /**
-    * @return the set of nodes in object position
+    * @param s the triple subject
+    * @param o the triple object
+    * @return the predicates found from the provided subject and object
     */
-  def objects: Set[Node] =
-    foldLeft(Set.empty[Node]) {
-      case (acc, (_, _, o)) => acc + o
-    }
+  def predicates(s: IriOrBNode => Boolean = _ => true, o: Node => Boolean = _ => true): Set[IriNode] =
+    select(s, _ => true, o).map { case (_, p, _) => p }
+
+  /**
+    * @param s the triple subject used to test matches
+    * @param p the triple predicate used to test matches
+    * @return the objects found from the provided subject and predicate
+    */
+  def objects(s: IriOrBNode => Boolean = _ => true, p: IriNode => Boolean = _ => true): Set[Node] =
+    select(s, p, _ => true).map { case (_, _, o) => o }
 
   /**
     * Adds the triple identified by (s, p, o) arguments to this graph.
@@ -144,8 +155,14 @@ final class Graph private[rdf] (private val underlying: G[Node, LkDiEdge]) {
 
   private def foldLeft[Z](z: Z)(f: (Z, (IriOrBNode, IriNode, Node)) => Z): Z =
     underlying.edges.foldLeft(z) {
-      case (acc, e) => f(acc, (e.from.toOuter.asInstanceOf[IriOrBNode], e.label.asInstanceOf[IriNode], e.to))
+      case (acc, e) => f(acc, (e.s, e.p, e.o))
     }
+
+  private implicit class EdgeOps(e: underlying.EdgeT) {
+    def s: IriOrBNode = e.from.toOuter.asInstanceOf[IriOrBNode]
+    def p: IriNode    = e.label.asInstanceOf[IriNode]
+    def o: Node       = e.to
+  }
 
   override def toString: String = underlying.toString()
   override def hashCode(): Int  = underlying.hashCode()
@@ -187,4 +204,8 @@ object Graph {
         .mkString("\n"))
 
   final implicit val graphEq: Eq[Graph] = Eq.fromUniversalEquals
+
+  final implicit def sToEq(s: IriOrBNode): IriOrBNode => Boolean = _ == s
+  final implicit def oToEq(o: Node): Node => Boolean             = _ == o
+  final implicit def pToEq(p: IriNode): IriNode => Boolean       = _ == p
 }
