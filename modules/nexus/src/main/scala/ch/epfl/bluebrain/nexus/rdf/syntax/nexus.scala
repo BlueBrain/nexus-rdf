@@ -18,6 +18,14 @@ object nexus {
         case iri: IriOrBNode => iri
       }).toList match {
         case head :: Nil => Some(head)
+        case _           => idWithoutBlankNodes
+      }
+
+    private def idWithoutBlankNodes: Option[IriOrBNode] =
+      (graph.subjects -- graph.objects(_.isIri).collect {
+        case iri: IriOrBNode => iri
+      }).toList match {
+        case head :: Nil => Some(head)
         case _           => None
       }
 

@@ -1,0 +1,68 @@
+{
+  "@context": {
+    "dcterms": "http://purl.org/dc/terms/",
+    "nxv": "https://bbp-nexus.epfl.ch/vocabs/nexus/core/terms/v0.1.0/",
+    "owl": "http://www.w3.org/2002/07/owl#",
+    "prov": "http://www.w3.org/ns/prov#",
+    "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+    "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+    "schema": "http://schema.org/",
+    "sh": "http://www.w3.org/ns/shacl#",
+    "shsh": "http://www.w3.org/ns/shacl-shacl#",
+    "skos": "http://www.w3.org/2004/02/skos/core#",
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
+    "accessURL": {
+      "@id": "schema:accessURL"
+    },
+    "algorithm": {
+      "@id": "schema:algorithm"
+    },
+    "contentSize": {
+      "@id": "schema:contentSize"
+    },
+    "digest": {
+      "@id": "nxv:digest"
+    },
+    "downloadURL": {
+      "@id": "schema:downloadURL",
+      "@type": "@id"
+    },
+    "mediaType": {
+      "@id": "schema:mediaType"
+    },
+    "originalFileName": {
+      "@id": "nxv:originalFileName"
+    },
+    "storage": {
+      "@id": "nxv:storage"
+    },
+    "unit": {
+      "@id": "schema:unitCode"
+    },
+    "value": {
+      "@id": "schema:storage"
+    },
+    "distribution": {
+      "@id": "http://schema.org/distribution"
+    },
+    "id": "@id",
+    "type": "@type",
+    "_links": {
+      "@id": "https://bbp-nexus.epfl.ch/vocabs/nexus/core/terms/v0.1.0/_links"
+    }
+  },
+  "id": "https://bbp-nexus.epfl.ch/dev/v0/contexts/nexus/core/distribution/v0.1.0",
+  "type": "http://example.com/Some",
+  "nxv:_rev": 1,
+  "nxv:_published": false,
+  "nxv:_deprecated": false,
+  "_links": {
+    "@context": {
+      "_self": {
+        "@id": "nxv:_self",
+        "@type": "@id"
+      }
+    },
+    "_self": "https://bbp-nexus.epfl.ch/dev/v0/contexts/nexus/core/distribution/v0.1.0"
+  }
+}

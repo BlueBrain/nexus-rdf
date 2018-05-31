@@ -13,8 +13,9 @@ import scala.io.Source
 class GraphSyntaxSpec extends WordSpecLike with Matchers with TryValues with OptionValues {
 
   "A GraphSyntax" should {
-    val json      = jsonContentOf("/no_id.json")
-    val typedJson = jsonContentOf("/id_and_types.json")
+    val json               = jsonContentOf("/no_id.json")
+    val selfReferencedJson = jsonContentOf("/self-referenced.json")
+    val typedJson          = jsonContentOf("/id_and_types.json")
 
     "find @id from a Json-LD without it" in {
       json.asGraph.id.value shouldBe a[BNode]
@@ -22,6 +23,10 @@ class GraphSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
 
     "find @id from Json-LD with it" in {
       typedJson.asGraph.id.value shouldEqual url"http://example.org/cars/for-sale#tesla"
+    }
+
+    "find @id from a self referenced Json-LD" in {
+      selfReferencedJson.asGraph.id.value shouldEqual url"https://bbp-nexus.epfl.ch/dev/v0/contexts/nexus/core/distribution/v0.1.0"
     }
 
     "find the @type from the Json-LD without @id" in {

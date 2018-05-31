@@ -39,10 +39,10 @@ final class Graph private[rdf] (private val underlying: G[Node, LkDiEdge]) {
   /**
     * @param p the triple predicate
     * @param o the triple object
-    * @return an optional subject found from the provided predicate and object
+    * @return the subjects found from the provided predicate and object
     */
-  def subject(p: IriNode, o: Node): Option[IriOrBNode] =
-    underlying.edges.find(e => p == e.predicate && o == e.obj).map(_.subject)
+  def subjects(p: IriNode, o: Node): Set[IriOrBNode] =
+    underlying.edges.filter(e => p == e.predicate && o == e.obj).map(_.subject).toSet
 
   /**
     * @return the set of nodes in subject position
@@ -55,10 +55,10 @@ final class Graph private[rdf] (private val underlying: G[Node, LkDiEdge]) {
   /**
     * @param s the triple subject
     * @param o the triple object
-    * @return an optional predicate found from the provided subject and object
+    * @return the predicates found from the provided subject and object
     */
-  def predicate(s: IriOrBNode, o: Node): Option[IriNode] =
-    underlying.edges.find(e => s == e.subject && o == e.obj).map(_.predicate)
+  def predicates(s: IriOrBNode, o: Node): Set[IriNode] =
+    underlying.edges.filter(e => s == e.subject && o == e.obj).map(_.predicate).toSet
 
   /**
     * @return the set of predicates
@@ -82,7 +82,15 @@ final class Graph private[rdf] (private val underlying: G[Node, LkDiEdge]) {
     * @return the objects found from the provided subject and predicate
     */
   def objects(s: IriOrBNode, p: IriNode): Set[Node] =
-    underlying.edges.filter(e => s == e.subject && p == e.predicate).map(_.obj).toSet
+    objects(s2 => s2 == s, p2 => p2 == p)
+
+  /**
+    * @param s the triple subject used to test matches
+    * @param p the triple predicate used to test matches
+    * @return the objects found from the provided subject and predicate
+    */
+  def objects(s: IriOrBNode => Boolean = (n) => true, p: IriNode => Boolean = (n) => true): Set[Node] =
+    underlying.edges.filter(e => s(e.subject) && p(e.predicate)).map(_.obj).toSet
 
   /**
     * Adds the triple identified by (s, p, o) arguments to this graph.

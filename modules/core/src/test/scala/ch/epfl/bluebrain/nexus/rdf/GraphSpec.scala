@@ -104,11 +104,11 @@ class GraphSpec extends WordSpecLike with Matchers with EitherValues {
     }
 
     "return the correct subject" in {
-      g.subject(isa, string) shouldEqual Some(a)
+      g.subjects(isa, string) shouldEqual Set(a)
     }
 
     "return no subject" in {
-      g.subject(a, b"10") shouldEqual None
+      g.subjects(a, b"10") shouldEqual Set.empty
     }
 
     "return the correct predicates" in {
@@ -116,11 +116,11 @@ class GraphSpec extends WordSpecLike with Matchers with EitherValues {
     }
 
     "return the correct predicate" in {
-      g.predicate(a, string) shouldEqual Some(isa)
+      g.predicates(a, string) shouldEqual Set(isa)
     }
 
     "return no predicate" in {
-      g.predicate(a, b"10") shouldEqual None
+      g.predicates(a, b"10") shouldEqual Set.empty
     }
 
     "return the correct objects" in {
@@ -130,6 +130,11 @@ class GraphSpec extends WordSpecLike with Matchers with EitherValues {
     "return the filtered objects" in {
       g.objects(a, isa) shouldEqual Set(string, bool)
       g.objects(b"1", p.string) shouldEqual Set[Node]("asd")
+    }
+
+    "return objects with predicate http://prop/string of http://prop/int" in {
+      g.objects(a, isa) shouldEqual Set(string, bool)
+      g.objects(p = pred => pred == p.string || pred == p.int) shouldEqual Set[Node]("asd", 2)
     }
 
     "return an empty list of filtered objects" in {
