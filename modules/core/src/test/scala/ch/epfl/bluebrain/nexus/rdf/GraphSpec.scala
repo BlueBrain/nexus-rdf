@@ -108,8 +108,8 @@ class GraphSpec extends WordSpecLike with Matchers with EitherValues {
     }
 
     "return the correct filtered subjects" in {
-      g.subjects(p.string) shouldEqual Set[IriOrBNode](a)
-      g.subjects(hasa) shouldEqual Set[IriOrBNode](b"1")
+      g.subjects(p.string) shouldEqual Set[IriOrBNode](b"1")
+      g.subjects(hasa) shouldEqual Set[IriOrBNode](a)
       g.subjects(n => n == p.string || n == hasa) shouldEqual Set[IriOrBNode](a, b"1")
     }
 
