@@ -48,9 +48,7 @@ final class Graph private[rdf] (private val underlying: G[Node, LkDiEdge]) {
     * @return the set of nodes in subject position
     */
   def subjects: Set[IriOrBNode] =
-    foldLeft(Set.empty[IriOrBNode]) {
-      case (acc, (s, _, _)) => acc + s
-    }
+    triples.map { case (s, _, _) => s }
 
   /**
     * @param s the triple subject
@@ -64,17 +62,13 @@ final class Graph private[rdf] (private val underlying: G[Node, LkDiEdge]) {
     * @return the set of predicates
     */
   def predicates: Set[IriNode] =
-    foldLeft(Set.empty[IriNode]) {
-      case (acc, (_, p, _)) => acc + p
-    }
+    triples.map { case (_, p, _) => p }
 
   /**
     * @return the set of nodes in object position
     */
   def objects: Set[Node] =
-    foldLeft(Set.empty[Node]) {
-      case (acc, (_, _, o)) => acc + o
-    }
+    triples.map { case (_, _, o) => o }
 
   /**
     * @param s the triple subject
