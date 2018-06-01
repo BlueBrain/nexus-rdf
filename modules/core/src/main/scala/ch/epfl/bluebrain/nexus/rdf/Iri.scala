@@ -160,6 +160,82 @@ object Iri {
 
       s"$a${path.pctEncoded}$q$f"
     }
+
+    def resolve(base: AbsoluteIri): AbsoluteIri =
+      base match {
+        case url: Url => resolveUrl(url)
+        case urn: Urn => resolveUrn(urn)
+      }
+
+    private def resolveUrl(base: Url): AbsoluteIri =
+      authority match {
+        case Some(auth) =>
+          base.copy(authority = Some(auth), query = query, path = path, fragment = fragment)
+        case None =>
+          val (p, q) = path match {
+            case Empty =>
+              base.path -> (if (query.isDefined) query else base.query)
+            case _ if path.startWithSlash =>
+              path -> query
+            case _ =>
+              merge(base) -> query
+          }
+          base.copy(query = q, path = p, fragment = fragment)
+      }
+
+    private def resolveUrn(base: Urn): AbsoluteIri = {
+      val (p, q) = path match {
+        case Empty =>
+          base.nss -> (if (query.isDefined) query else base.q)
+        case _ if path.startWithSlash =>
+          path -> query
+        case _ =>
+          merge(base) -> query
+      }
+      base.copy(q = q, nss = p, fragment = fragment)
+    }
+
+    private def merge(base: Url): Path =
+      if (base.authority.isDefined && base.path.isEmpty) Slash(path)
+      else removeDotSegments(Path(deleteLast(base.path).segments ++ path.segments))
+
+    private def merge(base: Urn): Path =
+      removeDotSegments(Path(deleteLast(base.nss).segments ++ path.segments))
+
+    private def deleteLast(path: Path): Path =
+      path match {
+        case Segment(_, rest) => rest
+        case _                => path
+      }
+
+    private def removeDotSegments(path: Path): Path = {
+
+      def removeLast(output: List[PathI]): List[PathI] = output.reverse match {
+        case SegmentI(_) :: SlashI :: rest => rest.reverse
+        case SegmentI(_) :: rest           => rest.reverse
+        case _                             => output
+      }
+
+      def inner(input: List[PathI], output: List[PathI]): List[PathI] =
+        input match {
+          // -> "../" or "./"
+          case SegmentI("..") :: SlashI :: rest => inner(rest, output)
+          case SegmentI(".") :: SlashI :: rest  => inner(rest, output)
+          // -> "/./" or "/.",
+          case SlashI :: SegmentI(".") :: SlashI :: rest => inner(SlashI :: rest, output)
+          case SlashI :: SegmentI(".") :: rest           => inner(SlashI :: rest, output)
+          // -> "/../" or "/.."
+          case SlashI :: SegmentI("..") :: SlashI :: rest => inner(SlashI :: rest, removeLast(output))
+          case SlashI :: SegmentI("..") :: rest           => inner(SlashI :: rest, removeLast(output))
+          // only "." or ".."
+          case SegmentI(".") :: Nil | SegmentI("..") :: Nil => inner(List.empty, output)
+          // move
+          case elem :: rest => inner(rest, output ++ List(elem))
+          case Nil          => output
+        }
+      Path(inner(path.segments, List.empty))
+    }
+
   }
 
   object RelativeIri {
@@ -738,6 +814,11 @@ object Iri {
     def endsWithSlash: Boolean = isSlash
 
     /**
+      * @return true if this path starts with a slash ('/'), false otherwise
+      */
+    def startWithSlash: Boolean
+
+    /**
       * @return the UTF-8 representation of this Path
       */
     def asString: String
@@ -747,9 +828,33 @@ object Iri {
       *         is not contained in the Set ''pchar''
       */
     def pctEncoded: String
+
+    /**
+      * Fold left over the paths
+      *
+      * @param z the initial output value
+      * @param f the fold function
+      * @tparam Z the generic type of the output
+      */
+    def foldLeft[Z](z: Z)(f: ((Z, Path) => Z)): Z
+
+    /**
+      * @return the path converted into segments containing also slashes
+      */
+    def segments: List[PathI] =
+      foldLeft(List.empty[PathI]) {
+        case (acc, Segment(s, _)) => SegmentI(s) :: acc
+        case (acc, Slash(_))      => SlashI :: acc
+        case (acc, _)             => acc
+      }.reverse
+
   }
 
   object Path {
+
+    private[rdf] sealed trait PathI                         extends Product with Serializable
+    private[rdf] final case class SegmentI(segment: String) extends PathI
+    private[rdf] final case object SlashI                   extends PathI
 
     /**
       * Constant value for a single slash.
@@ -764,6 +869,17 @@ object Iri {
       */
     final def apply(string: String): Either[String, Path] =
       abempty(string)
+
+    /**
+      * Constructs a Path from the provided List of segments
+      *
+      * @param list the list of segments with its slashes
+      */
+    final def apply(list: List[PathI]): Path =
+      list.foldLeft[Path](Path.Empty) {
+        case (acc, SegmentI(s)) => Segment(s, acc)
+        case (acc, SlashI)      => Slash(acc)
+      }
 
     /**
       * Attempts to parse the argument string as an `ipath-abempty` Path as defined by RFC 3987.
@@ -785,14 +901,16 @@ object Iri {
       * An empty path.
       */
     final case object Empty extends Empty {
-      def isEmpty: Boolean           = true
-      def isSlash: Boolean           = false
-      def isSegment: Boolean         = false
-      def asEmpty: Option[Empty]     = Some(this)
-      def asSlash: Option[Slash]     = None
-      def asSegment: Option[Segment] = None
-      def asString: String           = ""
-      def pctEncoded: String         = ""
+      def isEmpty: Boolean                        = true
+      def isSlash: Boolean                        = false
+      def isSegment: Boolean                      = false
+      def asEmpty: Option[Empty]                  = Some(this)
+      def asSlash: Option[Slash]                  = None
+      def asSegment: Option[Segment]              = None
+      def asString: String                        = ""
+      def pctEncoded: String                      = ""
+      def startWithSlash: Boolean                 = false
+      def foldLeft[Z](z: Z)(f: (Z, Path) => Z): Z = f(z, this)
     }
 
     /**
@@ -801,14 +919,17 @@ object Iri {
       * @param rest the remainder of the path (excluding the '/')
       */
     final case class Slash(rest: Path) extends Path {
-      def isEmpty: Boolean           = false
-      def isSlash: Boolean           = true
-      def isSegment: Boolean         = false
-      def asEmpty: Option[Empty]     = None
-      def asSlash: Option[Slash]     = Some(this)
-      def asSegment: Option[Segment] = None
-      def asString: String           = rest.asString + "/"
-      def pctEncoded: String         = rest.pctEncoded + "/"
+      def isEmpty: Boolean                        = false
+      def isSlash: Boolean                        = true
+      def isSegment: Boolean                      = false
+      def asEmpty: Option[Empty]                  = None
+      def asSlash: Option[Slash]                  = Some(this)
+      def asSegment: Option[Segment]              = None
+      def asString: String                        = rest.asString + "/"
+      def pctEncoded: String                      = rest.pctEncoded + "/"
+      def startWithSlash: Boolean                 = if (rest.isEmpty) true else rest.startWithSlash
+      def foldLeft[Z](z: Z)(f: (Z, Path) => Z): Z = f(rest.foldLeft(z)(f), this)
+
     }
 
     /**
@@ -817,14 +938,16 @@ object Iri {
       * @param rest the remainder of the path (excluding the segment denoted by this)
       */
     final case class Segment private[rdf] (segment: String, rest: Path) extends Path {
-      def isEmpty: Boolean           = false
-      def isSlash: Boolean           = false
-      def isSegment: Boolean         = true
-      def asEmpty: Option[Empty]     = None
-      def asSlash: Option[Slash]     = None
-      def asSegment: Option[Segment] = Some(this)
-      def asString: String           = rest.asString + segment
-      def pctEncoded: String         = rest.pctEncoded + pctEncode(segment)
+      def isEmpty: Boolean                        = false
+      def isSlash: Boolean                        = false
+      def isSegment: Boolean                      = true
+      def asEmpty: Option[Empty]                  = None
+      def asSlash: Option[Slash]                  = None
+      def asSegment: Option[Segment]              = Some(this)
+      def asString: String                        = rest.asString + segment
+      def pctEncoded: String                      = rest.pctEncoded + pctEncode(segment)
+      def startWithSlash: Boolean                 = rest.startWithSlash
+      def foldLeft[Z](z: Z)(f: (Z, Path) => Z): Z = f(rest.foldLeft(z)(f), this)
     }
 
     final implicit val pathShow: Show[Path] = Show.show(_.asString)

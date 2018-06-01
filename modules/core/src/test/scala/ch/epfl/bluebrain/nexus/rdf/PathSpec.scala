@@ -92,5 +92,40 @@ class PathSpec extends WordSpecLike with Matchers with Inspectors with EitherVal
     "eq" in {
       Eq.eqv(abcd.right.value, Segment("d", Path("/a/b//c/").right.value)) shouldEqual true
     }
+
+    "start with slash" in {
+      val cases = List("/", "///", "/a/b/c/d", "/a/b/c/d/")
+      forAll(cases) {
+        case (str) => Path(str).right.value.startWithSlash shouldEqual true
+      }
+    }
+
+    "does not start with slash" in {
+      val cases = List(Empty, Segment("d", Slash(Segment("c", Slash(Slash(Segment("b", Slash(Segment("a", Empty)))))))))
+      forAll(cases) {
+        case (p) => p.startWithSlash shouldEqual false
+      }
+    }
+
+    "fold left counting" in {
+      Path("/a/b/c/d").right.value.foldLeft(0) {
+        case (acc, _: Segment) => acc + 1
+        case (acc, _)          => acc
+      } shouldEqual 4
+    }
+
+    "fold left reconstructing the path" in {
+      Path("/a/b/c/d").right.value
+        .foldLeft(List.empty[String]) {
+          case (acc, Segment(s, _)) => s :: acc
+          case (acc, _)             => acc
+        }
+        .reverse shouldEqual List("a", "b", "c", "d")
+    }
+
+    "build path from list" in {
+      val list = List(SlashI, SegmentI("a"), SlashI, SegmentI("b"), SlashI, SegmentI("c"), SlashI, SegmentI("d"))
+      Path(list).asString shouldEqual "/a/b/c/d"
+    }
   }
 }
