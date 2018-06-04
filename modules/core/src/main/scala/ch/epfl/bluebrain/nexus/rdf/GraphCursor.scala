@@ -25,10 +25,11 @@ sealed trait GraphCursor extends Product with Serializable {
 object GraphCursor {
 
   /**
-    * An cursor which does not contain values
+    * A cursor which does not contain values
     */
   final case object EmptyCursor extends GraphCursor {
-    override def values: Set[Node]                                                                    = Set.empty
+    override def values: Set[Node] = Set.empty
+
     override def down(p: IriNode => Boolean = _ => true, o: Node => Boolean = _ => true): GraphCursor = this
   }
 
