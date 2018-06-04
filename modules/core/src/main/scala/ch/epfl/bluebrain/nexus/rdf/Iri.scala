@@ -162,6 +162,16 @@ object Iri {
       s"$a${path.pctEncoded}$q$f"
     }
 
+    /**
+      * Resolves a [[RelativeIri]] into an [[AbsoluteIri]] with the provided ''base''.
+      * The resolution algorithm is taken from the rfc3986 and
+      * can be found in https://tools.ietf.org/html/rfc3986#section-5.2.
+      *
+      * Ex: given a base = "http://a/b/c/d;p?q" and a relative iri = "./g" the output will be
+      * "http://a/b/c/g"
+      *
+      * @param base the base [[AbsoluteIri]] from where to resolve the [[RelativeIri]]
+      */
     def resolve(base: AbsoluteIri): AbsoluteIri =
       base match {
         case url: Url => resolveUrl(url)
@@ -170,8 +180,8 @@ object Iri {
 
     private def resolveUrl(base: Url): AbsoluteIri =
       authority match {
-        case Some(auth) =>
-          base.copy(authority = Some(auth), query = query, path = path, fragment = fragment)
+        case Some(_) =>
+          Url(base.scheme, authority, path, query, fragment)
         case None =>
           val (p, q) = path match {
             case Empty =>
@@ -212,7 +222,8 @@ object Iri {
 
     private def removeDotSegments(path: Path): Path = {
 
-      def inner(input: Path, output: Path): Path = {
+      @tailrec
+      def inner(input: Path, output: Path): Path =
         input match {
           // -> "../" or "./"
           case Segment("..", Slash(rest)) => inner(rest, output)
@@ -227,10 +238,10 @@ object Iri {
           case Segment(".", Empty) | Segment("..", Empty) => inner(Path.Empty, output)
           // move
           case Slash(rest)      => inner(rest, Slash(output))
-          case Segment(s, rest) => inner(rest, s :: output)
+          case Segment(s, rest) => inner(rest, output / s)
           case Empty            => output
         }
-      }
+
       inner(path.reverse, Path.Empty)
     }
 
@@ -842,21 +853,25 @@ object Iri {
 
     /**
       * @param other the path to be suffixed to the current path
-      * @return current / suffix
+      * @return the current path plus the provided path
+      *         Ex: current = "/a/b/c/d", other = "/e/f" will output "/a/b/c/d/e/f"
+      *         current = "/a/b/c/def", other = "ghi/f" will output "/a/b/c/defghi/f"
       */
     def ::(other: Path): Path = other prepend this
 
     /**
       * @param other the path to be prepended to the current path
-      * @return current / suffix
-      */
+      * @return the current path plus the provided path
+      *         Ex: current = "/e/f", other = "/a/b/c/d" will output "/a/b/c/d/e/f"
+      *         current = "ghi/f", other = "/a/b/c/def" will output "/a/b/c/defghi/f"
+      **/
     def prepend(other: Path): Path
 
     /**
       * @param segment the segment to be appended to a path
       * @return a new Path with the ending segment
       */
-    def ::(segment: String): Path
+    def /(segment: String): Path
 
   }
 
@@ -906,7 +921,7 @@ object Iri {
       def pctEncoded: String         = ""
       def startWithSlash: Boolean    = false
       def prepend(other: Path): Path = other
-      def ::(segment: String): Path  = if (segment.isEmpty) this else Segment(segment, this)
+      def /(segment: String): Path   = if (segment.isEmpty) this else Segment(segment, this)
 
     }
 
@@ -926,7 +941,7 @@ object Iri {
       def pctEncoded: String         = rest.pctEncoded + "/"
       def startWithSlash: Boolean    = if (rest.isEmpty) true else rest.startWithSlash
       def prepend(other: Path): Path = Slash(rest prepend other)
-      def ::(segment: String): Path  = if (segment.isEmpty) this else Segment(segment, this)
+      def /(segment: String): Path   = if (segment.isEmpty) this else Segment(segment, this)
 
     }
 
@@ -945,8 +960,8 @@ object Iri {
       def asString: String           = rest.asString + segment
       def pctEncoded: String         = rest.pctEncoded + pctEncode(segment)
       def startWithSlash: Boolean    = rest.startWithSlash
-      def prepend(other: Path): Path = segment :: (rest prepend other)
-      def ::(s: String): Path        = if (segment.isEmpty) this else Segment(segment + s, rest)
+      def prepend(other: Path): Path = (rest prepend other) / segment
+      def /(s: String): Path         = if (segment.isEmpty) this else Segment(segment + s, rest)
 
     }
 

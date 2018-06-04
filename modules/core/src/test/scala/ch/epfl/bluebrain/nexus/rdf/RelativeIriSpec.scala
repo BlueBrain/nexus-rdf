@@ -80,30 +80,95 @@ class RelativeIriSpec extends WordSpecLike with Matchers with Inspectors with Ei
       Eq.eqv(lhs, rhs) shouldEqual true
     }
 
-    "resolve from base url" in {
+    "resolve from base url http://a/b/c/d;p?q" in {
       val base = Url("http://a/b/c/d;p?q").right.value
       val cases = List(
-        "g"       -> "http://a/b/c/g",
-        "./g"     -> "http://a/b/c/g",
-        "g/"      -> "http://a/b/c/g/",
-        "/g"      -> "http://a/g",
-        "//g"     -> "http://g",
-        "?y"      -> "http://a/b/c/d;p?y",
-        "g?y"     -> "http://a/b/c/g?y",
-        "#s"      -> "http://a/b/c/d;p?q#s",
-        "g#s"     -> "http://a/b/c/g#s",
-        "g?y#s"   -> "http://a/b/c/g?y#s",
-        ";x"      -> "http://a/b/c/;x",
-        "g;x"     -> "http://a/b/c/g;x",
-        "g;x?y#s" -> "http://a/b/c/g;x?y#s",
-        "."       -> "http://a/b/c/",
-        "./"      -> "http://a/b/c/",
-        ".."      -> "http://a/b/",
-        "../"     -> "http://a/b/",
-        "../g"    -> "http://a/b/g",
-        "../.."   -> "http://a/",
-        "../../"  -> "http://a/",
-        "../../g" -> "http://a/g"
+        "g"            -> "http://a/b/c/g",
+        "./g"          -> "http://a/b/c/g",
+        "g/"           -> "http://a/b/c/g/",
+        "/g"           -> "http://a/g",
+        "//g"          -> "http://g",
+        "?y"           -> "http://a/b/c/d;p?y",
+        "g?y"          -> "http://a/b/c/g?y",
+        "#s"           -> "http://a/b/c/d;p?q#s",
+        "g#s"          -> "http://a/b/c/g#s",
+        "g?y#s"        -> "http://a/b/c/g?y#s",
+        ";x"           -> "http://a/b/c/;x",
+        "g;x"          -> "http://a/b/c/g;x",
+        "g;x?y#s"      -> "http://a/b/c/g;x?y#s",
+        "."            -> "http://a/b/c/",
+        "./"           -> "http://a/b/c/",
+        ".."           -> "http://a/b/",
+        "../"          -> "http://a/b/",
+        "../g"         -> "http://a/b/g",
+        "../.."        -> "http://a/",
+        "../../"       -> "http://a/",
+        "../../../../" -> "http://a/",
+        ".././g"       -> "http://a/b/g",
+        "../../g"      -> "http://a/g"
+      )
+      forAll(cases) {
+        case (in, result) =>
+          RelativeIri(in).right.value.resolve(base) shouldEqual Url(result).right.value
+      }
+    }
+
+    "resolve from base url http://a/b/c/" in {
+      val base = Url("http://a/b/c/").right.value
+      val cases = List(
+        "g"            -> "http://a/b/c/g",
+        "./g"          -> "http://a/b/c/g",
+        "g/"           -> "http://a/b/c/g/",
+        "/g"           -> "http://a/g",
+        "//g"          -> "http://g",
+        "?y"           -> "http://a/b/c/?y",
+        "g?y"          -> "http://a/b/c/g?y",
+        "#s"           -> "http://a/b/c/#s",
+        "g#s"          -> "http://a/b/c/g#s",
+        "g?y#s"        -> "http://a/b/c/g?y#s",
+        ";x"           -> "http://a/b/c/;x",
+        "g;x"          -> "http://a/b/c/g;x",
+        "g;x?y#s"      -> "http://a/b/c/g;x?y#s",
+        "."            -> "http://a/b/c/",
+        "./"           -> "http://a/b/c/",
+        ".."           -> "http://a/b/",
+        "../"          -> "http://a/b/",
+        "../g"         -> "http://a/b/g",
+        "../.."        -> "http://a/",
+        "../../"       -> "http://a/",
+        "../../../../" -> "http://a/",
+        "../../g"      -> "http://a/g"
+      )
+      forAll(cases) {
+        case (in, result) => RelativeIri(in).right.value.resolve(base) shouldEqual Url(result).right.value
+      }
+    }
+
+    "resolve from base url http://a/b/c/d#fragment" in {
+      val base = Url("http://a/b/c/").right.value
+      val cases = List(
+        "g"            -> "http://a/b/c/g",
+        "./g"          -> "http://a/b/c/g",
+        "g/"           -> "http://a/b/c/g/",
+        "/g"           -> "http://a/g",
+        "//g"          -> "http://g",
+        "?y"           -> "http://a/b/c/?y",
+        "g?y"          -> "http://a/b/c/g?y",
+        "#s"           -> "http://a/b/c/#s",
+        "g#s"          -> "http://a/b/c/g#s",
+        "g?y#s"        -> "http://a/b/c/g?y#s",
+        ";x"           -> "http://a/b/c/;x",
+        "g;x"          -> "http://a/b/c/g;x",
+        "g;x?y#s"      -> "http://a/b/c/g;x?y#s",
+        "."            -> "http://a/b/c/",
+        "./"           -> "http://a/b/c/",
+        ".."           -> "http://a/b/",
+        "../"          -> "http://a/b/",
+        "../g"         -> "http://a/b/g",
+        "../.."        -> "http://a/",
+        "../../"       -> "http://a/",
+        "../../../../" -> "http://a/",
+        "../../g"      -> "http://a/g"
       )
       forAll(cases) {
         case (in, result) => RelativeIri(in).right.value.resolve(base) shouldEqual Url(result).right.value

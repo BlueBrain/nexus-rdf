@@ -108,14 +108,33 @@ class PathSpec extends WordSpecLike with Matchers with Inspectors with EitherVal
     }
 
     "reverse" in {
-      Path("/a/b/c/d").right.value.reverse shouldEqual Slash(
-        Segment("a", Slash(Segment("b", Slash(Segment("c", Slash(Segment("d", Empty))))))))
-      Path("/a/b/c/d").right.value.reverse.reverse shouldEqual Path("/a/b/c/d").right.value
+      val cases = List(
+        Path("/a/b").right.value    -> Slash(Segment("a", Slash(Segment("b", Empty)))),
+        Empty                       -> Empty,
+        Path("/a/b/c/").right.value -> Path("/c/b/a/").right.value,
+        Path./                      -> Path./
+      )
+      forAll(cases) {
+        case (path, reversed) =>
+          path.reverse shouldEqual reversed
+          path.reverse.reverse shouldEqual path
+      }
     }
 
     "join two paths" in {
-      Path("/e/f").right.value :: Path("/a/b/c/d").right.value shouldEqual Path("/a/b/c/d/e/f").right.value
-      Segment("f", Slash(Segment("ghi", Empty))) :: Path("/a/b/c/def").right.value shouldEqual Path("/a/b/c/defghi/f").right.value
+      val cases = List(
+        (Path("/e/f").right.value :: Path("/a/b/c/d").right.value)                     -> Path("/a/b/c/d/e/f").right.value,
+        (Segment("f", Slash(Segment("ghi", Empty))) :: Path("/a/b/c/def").right.value) -> Path("/a/b/c/defghi/f").right.value,
+        (Empty :: Path("/a/b").right.value)                                            -> Path("/a/b").right.value,
+        (Empty :: Slash(Empty))                                                        -> Slash(Empty),
+        (Slash(Empty) :: Empty)                                                        -> Slash(Empty),
+        (Path("/e/f/").right.value :: Path("/a/b/c/d").right.value)                    -> Path("/a/b/c/d/e/f/").right.value,
+        (Path("/e/f/").right.value :: Path("/a/b/c/d/").right.value)                   -> Path("/a/b/c/d//e/f/").right.value,
+        (Empty :: Empty)                                                               -> Empty
+      )
+      forAll(cases) {
+        case (result, expected) => result shouldEqual expected
+      }
     }
   }
 }
