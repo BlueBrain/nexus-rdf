@@ -107,25 +107,15 @@ class PathSpec extends WordSpecLike with Matchers with Inspectors with EitherVal
       }
     }
 
-    "fold left counting" in {
-      Path("/a/b/c/d").right.value.foldLeft(0) {
-        case (acc, _: Segment) => acc + 1
-        case (acc, _)          => acc
-      } shouldEqual 4
+    "reverse" in {
+      Path("/a/b/c/d").right.value.reverse shouldEqual Slash(
+        Segment("a", Slash(Segment("b", Slash(Segment("c", Slash(Segment("d", Empty))))))))
+      Path("/a/b/c/d").right.value.reverse.reverse shouldEqual Path("/a/b/c/d").right.value
     }
 
-    "fold left reconstructing the path" in {
-      Path("/a/b/c/d").right.value
-        .foldLeft(List.empty[String]) {
-          case (acc, Segment(s, _)) => s :: acc
-          case (acc, _)             => acc
-        }
-        .reverse shouldEqual List("a", "b", "c", "d")
-    }
-
-    "build path from list" in {
-      val list = List(SlashI, SegmentI("a"), SlashI, SegmentI("b"), SlashI, SegmentI("c"), SlashI, SegmentI("d"))
-      Path(list).asString shouldEqual "/a/b/c/d"
+    "join two paths" in {
+      Path("/e/f").right.value :: Path("/a/b/c/d").right.value shouldEqual Path("/a/b/c/d/e/f").right.value
+      Segment("f", Slash(Segment("ghi", Empty))) :: Path("/a/b/c/def").right.value shouldEqual Path("/a/b/c/defghi/f").right.value
     }
   }
 }

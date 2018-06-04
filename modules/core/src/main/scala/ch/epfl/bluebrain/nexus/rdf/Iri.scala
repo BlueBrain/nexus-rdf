@@ -10,6 +10,7 @@ import ch.epfl.bluebrain.nexus.rdf.PctString._
 import org.parboiled2.ErrorFormatter
 import org.parboiled2.Parser.DeliveryScheme.{Either => E}
 
+import scala.annotation.tailrec
 import scala.collection.immutable.SortedSet
 import scala.collection.{immutable, SeqView, SortedMap}
 
@@ -197,43 +198,40 @@ object Iri {
 
     private def merge(base: Url): Path =
       if (base.authority.isDefined && base.path.isEmpty) Slash(path)
-      else removeDotSegments(Path(deleteLast(base.path).segments ++ path.segments))
+      else removeDotSegments(path :: deleteLast(base.path))
 
     private def merge(base: Urn): Path =
-      removeDotSegments(Path(deleteLast(base.nss).segments ++ path.segments))
+      removeDotSegments(path :: deleteLast(base.nss))
 
-    private def deleteLast(path: Path): Path =
+    private def deleteLast(path: Path, withSlash: Boolean = false): Path =
       path match {
-        case Segment(_, rest) => rest
-        case _                => path
+        case Segment(_, Slash(rest)) if withSlash => rest
+        case Segment(_, rest)                     => rest
+        case _                                    => path
       }
 
     private def removeDotSegments(path: Path): Path = {
 
-      def removeLast(output: List[PathI]): List[PathI] = output.reverse match {
-        case SegmentI(_) :: SlashI :: rest => rest.reverse
-        case SegmentI(_) :: rest           => rest.reverse
-        case _                             => output
-      }
-
-      def inner(input: List[PathI], output: List[PathI]): List[PathI] =
+      def inner(input: Path, output: Path): Path = {
         input match {
           // -> "../" or "./"
-          case SegmentI("..") :: SlashI :: rest => inner(rest, output)
-          case SegmentI(".") :: SlashI :: rest  => inner(rest, output)
+          case Segment("..", Slash(rest)) => inner(rest, output)
+          case Segment(".", Slash(rest))  => inner(rest, output)
           // -> "/./" or "/.",
-          case SlashI :: SegmentI(".") :: SlashI :: rest => inner(SlashI :: rest, output)
-          case SlashI :: SegmentI(".") :: rest           => inner(SlashI :: rest, output)
+          case Slash(Segment(".", Slash(rest))) => inner(Slash(rest), output)
+          case Slash(Segment(".", rest))        => inner(Slash(rest), output)
           // -> "/../" or "/.."
-          case SlashI :: SegmentI("..") :: SlashI :: rest => inner(SlashI :: rest, removeLast(output))
-          case SlashI :: SegmentI("..") :: rest           => inner(SlashI :: rest, removeLast(output))
+          case Slash(Segment("..", Slash(rest))) => inner(Slash(rest), deleteLast(output, withSlash = true))
+          case Slash(Segment("..", rest))        => inner(Slash(rest), deleteLast(output, withSlash = true))
           // only "." or ".."
-          case SegmentI(".") :: Nil | SegmentI("..") :: Nil => inner(List.empty, output)
+          case Segment(".", Empty) | Segment("..", Empty) => inner(Path.Empty, output)
           // move
-          case elem :: rest => inner(rest, output ++ List(elem))
-          case Nil          => output
+          case Slash(rest)      => inner(rest, Slash(output))
+          case Segment(s, rest) => inner(rest, s :: output)
+          case Empty            => output
         }
-      Path(inner(path.segments, List.empty))
+      }
+      inner(path.reverse, Path.Empty)
     }
 
   }
@@ -830,31 +828,39 @@ object Iri {
     def pctEncoded: String
 
     /**
-      * Fold left over the paths
-      *
-      * @param z the initial output value
-      * @param f the fold function
-      * @tparam Z the generic type of the output
+      * @return the reversed path
       */
-    def foldLeft[Z](z: Z)(f: ((Z, Path) => Z)): Z
+    def reverse: Path = {
+      @tailrec
+      def inner(acc: Path, remaining: Path): Path = remaining match {
+        case Empty         => acc
+        case Segment(h, t) => inner(Segment(h, acc), t)
+        case Slash(t)      => inner(Slash(acc), t)
+      }
+      inner(Empty, this)
+    }
 
     /**
-      * @return the path converted into segments containing also slashes
+      * @param other the path to be suffixed to the current path
+      * @return current / suffix
       */
-    def segments: List[PathI] =
-      foldLeft(List.empty[PathI]) {
-        case (acc, Segment(s, _)) => SegmentI(s) :: acc
-        case (acc, Slash(_))      => SlashI :: acc
-        case (acc, _)             => acc
-      }.reverse
+    def ::(other: Path): Path = other prepend this
+
+    /**
+      * @param other the path to be prepended to the current path
+      * @return current / suffix
+      */
+    def prepend(other: Path): Path
+
+    /**
+      * @param segment the segment to be appended to a path
+      * @return a new Path with the ending segment
+      */
+    def ::(segment: String): Path
 
   }
 
   object Path {
-
-    private[rdf] sealed trait PathI                         extends Product with Serializable
-    private[rdf] final case class SegmentI(segment: String) extends PathI
-    private[rdf] final case object SlashI                   extends PathI
 
     /**
       * Constant value for a single slash.
@@ -869,17 +875,6 @@ object Iri {
       */
     final def apply(string: String): Either[String, Path] =
       abempty(string)
-
-    /**
-      * Constructs a Path from the provided List of segments
-      *
-      * @param list the list of segments with its slashes
-      */
-    final def apply(list: List[PathI]): Path =
-      list.foldLeft[Path](Path.Empty) {
-        case (acc, SegmentI(s)) => Segment(s, acc)
-        case (acc, SlashI)      => Slash(acc)
-      }
 
     /**
       * Attempts to parse the argument string as an `ipath-abempty` Path as defined by RFC 3987.
@@ -901,16 +896,18 @@ object Iri {
       * An empty path.
       */
     final case object Empty extends Empty {
-      def isEmpty: Boolean                        = true
-      def isSlash: Boolean                        = false
-      def isSegment: Boolean                      = false
-      def asEmpty: Option[Empty]                  = Some(this)
-      def asSlash: Option[Slash]                  = None
-      def asSegment: Option[Segment]              = None
-      def asString: String                        = ""
-      def pctEncoded: String                      = ""
-      def startWithSlash: Boolean                 = false
-      def foldLeft[Z](z: Z)(f: (Z, Path) => Z): Z = f(z, this)
+      def isEmpty: Boolean           = true
+      def isSlash: Boolean           = false
+      def isSegment: Boolean         = false
+      def asEmpty: Option[Empty]     = Some(this)
+      def asSlash: Option[Slash]     = None
+      def asSegment: Option[Segment] = None
+      def asString: String           = ""
+      def pctEncoded: String         = ""
+      def startWithSlash: Boolean    = false
+      def prepend(other: Path): Path = other
+      def ::(segment: String): Path  = if (segment.isEmpty) this else Segment(segment, this)
+
     }
 
     /**
@@ -919,16 +916,17 @@ object Iri {
       * @param rest the remainder of the path (excluding the '/')
       */
     final case class Slash(rest: Path) extends Path {
-      def isEmpty: Boolean                        = false
-      def isSlash: Boolean                        = true
-      def isSegment: Boolean                      = false
-      def asEmpty: Option[Empty]                  = None
-      def asSlash: Option[Slash]                  = Some(this)
-      def asSegment: Option[Segment]              = None
-      def asString: String                        = rest.asString + "/"
-      def pctEncoded: String                      = rest.pctEncoded + "/"
-      def startWithSlash: Boolean                 = if (rest.isEmpty) true else rest.startWithSlash
-      def foldLeft[Z](z: Z)(f: (Z, Path) => Z): Z = f(rest.foldLeft(z)(f), this)
+      def isEmpty: Boolean           = false
+      def isSlash: Boolean           = true
+      def isSegment: Boolean         = false
+      def asEmpty: Option[Empty]     = None
+      def asSlash: Option[Slash]     = Some(this)
+      def asSegment: Option[Segment] = None
+      def asString: String           = rest.asString + "/"
+      def pctEncoded: String         = rest.pctEncoded + "/"
+      def startWithSlash: Boolean    = if (rest.isEmpty) true else rest.startWithSlash
+      def prepend(other: Path): Path = Slash(rest prepend other)
+      def ::(segment: String): Path  = if (segment.isEmpty) this else Segment(segment, this)
 
     }
 
@@ -938,16 +936,18 @@ object Iri {
       * @param rest the remainder of the path (excluding the segment denoted by this)
       */
     final case class Segment private[rdf] (segment: String, rest: Path) extends Path {
-      def isEmpty: Boolean                        = false
-      def isSlash: Boolean                        = false
-      def isSegment: Boolean                      = true
-      def asEmpty: Option[Empty]                  = None
-      def asSlash: Option[Slash]                  = None
-      def asSegment: Option[Segment]              = Some(this)
-      def asString: String                        = rest.asString + segment
-      def pctEncoded: String                      = rest.pctEncoded + pctEncode(segment)
-      def startWithSlash: Boolean                 = rest.startWithSlash
-      def foldLeft[Z](z: Z)(f: (Z, Path) => Z): Z = f(rest.foldLeft(z)(f), this)
+      def isEmpty: Boolean           = false
+      def isSlash: Boolean           = false
+      def isSegment: Boolean         = true
+      def asEmpty: Option[Empty]     = None
+      def asSlash: Option[Slash]     = None
+      def asSegment: Option[Segment] = Some(this)
+      def asString: String           = rest.asString + segment
+      def pctEncoded: String         = rest.pctEncoded + pctEncode(segment)
+      def startWithSlash: Boolean    = rest.startWithSlash
+      def prepend(other: Path): Path = segment :: (rest prepend other)
+      def ::(s: String): Path        = if (segment.isEmpty) this else Segment(segment + s, rest)
+
     }
 
     final implicit val pathShow: Show[Path] = Show.show(_.asString)
