@@ -157,6 +157,8 @@ class IriParser(val input: ParserInput) extends Parser {
     oneOrMore(_pctEncoded | capture(oneOrMore(`sub-delims` ++ `iunreserved` ++ ':' ++ '@'))) ~> ((seq: Seq[String]) => seq.mkString)
   }
 
+  def segment: Rule1[String] = rule { `isegment-nz` ~ EOI }
+
   def `isegment-nz-nc`: Rule1[String] = rule {
     oneOrMore(_pctEncoded | capture(oneOrMore(`sub-delims` ++ `iunreserved` ++ '@'))) ~> ((seq: Seq[String]) => seq.mkString)
   }

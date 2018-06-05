@@ -108,8 +108,7 @@ class RelativeIriSpec extends WordSpecLike with Matchers with Inspectors with Ei
         "../../g"      -> "http://a/g"
       )
       forAll(cases) {
-        case (in, result) =>
-          RelativeIri(in).right.value.resolve(base) shouldEqual Url(result).right.value
+        case (in, result) => RelativeIri(in).right.value.resolve(base) shouldEqual Url(result).right.value
       }
     }
 

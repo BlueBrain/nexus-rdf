@@ -238,7 +238,7 @@ object Iri {
           case Segment(".", Empty) | Segment("..", Empty) => inner(Path.Empty, output)
           // move
           case Slash(rest)      => inner(rest, Slash(output))
-          case Segment(s, rest) => inner(rest, output / s)
+          case Segment(s, rest) => inner(rest, output + s)
           case Empty            => output
         }
 
@@ -855,7 +855,7 @@ object Iri {
       * @param other the path to be suffixed to the current path
       * @return the current path plus the provided path
       *         Ex: current = "/a/b/c/d", other = "/e/f" will output "/a/b/c/d/e/f"
-      *         current = "/a/b/c/def", other = "ghi/f" will output "/a/b/c/defghi/f"
+      *         current = "/a/b/c/def", other = "ghi/f" will output "/a/b/c/def/ghi/f"
       */
     def ::(other: Path): Path = other prepend this
 
@@ -863,7 +863,7 @@ object Iri {
       * @param other the path to be prepended to the current path
       * @return the current path plus the provided path
       *         Ex: current = "/e/f", other = "/a/b/c/d" will output "/a/b/c/d/e/f"
-      *         current = "ghi/f", other = "/a/b/c/def" will output "/a/b/c/defghi/f"
+      *         current = "ghi/f", other = "/a/b/c/def" will output "/a/b/c/def/ghi/f"
       **/
     def prepend(other: Path): Path
 
@@ -871,8 +871,15 @@ object Iri {
       * @param segment the segment to be appended to a path
       * @return current / segment. If the current path is a [[Segment]], a slash will be added
       */
-    def /(segment: String): Path
+    def /(segment: String): Path =
+      if (segment.isEmpty) this else Segment(segment, Slash(this))
 
+    /**
+      * @param string the string to be appended to this path
+      * @return Segment(string, Empty) if this is empty, current / string if current ends with a slash
+      *         or Segment(segment + string, rest) if current is a Segment
+      */
+    def +(string: String): Path
   }
 
   object Path {
@@ -903,6 +910,18 @@ object Iri {
         .leftMap(_.format(string, formatter))
 
     /**
+      * Attempts to parse the argument string as an `isegment-nz` Segment as defined by RFC 3987.
+      *
+      * @param string the string to parse as a Path
+      * @return Right(Path) if the parsing succeeds, Left(error) otherwise
+      */
+    final def segment(string: String): Either[String, Path] =
+      new IriParser(string).segment
+        .run()
+        .map(str => Segment(str, Empty))
+        .leftMap(_.format(string, formatter))
+
+    /**
       * An empty path.
       */
     sealed trait Empty extends Path
@@ -921,7 +940,7 @@ object Iri {
       def pctEncoded: String         = ""
       def startWithSlash: Boolean    = false
       def prepend(other: Path): Path = other
-      def /(segment: String): Path   = if (segment.isEmpty) this else Segment(segment, this)
+      def +(segment: String): Path   = if (segment.isEmpty) this else Segment(segment, this)
 
     }
 
@@ -941,7 +960,7 @@ object Iri {
       def pctEncoded: String         = rest.pctEncoded + "/"
       def startWithSlash: Boolean    = if (rest.isEmpty) true else rest.startWithSlash
       def prepend(other: Path): Path = Slash(rest prepend other)
-      def /(segment: String): Path   = if (segment.isEmpty) this else Segment(segment, this)
+      def +(segment: String): Path   = if (segment.isEmpty) this else Segment(segment, this)
 
     }
 
@@ -960,9 +979,8 @@ object Iri {
       def asString: String           = rest.asString + segment
       def pctEncoded: String         = rest.pctEncoded + pctEncode(segment)
       def startWithSlash: Boolean    = rest.startWithSlash
-      def prepend(other: Path): Path = (rest prepend other) / segment
-      def /(s: String): Path         = if (segment.isEmpty) this else Segment(s, Slash(Segment(segment, rest)))
-
+      def prepend(other: Path): Path = (rest prepend other) + segment
+      def +(s: String): Path         = if (segment.isEmpty) this else Segment(segment + s, rest)
     }
 
     final implicit val pathShow: Show[Path] = Show.show(_.asString)
