@@ -869,7 +869,7 @@ object Iri {
 
     /**
       * @param segment the segment to be appended to a path
-      * @return a new Path with the ending segment
+      * @return current / segment. If the current path is a [[Segment]], a slash will be added
       */
     def /(segment: String): Path
 
@@ -961,7 +961,7 @@ object Iri {
       def pctEncoded: String         = rest.pctEncoded + pctEncode(segment)
       def startWithSlash: Boolean    = rest.startWithSlash
       def prepend(other: Path): Path = (rest prepend other) / segment
-      def /(s: String): Path         = if (segment.isEmpty) this else Segment(segment + s, rest)
+      def /(s: String): Path         = if (segment.isEmpty) this else Segment(s, Slash(Segment(segment, rest)))
 
     }
 

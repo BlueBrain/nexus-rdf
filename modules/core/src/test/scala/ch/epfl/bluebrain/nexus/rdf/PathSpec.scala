@@ -124,7 +124,7 @@ class PathSpec extends WordSpecLike with Matchers with Inspectors with EitherVal
     "join two paths" in {
       val cases = List(
         (Path("/e/f").right.value :: Path("/a/b/c/d").right.value)                     -> Path("/a/b/c/d/e/f").right.value,
-        (Segment("f", Slash(Segment("ghi", Empty))) :: Path("/a/b/c/def").right.value) -> Path("/a/b/c/defghi/f").right.value,
+        (Segment("f", Slash(Segment("ghi", Empty))) :: Path("/a/b/c/def").right.value) -> Path("/a/b/c/def/ghi/f").right.value,
         (Empty :: Path("/a/b").right.value)                                            -> Path("/a/b").right.value,
         (Empty :: Slash(Empty))                                                        -> Slash(Empty),
         (Slash(Empty) :: Empty)                                                        -> Slash(Empty),
