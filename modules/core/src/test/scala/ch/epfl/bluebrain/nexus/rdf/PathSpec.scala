@@ -2,8 +2,8 @@ package ch.epfl.bluebrain.nexus.rdf
 
 import cats.kernel.Eq
 import cats.syntax.show._
+import ch.epfl.bluebrain.nexus.rdf.Iri.Path.{segment, _}
 import ch.epfl.bluebrain.nexus.rdf.Iri._
-import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
 import org.scalatest.{EitherValues, Inspectors, Matchers, WordSpecLike}
 
 class PathSpec extends WordSpecLike with Matchers with Inspectors with EitherValues {
@@ -91,6 +91,54 @@ class PathSpec extends WordSpecLike with Matchers with Inspectors with EitherVal
     }
     "eq" in {
       Eq.eqv(abcd.right.value, Segment("d", Path("/a/b//c/").right.value)) shouldEqual true
+    }
+
+    "start with slash" in {
+      val cases = List("/", "///", "/a/b/c/d", "/a/b/c/d/")
+      forAll(cases) {
+        case (str) => Path(str).right.value.startWithSlash shouldEqual true
+      }
+    }
+
+    "does not start with slash" in {
+      val cases = List(Empty, Segment("d", Slash(Segment("c", Slash(Slash(Segment("b", Slash(Segment("a", Empty)))))))))
+      forAll(cases) {
+        case (p) => p.startWithSlash shouldEqual false
+      }
+    }
+
+    "reverse" in {
+      val cases = List(
+        Path("/a/b").right.value    -> Slash(Segment("a", Slash(Segment("b", Empty)))),
+        Empty                       -> Empty,
+        Path("/a/b/c/").right.value -> Path("/c/b/a/").right.value,
+        Path./                      -> Path./
+      )
+      forAll(cases) {
+        case (path, reversed) =>
+          path.reverse shouldEqual reversed
+          path.reverse.reverse shouldEqual path
+      }
+    }
+
+    "concatenate segments" in {
+      segment("a").right.value / "b" / "c" shouldEqual Segment("c", Slash(Segment("b", Slash(Segment("a", Empty)))))
+    }
+
+    "join two paths" in {
+      val cases = List(
+        (Path("/e/f").right.value :: Path("/a/b/c/d").right.value)           -> Path("/a/b/c/d/e/f").right.value,
+        (segment("ghi").right.value / "f" :: Path("/a/b/c/def").right.value) -> Path("/a/b/c/defghi/f").right.value,
+        (Empty :: Path("/a/b").right.value)                                  -> Path("/a/b").right.value,
+        (Empty :: Slash(Empty))                                              -> Slash(Empty),
+        (Slash(Empty) :: Empty)                                              -> Slash(Empty),
+        (Path("/e/f/").right.value :: Path("/a/b/c/d").right.value)          -> Path("/a/b/c/d/e/f/").right.value,
+        (Path("/e/f/").right.value :: Path("/a/b/c/d/").right.value)         -> Path("/a/b/c/d//e/f/").right.value,
+        (Empty :: Empty)                                                     -> Empty
+      )
+      forAll(cases) {
+        case (result, expected) => result shouldEqual expected
+      }
     }
   }
 }

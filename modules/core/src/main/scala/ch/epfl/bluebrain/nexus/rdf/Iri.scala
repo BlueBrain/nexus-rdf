@@ -10,6 +10,7 @@ import ch.epfl.bluebrain.nexus.rdf.PctString._
 import org.parboiled2.ErrorFormatter
 import org.parboiled2.Parser.DeliveryScheme.{Either => E}
 
+import scala.annotation.tailrec
 import scala.collection.immutable.SortedSet
 import scala.collection.{immutable, SeqView, SortedMap}
 
@@ -160,6 +161,90 @@ object Iri {
 
       s"$a${path.pctEncoded}$q$f"
     }
+
+    /**
+      * Resolves a [[RelativeIri]] into an [[AbsoluteIri]] with the provided ''base''.
+      * The resolution algorithm is taken from the rfc3986 and
+      * can be found in https://tools.ietf.org/html/rfc3986#section-5.2.
+      *
+      * Ex: given a base = "http://a/b/c/d;p?q" and a relative iri = "./g" the output will be
+      * "http://a/b/c/g"
+      *
+      * @param base the base [[AbsoluteIri]] from where to resolve the [[RelativeIri]]
+      */
+    def resolve(base: AbsoluteIri): AbsoluteIri =
+      base match {
+        case url: Url => resolveUrl(url)
+        case urn: Urn => resolveUrn(urn)
+      }
+
+    private def resolveUrl(base: Url): AbsoluteIri =
+      authority match {
+        case Some(_) =>
+          Url(base.scheme, authority, path, query, fragment)
+        case None =>
+          val (p, q) = path match {
+            case Empty =>
+              base.path -> (if (query.isDefined) query else base.query)
+            case _ if path.startWithSlash =>
+              path -> query
+            case _ =>
+              merge(base) -> query
+          }
+          base.copy(query = q, path = p, fragment = fragment)
+      }
+
+    private def resolveUrn(base: Urn): AbsoluteIri = {
+      val (p, q) = path match {
+        case Empty =>
+          base.nss -> (if (query.isDefined) query else base.q)
+        case _ if path.startWithSlash =>
+          path -> query
+        case _ =>
+          merge(base) -> query
+      }
+      base.copy(q = q, nss = p, fragment = fragment)
+    }
+
+    private def merge(base: Url): Path =
+      if (base.authority.isDefined && base.path.isEmpty) Slash(path)
+      else removeDotSegments(path :: deleteLast(base.path))
+
+    private def merge(base: Urn): Path =
+      removeDotSegments(path :: deleteLast(base.nss))
+
+    private def deleteLast(path: Path, withSlash: Boolean = false): Path =
+      path match {
+        case Segment(_, Slash(rest)) if withSlash => rest
+        case Segment(_, rest)                     => rest
+        case _                                    => path
+      }
+
+    private def removeDotSegments(path: Path): Path = {
+
+      @tailrec
+      def inner(input: Path, output: Path): Path =
+        input match {
+          // -> "../" or "./"
+          case Segment("..", Slash(rest)) => inner(rest, output)
+          case Segment(".", Slash(rest))  => inner(rest, output)
+          // -> "/./" or "/.",
+          case Slash(Segment(".", Slash(rest))) => inner(Slash(rest), output)
+          case Slash(Segment(".", rest))        => inner(Slash(rest), output)
+          // -> "/../" or "/.."
+          case Slash(Segment("..", Slash(rest))) => inner(Slash(rest), deleteLast(output, withSlash = true))
+          case Slash(Segment("..", rest))        => inner(Slash(rest), deleteLast(output, withSlash = true))
+          // only "." or ".."
+          case Segment(".", Empty) | Segment("..", Empty) => inner(Path.Empty, output)
+          // move
+          case Slash(rest)      => inner(rest, Slash(output))
+          case Segment(s, rest) => inner(rest, output + s)
+          case Empty            => output
+        }
+
+      inner(path.reverse, Path.Empty)
+    }
+
   }
 
   object RelativeIri {
@@ -738,6 +823,11 @@ object Iri {
     def endsWithSlash: Boolean = isSlash
 
     /**
+      * @return true if this path starts with a slash ('/'), false otherwise
+      */
+    def startWithSlash: Boolean
+
+    /**
       * @return the UTF-8 representation of this Path
       */
     def asString: String
@@ -747,6 +837,49 @@ object Iri {
       *         is not contained in the Set ''pchar''
       */
     def pctEncoded: String
+
+    /**
+      * @return the reversed path
+      */
+    def reverse: Path = {
+      @tailrec
+      def inner(acc: Path, remaining: Path): Path = remaining match {
+        case Empty         => acc
+        case Segment(h, t) => inner(Segment(h, acc), t)
+        case Slash(t)      => inner(Slash(acc), t)
+      }
+      inner(Empty, this)
+    }
+
+    /**
+      * @param other the path to be suffixed to the current path
+      * @return the current path plus the provided path
+      *         Ex: current = "/a/b/c/d", other = "/e/f" will output "/a/b/c/d/e/f"
+      *         current = "/a/b/c/def", other = "ghi/f" will output "/a/b/c/def/ghi/f"
+      */
+    def ::(other: Path): Path = other prepend this
+
+    /**
+      * @param other the path to be prepended to the current path
+      * @return the current path plus the provided path
+      *         Ex: current = "/e/f", other = "/a/b/c/d" will output "/a/b/c/d/e/f"
+      *         current = "ghi/f", other = "/a/b/c/def" will output "/a/b/c/def/ghi/f"
+      **/
+    def prepend(other: Path): Path
+
+    /**
+      * @param segment the segment to be appended to a path
+      * @return current / segment. If the current path is a [[Segment]], a slash will be added
+      */
+    def /(segment: String): Path =
+      if (segment.isEmpty) this else Segment(segment, Slash(this))
+
+    /**
+      * @param string the string to be appended to this path
+      * @return Segment(string, Empty) if this is empty, current / string if current ends with a slash
+      *         or Segment(segment + string, rest) if current is a Segment
+      */
+    def +(string: String): Path
   }
 
   object Path {
@@ -777,6 +910,18 @@ object Iri {
         .leftMap(_.format(string, formatter))
 
     /**
+      * Attempts to parse the argument string as an `isegment-nz` Segment as defined by RFC 3987.
+      *
+      * @param string the string to parse as a Path
+      * @return Right(Path) if the parsing succeeds, Left(error) otherwise
+      */
+    final def segment(string: String): Either[String, Path] =
+      new IriParser(string).segment
+        .run()
+        .map(str => Segment(str, Empty))
+        .leftMap(_.format(string, formatter))
+
+    /**
       * An empty path.
       */
     sealed trait Empty extends Path
@@ -793,6 +938,10 @@ object Iri {
       def asSegment: Option[Segment] = None
       def asString: String           = ""
       def pctEncoded: String         = ""
+      def startWithSlash: Boolean    = false
+      def prepend(other: Path): Path = other
+      def +(segment: String): Path   = if (segment.isEmpty) this else Segment(segment, this)
+
     }
 
     /**
@@ -809,6 +958,10 @@ object Iri {
       def asSegment: Option[Segment] = None
       def asString: String           = rest.asString + "/"
       def pctEncoded: String         = rest.pctEncoded + "/"
+      def startWithSlash: Boolean    = if (rest.isEmpty) true else rest.startWithSlash
+      def prepend(other: Path): Path = Slash(rest prepend other)
+      def +(segment: String): Path   = if (segment.isEmpty) this else Segment(segment, this)
+
     }
 
     /**
@@ -825,6 +978,9 @@ object Iri {
       def asSegment: Option[Segment] = Some(this)
       def asString: String           = rest.asString + segment
       def pctEncoded: String         = rest.pctEncoded + pctEncode(segment)
+      def startWithSlash: Boolean    = rest.startWithSlash
+      def prepend(other: Path): Path = (rest prepend other) + segment
+      def +(s: String): Path         = if (segment.isEmpty) this else Segment(segment + s, rest)
     }
 
     final implicit val pathShow: Show[Path] = Show.show(_.asString)
