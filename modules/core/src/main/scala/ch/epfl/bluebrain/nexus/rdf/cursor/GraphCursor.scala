@@ -72,6 +72,7 @@ sealed abstract class GraphCursor(private val lastCursor: SCursor, private val l
 
 }
 
+@SuppressWarnings(Array("NullParameter"))
 object GraphCursor {
 
   private[cursor] sealed abstract class SCursor(val lastCursor: SCursor, lastOp: CursorOp)
