@@ -3,6 +3,7 @@ package ch.epfl.bluebrain.nexus.rdf
 import cats.kernel.Eq
 import cats.syntax.show._
 import ch.epfl.bluebrain.nexus.rdf.Graph.{Triple, _}
+import ch.epfl.bluebrain.nexus.rdf.GraphCursor.{EmptyCursor, MultiCursor, SingleCursor}
 import ch.epfl.bluebrain.nexus.rdf.Node.{IriNode, IriOrBNode, Literal}
 import ch.epfl.bluebrain.nexus.rdf.syntax.node._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
@@ -185,6 +186,40 @@ class GraphSpec extends WordSpecLike with Matchers with EitherValues {
       val fst = Graph((b"1", p.other, true): Triple)
       val snd = Graph((b"1", p.other, true): Triple)
       HashSet(fst)(snd) shouldEqual true
+    }
+
+    "navigate the graph" in {
+
+      val id1 = url"http://nexus.example.com/john-doe"
+      val id2 = url"http://nexus.example.com/other"
+      val id3 = url"http://nexus.example.com/other2"
+      val graph = Graph(
+        (id1, url"http://schema.org/name", "John Doe"),
+        (id1, url"http://schema.org/birthYear", 1987),
+        (id1, url"http://example.com/stringProperty", "Some property"),
+        (id1, url"http://www.w3.org/1999/02/22-rdf-syntax-ns#type", url"http://schema.org/Person"),
+        (id1, url"http://example.com/sibling", id2),
+        (id1, url"http://example.com/sibling", id3),
+        (id2, url"http://www.w3.org/1999/02/22-rdf-syntax-ns#type", url"http://schema.org/Other"),
+        (id2, url"http://schema.org/birthYear", 1988),
+        (id3, url"http://www.w3.org/1999/02/22-rdf-syntax-ns#type", url"http://schema.org/SomeOther"),
+        (id3, url"http://schema.org/birthYear", 1950),
+        (id3, url"http://schema.org/other", 2)
+      )
+
+      val cursor = graph.down(id1, url"http://example.com/sibling")
+      cursor.isInstanceOf[MultiCursor] shouldEqual true
+      cursor.values shouldEqual Set[Node](id2, id3)
+      cursor.ids shouldEqual Set[IriOrBNode](id2, id3)
+
+      val cursor2 = cursor.down(url"http://schema.org/other")
+      cursor2.isInstanceOf[SingleCursor] shouldEqual true
+      cursor2.asInstanceOf[SingleCursor].value shouldEqual (2: Node)
+      cursor2.ids shouldEqual Set.empty[IriOrBNode]
+
+      cursor.down(url"http://schema.org/birthYear").values shouldEqual Set[Node](1988, 1950)
+
+      cursor2.down(url"http://www.w3.org/1999/02/22-rdf-syntax-ns#type") shouldEqual EmptyCursor
     }
   }
 

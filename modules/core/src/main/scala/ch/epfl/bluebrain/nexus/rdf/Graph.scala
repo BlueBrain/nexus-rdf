@@ -48,6 +48,19 @@ final class Graph private[rdf] (private val underlying: G[Node, LkDiEdge]) {
     underlying.edges.filter(e => s(e.s) && p(e.p) && o(e.o)).map(e => (e.s, e.p, e.o)).toSet
 
   /**
+    * @param s the triple subject used to test matches
+    * @param p the triple predicate used to test matches
+    * @param o the triple objects used to test matches
+    * @return the cursor from the provided subject, predicate and object functions
+    */
+  def down(s: IriOrBNode => Boolean = _ => true,
+           p: IriNode => Boolean = _ => true,
+           o: Node => Boolean = _ => true): GraphCursor = {
+    val objects = underlying.edges.filter(e => s(e.s) && p(e.p) && o(e.o)).map(_.o).toSet
+    GraphCursor(objects, this)
+  }
+
+  /**
     * @param p the triple predicate
     * @param o the triple object
     * @return the subjects found from the provided predicate and object
