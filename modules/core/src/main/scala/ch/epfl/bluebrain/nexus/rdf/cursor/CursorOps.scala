@@ -16,12 +16,12 @@ final object CursorOp {
   /**
     * Moves the cursor to the parent node
     */
-  final case object MoveUp                          extends CursorOp
+  final case object MoveUp extends CursorOp
 
   /**
     * Moves the cursor to the top node (the initial cursor)
     */
-  final case object MoveTop                         extends CursorOp
+  final case object MoveTop extends CursorOp
 
   /**
     * If the cursor is a [[ch.epfl.bluebrain.nexus.rdf.cursor.GraphCursor.NodeCursor]],
@@ -29,7 +29,7 @@ final object CursorOp {
     *
     * @param p the triple predicate function used to move the cursor
     */
-  final case class Field(p: IriNode => Boolean)     extends CursorOp
+  final case class Field(p: IriNode => Boolean) extends CursorOp
 
   /**
     * Moves the cursor to the next node which matches the provided ''p''
@@ -44,7 +44,7 @@ final object CursorOp {
     *
     * @param o the triple object function used to move the cursor
     */
-  final case class DownAt(o: Node => Boolean)       extends CursorOp
+  final case class DownAt(o: Node => Boolean) extends CursorOp
 
   implicit final val eqCursorOp: Eq[CursorOp] = Eq.fromUniversalEquals
 
