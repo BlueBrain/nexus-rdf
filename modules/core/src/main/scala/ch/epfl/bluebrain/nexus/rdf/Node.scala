@@ -150,7 +150,7 @@ object Node {
     Literal(value)
 
   /**
-    * Creates a new Decimal literal of ''http://www.w3.org/2001/XMLSchema#decimal'' data type.
+    * Creates a new Float literal of ''http://www.w3.org/2001/XMLSchema#float'' data type.
     *
     * @param value the underlying float value
     */
@@ -308,7 +308,7 @@ object Node {
 
       // format: off
       final val numericDataTypes: Set[AbsoluteIri] = Set(
-        byte, short, int, integer, long, decimal,
+        byte, short, int, integer, long, decimal, float,
         negativeInteger, nonNegativeInteger, nonPositiveInteger, positiveInteger,
         unsignedByte, unsignedShort, unsignedInt, unsignedLong)
       // format: on
@@ -385,7 +385,7 @@ object Node {
       new Literal(value.toString, xsd.long)
 
     /**
-      * Creates a new Decimal literal of ''http://www.w3.org/2001/XMLSchema#float'' data type.
+      * Creates a new Float literal of ''http://www.w3.org/2001/XMLSchema#float'' data type.
       *
       * @param value the underlying float value
       */

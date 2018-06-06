@@ -1,13 +1,14 @@
 package ch.epfl.bluebrain.nexus.rdf.cursor
 
 import ch.epfl.bluebrain.nexus.rdf.Graph._
-import ch.epfl.bluebrain.nexus.rdf.Node.IriNode
-import ch.epfl.bluebrain.nexus.rdf.cursor.GraphCursor.{SCursor, TopCursor}
-import ch.epfl.bluebrain.nexus.rdf.{Graph, Node}
+import ch.epfl.bluebrain.nexus.rdf.Node.{IriNode, IriOrBNode}
 import ch.epfl.bluebrain.nexus.rdf.cursor.CursorOp._
+import ch.epfl.bluebrain.nexus.rdf.cursor.GraphCursor.SCursor
+import ch.epfl.bluebrain.nexus.rdf.{Graph, Node}
 
 import scala.annotation.tailrec
 
+@SuppressWarnings(Array("NullParameter"))
 sealed abstract class GraphCursor(private val lastCursor: SCursor, private val lastOp: CursorOp) extends Serializable {
 
   /**
@@ -20,10 +21,9 @@ sealed abstract class GraphCursor(private val lastCursor: SCursor, private val l
     */
   def history: List[CursorOp] = {
     @tailrec
-    def inner(cursor: GraphCursor, acc: List[CursorOp]): List[CursorOp] = cursor match {
-      case _: TopCursor if cursor.lastCursor == null => acc
-      case _                                         => inner(cursor.lastCursor, cursor.lastOp :: acc)
-    }
+    def inner(cursor: GraphCursor, acc: List[CursorOp]): List[CursorOp] =
+      if (cursor.lastCursor == null) acc
+      else inner(cursor.lastCursor, cursor.lastOp :: acc)
 
     inner(this, List.empty)
   }
@@ -72,9 +72,10 @@ sealed abstract class GraphCursor(private val lastCursor: SCursor, private val l
 
 }
 
-private[cursor] object GraphCursor {
+object GraphCursor {
 
-  sealed abstract class SCursor(val lastCursor: SCursor, lastOp: CursorOp) extends GraphCursor(lastCursor, lastOp) {
+  private[cursor] sealed abstract class SCursor(val lastCursor: SCursor, lastOp: CursorOp)
+      extends GraphCursor(lastCursor, lastOp) {
 
     protected[this] final def fail(op: CursorOp): GraphCursor = new FailedCursor(this, op)
 
@@ -84,19 +85,27 @@ private[cursor] object GraphCursor {
 
     def downAt(o: Node => Boolean): GraphCursor = fail(DownAt(o))
 
-    protected[this] def fetchTop: SCursor = {
+    private def fetchTop: GraphCursor = {
       @tailrec
-      def inner(cursor: SCursor): SCursor = cursor match {
-        case c: TopCursor => c
-        case _            => inner(cursor.lastCursor)
-      }
+      def inner(cursor: GraphCursor): GraphCursor =
+        if (cursor == null)
+          fail(MoveTop)
+        else
+          cursor match {
+            case c: TopCursor => c
+            case _            => inner(cursor.lastCursor)
+          }
 
       inner(this)
     }
 
+    def top: GraphCursor = fetchTop match {
+      case t: TopCursor => t.addOp(this, MoveTop)
+      case o            => o
+    }
   }
 
-  sealed abstract class DownFieldCursor(lastCursor: SCursor, lastOp: CursorOp, g: Graph)
+  private[cursor] sealed abstract class DownFieldCursor(lastCursor: SCursor, lastOp: CursorOp, g: Graph)
       extends SCursor(lastCursor, lastOp) {
 
     protected[this] def downField(obj: Node, p: IriNode => Boolean): GraphCursor = {
@@ -110,7 +119,7 @@ private[cursor] object GraphCursor {
     }
   }
 
-  final class TopCursor(obj: Node)(lastCursor: SCursor, lastOp: CursorOp, graph: Graph)
+  private[cursor] final class TopCursor(obj: Node)(lastCursor: SCursor, lastOp: CursorOp, graph: Graph)
       extends DownFieldCursor(lastCursor, lastOp, graph) {
 
     def focus: Option[Node]                           = Some(obj)
@@ -119,10 +128,11 @@ private[cursor] object GraphCursor {
     def field(p: IriNode => Boolean): GraphCursor     = fail(Field(p))
     def addOp(cursor: SCursor, op: CursorOp): SCursor = new TopCursor(obj)(cursor, op, graph)
     def downField(p: IriNode => Boolean): GraphCursor = downField(obj, p)
-    def top: GraphCursor                              = fail(MoveTop)
+    override def top: GraphCursor                     = fail(MoveTop)
   }
-
-  final class NodeCursor(subject: Node, obj: Node, parent: SCursor)(lastCursor: SCursor, lastOp: CursorOp, graph: Graph)
+  private[cursor] final class NodeCursor(subject: Node, obj: Node, parent: SCursor)(lastCursor: SCursor,
+                                                                                    lastOp: CursorOp,
+                                                                                    graph: Graph)
       extends DownFieldCursor(lastCursor, lastOp, graph) {
 
     def field(p: IriNode => Boolean): GraphCursor = {
@@ -140,13 +150,12 @@ private[cursor] object GraphCursor {
     def addOp(cursor: SCursor, op: CursorOp): SCursor = new NodeCursor(subject, obj, parent)(cursor, op, graph)
     def downField(p: IriNode => Boolean): GraphCursor = downField(obj, p)
     def up: GraphCursor                               = parent.addOp(this, MoveUp)
-    def top: GraphCursor                              = fetchTop.addOp(this, MoveTop)
 
   }
 
-  final class ArrayNodeCursorSel(subject: Node, obj: Set[Node], parent: SCursor)(lastCursor: SCursor,
-                                                                                 lastOp: CursorOp,
-                                                                                 graph: Graph)
+  private[cursor] final class ArrayNodeCursorSel(subject: Node, obj: Set[Node], parent: SCursor)(lastCursor: SCursor,
+                                                                                                 lastOp: CursorOp,
+                                                                                                 graph: Graph)
       extends SCursor(lastCursor, lastOp) {
 
     override def downAt(o: Node => Boolean): GraphCursor =
@@ -161,13 +170,12 @@ private[cursor] object GraphCursor {
     def addOp(cursor: SCursor, op: CursorOp): SCursor = new ArrayNodeCursorSel(subject, obj, parent)(cursor, op, graph)
     def downField(p: IriNode => Boolean): GraphCursor = fail(DownField(p))
     def up: GraphCursor                               = parent.addOp(this, MoveUp)
-    def top: GraphCursor                              = fetchTop.addOp(this, MoveTop)
 
   }
 
-  final class ArrayNodeCursor(subject: Node, obj: Node, parent: SCursor)(lastCursor: SCursor,
-                                                                         lastOp: CursorOp,
-                                                                         graph: Graph)
+  private[cursor] final class ArrayNodeCursor(subject: Node, obj: Node, parent: SCursor)(lastCursor: SCursor,
+                                                                                         lastOp: CursorOp,
+                                                                                         graph: Graph)
       extends DownFieldCursor(lastCursor, lastOp, graph) {
 
     def focus: Option[Node]                           = Some(obj)
@@ -176,11 +184,11 @@ private[cursor] object GraphCursor {
     def addOp(cursor: SCursor, op: CursorOp): SCursor = new ArrayNodeCursor(subject, obj, parent)(cursor, op, graph)
     def downField(p: IriNode => Boolean): GraphCursor = downField(obj, p)
     def up: GraphCursor                               = parent.addOp(this, MoveUp)
-    def top: GraphCursor                              = fetchTop.addOp(this, MoveTop)
 
   }
 
-  final class FailedCursor(lastCursor: SCursor, lastOp: CursorOp) extends GraphCursor(lastCursor, lastOp) {
+  private[cursor] final class FailedCursor(lastCursor: SCursor, lastOp: CursorOp)
+      extends GraphCursor(lastCursor, lastOp) {
     def focus: Option[Node]                           = None
     def succeeded: Boolean                            = false
     def values: Option[Iterable[Node]]                = None
@@ -190,5 +198,18 @@ private[cursor] object GraphCursor {
     def field(p: IriNode => Boolean): GraphCursor     = this
     def downField(p: IriNode => Boolean): GraphCursor = this
   }
+
+  /**
+    * Construct an initial cursor from the provided ''node''
+    *
+    * @param node the node where to start the cursor traversal
+    * @param g    the [[Graph]] to traverse
+    */
+  final def apply(node: IriOrBNode, g: Graph): GraphCursor = new TopCursor(node)(null, null, g)
+
+  /**
+    * @return an initial failed cursor
+    */
+  final def failed: GraphCursor = new FailedCursor(null, null)
 
 }

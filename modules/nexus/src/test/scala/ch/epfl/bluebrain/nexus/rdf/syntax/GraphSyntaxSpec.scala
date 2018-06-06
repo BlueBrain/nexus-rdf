@@ -4,6 +4,8 @@ import ch.epfl.bluebrain.nexus.rdf.Node.BNode
 import ch.epfl.bluebrain.nexus.rdf.syntax.circe._
 import ch.epfl.bluebrain.nexus.rdf.syntax.nexus._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
+import ch.epfl.bluebrain.nexus.rdf.Graph._
+import ch.epfl.bluebrain.nexus.rdf.Node
 import io.circe.Json
 import io.circe.parser.parse
 import org.scalatest.{Matchers, OptionValues, TryValues, WordSpecLike}
@@ -33,6 +35,13 @@ class GraphSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
       typedJson.asGraph.primaryTypes shouldEqual Set(url"http://purl.org/goodrelations/v1#Offering",
                                                      url"http://www.w3.org/2002/07/owl#Ontology")
 
+    }
+
+    "navigate to an element" in {
+      json.asGraph.mainCursor
+        .downField(url"http://schema.org/image")
+        .focus
+        .value shouldEqual (url"http://www.civil.usherbrooke.ca/cours/gci215a/empire-state-building.jpg": Node)
     }
   }
 

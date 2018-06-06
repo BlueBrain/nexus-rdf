@@ -78,7 +78,13 @@ class GraphCursorSpec extends WordSpecLike with Matchers with OptionValues {
       (coordId2, schema.lng, literal(73.98f))
     )
 
-    val c = new TopCursor(id)(null, null, graph)
+    val c = GraphCursor(id, graph)
+
+    "obtain the cursor from the graph primary node" in {
+      c.focus.value shouldEqual graph.cursor(id).focus.value
+      c.history shouldEqual graph.cursor(id).history
+      c.values shouldEqual c.values
+    }
 
     "navigate down a simple" in {
       c.downField(schema.desc).focus.value shouldEqual ("The Empire State...": Node)
