@@ -2,7 +2,6 @@ package ch.epfl.bluebrain.nexus.rdf.cursor
 
 import java.io.Serializable
 
-import cats.Eq
 import ch.epfl.bluebrain.nexus.rdf.Node
 import ch.epfl.bluebrain.nexus.rdf.Node.IriNode
 
@@ -45,8 +44,4 @@ final object CursorOp {
     * @param o the triple object function used to move the cursor
     */
   final case class DownAt(o: Node => Boolean) extends CursorOp
-
-  implicit final val eqCursorOp: Eq[CursorOp] = Eq.fromUniversalEquals
-
-  val eqCursorOpList: Eq[List[CursorOp]] = cats.instances.list.catsKernelStdEqForList[CursorOp]
 }

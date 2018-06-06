@@ -92,10 +92,7 @@ class GraphCursorSpec extends WordSpecLike with Matchers with OptionValues {
     }
 
     "fail to navigate to a non existing property" in {
-      val failedCursor = c.downField(schema.lat)
-      failedCursor shouldBe a[FailedCursor]
-      failedCursor.focus shouldEqual None
-      failedCursor.failed shouldEqual true
+      failedChecks(c.downField(schema.lat))
     }
 
     "navigate down an object" in {
@@ -104,6 +101,8 @@ class GraphCursorSpec extends WordSpecLike with Matchers with OptionValues {
     }
 
     "navigate down an array element" in {
+      c.downField(schema.geo).downAt(geoId1).values shouldEqual None
+      c.downField(schema.geo).downAt(geoId1).focus.value shouldEqual geoId1
       c.downField(schema.geo).downAt(geoId1).downField(schema.coord).focus.value shouldEqual coordId1
       c.downField(schema.geo).downAt(geoId2).downField(schema.coord).focus.value shouldEqual coordId2
 
@@ -117,23 +116,39 @@ class GraphCursorSpec extends WordSpecLike with Matchers with OptionValues {
       c.downField(schema.geo).values.value shouldEqual Set(geoId1, geoId2)
     }
 
+    "fail to navigate to a down property when the array element hasn't been selected" in {
+      failedChecks(c.downField(schema.geo).downField(schema.coord))
+    }
+
+    "return None when getting the focus for an array element hasn't been selected" in {
+      c.downField(schema.geo).focus shouldEqual None
+    }
+
+    "fail to navigate through siblings in an array" in {
+      failedChecks(c.downField(schema.geo).downAt(geoId1).field(schema.geo))
+    }
+
     "fail to navigate down a non existing array element" in {
-      val failedCursor = c.downField(schema.geo).downAt(coordId1)
-      failedCursor shouldBe a[FailedCursor]
-      failedCursor.focus shouldEqual None
-      failedCursor.failed shouldEqual true
+      failedChecks(c.downField(schema.geo).downAt(coordId1))
     }
 
     "fail to navigate down a cursor which already failed" in {
-      val failedCursor = c.downField(schema.geo).downAt(coordId1).downField(schema.lat)
-      failedCursor shouldBe a[FailedCursor]
-      failedCursor.focus shouldEqual None
-      failedCursor.failed shouldEqual true
+      failedChecks(c.downField(schema.geo).downAt(coordId1).downField(schema.lat))
     }
 
     "navigate to siblings" in {
       c.downField(schema.img).downField(schema.desc).field(schema.name).focus.value shouldEqual ("Front": Node)
       c.downField(schema.img).field(schema.name).focus.value shouldEqual ("The Empire State Building": Node)
+      c.downField(schema.name)
+        .field(schema.img)
+        .downField(schema.desc)
+        .up
+        .downField(schema.name)
+        .field(schema.desc)
+        .focus
+        .value shouldEqual ("Image of...": Node)
+
+      c.downField(schema.geo).field(schema.img).downField(schema.name).focus.value shouldEqual ("Front": Node)
 
       c.downField(schema.geo)
         .downAt(geoId1)
@@ -166,6 +181,12 @@ class GraphCursorSpec extends WordSpecLike with Matchers with OptionValues {
 
       c.downField(image).downField(description).up.downField(name).history shouldEqual expected1
       c.downField(image).downField(description).up.downField(name).top.history shouldEqual expected2
+    }
+    def failedChecks(failedCursor: GraphCursor) = {
+      failedCursor shouldBe a[FailedCursor]
+      failedCursor.focus shouldEqual None
+      failedCursor.failed shouldEqual true
+      failedCursor.values shouldEqual None
     }
   }
 }
