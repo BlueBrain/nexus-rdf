@@ -2,10 +2,14 @@ package ch.epfl.bluebrain.nexus.rdf.syntax
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 
+import cats.syntax.show._
 import ch.epfl.bluebrain.nexus.rdf.Graph
+import ch.epfl.bluebrain.nexus.rdf.Node.{IriNode, IriOrBNode}
 import ch.epfl.bluebrain.nexus.rdf.syntax.jena._
+import com.github.jsonldjava.core.JsonLdOptions
 import io.circe.Json
 import io.circe.parser._
+import io.circe.syntax._
 import org.apache.jena.query.DatasetFactory
 import org.apache.jena.rdf.model.ModelFactory
 import org.apache.jena.riot.system.RiotLib
@@ -56,22 +60,57 @@ object circe {
     /**
       * Convert [[Graph]] into JSON-LD representation using provided context. Beware, that currently IRI contexts are
       * not resolved and will be ignored.
+      *
+      * @param id the optionally provided initial entity @id
       * @param context context to use when creating JSON-LD representation
       * @return [[Json]] containing JSON-LD representation of the [[Graph]]
       */
-    def asJson(context: Json): Try[Json] =
-      context.asObject.flatMap(_("@context")).flatMap(filterIriContext) match {
-        case Some(c) =>
-          val ctx = new JsonLDWriteContext
-          ctx.setJsonLDContext(c.noSpaces)
-          val g   = DatasetFactory.wrap(graph).asDatasetGraph
-          val out = new ByteArrayOutputStream()
-          val w   = RDFDataMgr.createDatasetWriter(RDFFormat.JSONLD)
-          val pm  = RiotLib.prefixMap(g)
-          Try {
-            w.write(out, g, pm, null, ctx)
-          }.flatMap(_ => parse(out.toString).toTry)
-        case None => Try(asJson)
+    def asJson(context: Json, id: Option[IriOrBNode]): Try[Json] =
+      (context.asObject.flatMap(_("@context")).flatMap(filterIriContext), id) match {
+        case (Some(c), Some(iri: IriNode)) => writeFramed(c, iri)
+        case (Some(c), _)                  => write(c)
+        case _                             => Try(asJson)
+      }
+
+    private def writeFramed(c: Json, id: IriNode): Try[Json] = {
+      val ctx = new JsonLDWriteContext
+      ctx.setJsonLDContext(c.noSpaces)
+      val opts = new JsonLdOptions()
+      opts.setEmbed(true)
+      opts.setProcessingMode(JsonLdOptions.JSON_LD_1_1)
+      opts.setCompactArrays(true)
+      opts.setPruneBlankNodeIdentifiers(true)
+      opts.setUseNativeTypes(true)
+      val context = Json.obj("@context"              -> c)
+      val frame   = context deepMerge Json.obj("@id" -> Json.fromString(id.show))
+      ctx.setFrame(frame.noSpaces)
+      ctx.setOptions(opts)
+      write(RDFFormat.JSONLD_FRAME_FLAT, ctx)
+    }
+
+    private def write(c: Json): Try[Json] = {
+      val ctx = new JsonLDWriteContext
+      ctx.setJsonLDContext(c.noSpaces)
+      write(RDFFormat.JSONLD, ctx)
+    }
+
+    private def write(format: RDFFormat, ctx: JsonLDWriteContext): Try[Json] = {
+      val g   = DatasetFactory.wrap(graph).asDatasetGraph
+      val out = new ByteArrayOutputStream()
+      val w   = RDFDataMgr.createDatasetWriter(format)
+      val pm  = RiotLib.prefixMap(g)
+      Try {
+        w.write(out, g, pm, null, ctx)
+      }.flatMap(_ => parse(out.toString).map(removeSingleGraph).toTry)
+    }
+
+    private def removeSingleGraph(json: Json): Json =
+      (json.hcursor.downField("@graph").focus.flatMap(_.asArray).flatMap {
+        case head +: IndexedSeq() => Some(head)
+        case _                    => None
+      }, json.asObject) match {
+        case (Some(entity), Some(obj)) => entity deepMerge obj.remove("@graph").asJson
+        case _                         => json
       }
   }
 }

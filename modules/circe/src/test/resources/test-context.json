@@ -1,11 +1,22 @@
 {
   "@context": {
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
     "Person": {
       "@id": "http://schema.org/Person"
+    },
+    "Other": {
+      "@id": "http://schema.org/Other"
     },
     "birthDate": {
       "@id": "http://schema.org/birthDate",
       "@type": "http://schema.org/Date"
+    },
+    "birthYear": {
+      "@id": "http://schema.org/birthYear"
+    },
+    "sibling": {
+      "@id": "http://example.com/sibling",
+      "@type": "@id"
     },
     "name": {
       "@id": "http://schema.org/name"

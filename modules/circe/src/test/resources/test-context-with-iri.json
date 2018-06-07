@@ -9,6 +9,9 @@
         "@id": "http://schema.org/birthDate",
         "@type": "http://schema.org/Date"
       },
+      "birthYear": {
+        "@id": "http://schema.org/birthYear"
+      },
       "name": {
         "@id": "http://schema.org/name"
       },
