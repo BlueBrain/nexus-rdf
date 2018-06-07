@@ -1,5 +1,13 @@
 {
   "@context": {
+    "_rev": {
+      "@id": "http://example.org/rev",
+      "@type": "xsd:integer"
+    },
+    "_deprecated": {
+      "@id": "http://example.org/deprecated",
+      "@type": "xsd:boolean"
+    },
     "gr": "http://purl.org/goodrelations/v1#",
     "pto": "http://www.productontology.org/id/",
     "foaf": "http://xmlns.com/foaf/0.1/",
@@ -24,6 +32,8 @@
   "gr:description": "Need to sell fast and furiously",
   "gr:hasBusinessFunction": "gr:Sell",
   "gr:acceptedPaymentMethods": "gr:Cash",
+  "_rev": 1,
+  "_deprecated": false,
   "gr:includes": {
     "@type": "pto:Vehicle",
     "gr:name": "Tesla Roadster",
