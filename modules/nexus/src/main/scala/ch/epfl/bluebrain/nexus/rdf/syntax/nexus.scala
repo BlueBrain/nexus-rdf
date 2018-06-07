@@ -36,7 +36,7 @@ object nexus {
     /**
       * @return the initial cursor of the ''graph'', centered in the ''primaryNode''
       */
-    def mainCursor: GraphCursor = primaryNode match {
+    def cursor(): GraphCursor = primaryNode match {
       case None       => GraphCursor.failed
       case Some(node) => graph.cursor(node)
     }

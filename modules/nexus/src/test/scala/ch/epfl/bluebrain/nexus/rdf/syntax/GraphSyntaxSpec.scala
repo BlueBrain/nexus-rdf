@@ -47,14 +47,15 @@ class GraphSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
     }
 
     "navigate to an element" in {
-      json.asGraph.mainCursor
+      json.asGraph
+        .cursor()
         .downField(url"http://schema.org/image")
         .focus
         .value shouldEqual (url"http://www.civil.usherbrooke.ca/cours/gci215a/empire-state-building.jpg": Node)
     }
 
     "return a failed cursor when @id is not found" in {
-      self.asGraph.mainCursor.failed shouldEqual true
+      self.asGraph.cursor().failed shouldEqual true
     }
 
   }
