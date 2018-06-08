@@ -1,0 +1,50 @@
+{
+  "@context": {
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
+    "Person": {
+      "@id": "http://schema.org/Person"
+    },
+    "Other": {
+      "@id": "http://schema.org/Other"
+    },
+    "birthDate": {
+      "@id": "http://schema.org/birthDate",
+      "@type": "http://schema.org/Date"
+    },
+    "birthYear": {
+      "@id": "http://schema.org/birthYear"
+    },
+    "sibling": {
+      "@id": "http://example.com/sibling",
+      "@type": "@id"
+    },
+    "name": {
+      "@id": "http://schema.org/name"
+    },
+    "sp": {
+      "@id": "http://example.com/stringProperty"
+    },
+    "knows": {
+      "@id": "http://schema.org/knows",
+      "@type": "@id"
+    }
+  },
+  "@graph": [
+    {
+      "@id": "http://nexus.example.com/john-doe",
+      "@type": "Person",
+      "name": "John Doe",
+      "birthDate": "1999-04-09T20:00Z",
+      "sp": "Some property",
+      "knows": "http://nexus.example.com/jack-doe"
+    },
+    {
+      "@id": "http://nexus.example.com/jack-doe",
+      "@type": "Person",
+      "name": "Jack Doe",
+      "birthDate": "1999-04-09T20:00Z",
+      "sp": "other property",
+      "knows": "http://nexus.example.com/jack-doe"
+    }
+  ]
+}

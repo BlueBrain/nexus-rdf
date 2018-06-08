@@ -58,7 +58,14 @@ class GraphSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
       self.asGraph.cursor().failed shouldEqual true
     }
 
+    "convert back to json" in {
+      val other = jsonContentOf("/id_and_type.json")
+      other.asGraph.asJson(context(other)).success.value shouldEqual other
+    }
+
   }
+
+  def context(json: Json): Json = Json.obj("@context" -> json.hcursor.get[Json]("@context").getOrElse(Json.obj()))
 
   final def jsonContentOf(resourcePath: String): Json =
     parse(Source.fromInputStream(getClass.getResourceAsStream(resourcePath)).mkString).toTry.success.value

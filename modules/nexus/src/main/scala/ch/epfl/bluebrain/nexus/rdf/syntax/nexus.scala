@@ -4,13 +4,18 @@ import ch.epfl.bluebrain.nexus.rdf.Graph
 import ch.epfl.bluebrain.nexus.rdf.Graph._
 import ch.epfl.bluebrain.nexus.rdf.Node.{BNode, IriNode, IriOrBNode}
 import ch.epfl.bluebrain.nexus.rdf.cursor.GraphCursor
+import ch.epfl.bluebrain.nexus.rdf.syntax.circe._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
+import io.circe.Json
+
+import scala.util.Try
 
 object nexus {
 
   private final val rdfType = url"http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
 
   final implicit class NexusGraphOps(graph: Graph) {
+    private val circeOps = new GraphOps(graph)
 
     /**
       * @return The optionally available root ''subject'' of the Graph. This is, the subject which is not used as an object
@@ -40,6 +45,16 @@ object nexus {
       case None       => GraphCursor.failed
       case Some(node) => graph.cursor(node)
     }
+
+    /**
+      * Convert [[Graph]] into JSON-LD representation using provided context. Beware, that currently IRI contexts are
+      * not resolved and will be ignored.
+      *
+      * @param context context to use when creating JSON-LD representation
+      * @return [[Json]] containing JSON-LD representation of the [[Graph]]
+      */
+    def asJson(context: Json): Try[Json] =
+      circeOps.asJson(context, primaryNode)
 
   }
 }
