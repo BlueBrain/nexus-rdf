@@ -150,7 +150,7 @@ object Node {
     Literal(value)
 
   /**
-    * Creates a new Decimal literal of ''http://www.w3.org/2001/XMLSchema#decimal'' data type.
+    * Creates a new Float literal of ''http://www.w3.org/2001/XMLSchema#float'' data type.
     *
     * @param value the underlying float value
     */
@@ -295,6 +295,7 @@ object Node {
       final val integer = schema.withFragment("integer")
       final val long    = schema.withFragment("long")
       final val decimal = schema.withFragment("decimal")
+      final val float = schema.withFragment("float")
 
       final val negativeInteger    = schema.withFragment("negativeInteger")
       final val nonNegativeInteger = schema.withFragment("nonNegativeInteger")
@@ -307,7 +308,7 @@ object Node {
 
       // format: off
       final val numericDataTypes: Set[AbsoluteIri] = Set(
-        byte, short, int, integer, long, decimal,
+        byte, short, int, integer, long, decimal, float,
         negativeInteger, nonNegativeInteger, nonPositiveInteger, positiveInteger,
         unsignedByte, unsignedShort, unsignedInt, unsignedLong)
       // format: on
@@ -384,12 +385,12 @@ object Node {
       new Literal(value.toString, xsd.long)
 
     /**
-      * Creates a new Decimal literal of ''http://www.w3.org/2001/XMLSchema#decimal'' data type.
+      * Creates a new Float literal of ''http://www.w3.org/2001/XMLSchema#float'' data type.
       *
       * @param value the underlying float value
       */
     final def apply(value: Float): Literal =
-      new Literal(value.toString, xsd.decimal)
+      new Literal(value.toString, xsd.float)
 
     /**
       * Creates a new Decimal literal of ''http://www.w3.org/2001/XMLSchema#decimal'' data type.

@@ -3,6 +3,7 @@ package ch.epfl.bluebrain.nexus.rdf
 import cats.{Eq, Show}
 import ch.epfl.bluebrain.nexus.rdf.Graph._
 import ch.epfl.bluebrain.nexus.rdf.Node.{IriNode, IriOrBNode}
+import ch.epfl.bluebrain.nexus.rdf.cursor.GraphCursor
 import scalax.collection.edge.LkDiEdge
 import scalax.collection.immutable.{Graph => G}
 
@@ -152,6 +153,13 @@ final class Graph private[rdf] (private val underlying: G[Node, LkDiEdge]) {
     */
   def --(that: Graph): Graph =
     subtract(that)
+
+  /**
+    * @param node the node where to start the cursor traversal
+    * @return an initial cursor from the provided ''node''
+    */
+  def cursor(node: IriOrBNode): GraphCursor =
+    GraphCursor(node, this)
 
   private def foldLeft[Z](z: Z)(f: (Z, (IriOrBNode, IriNode, Node)) => Z): Z =
     underlying.edges.foldLeft(z) {

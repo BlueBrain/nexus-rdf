@@ -3,6 +3,7 @@ package ch.epfl.bluebrain.nexus.rdf.syntax
 import ch.epfl.bluebrain.nexus.rdf.Graph
 import ch.epfl.bluebrain.nexus.rdf.Graph._
 import ch.epfl.bluebrain.nexus.rdf.Node.{BNode, IriNode, IriOrBNode}
+import ch.epfl.bluebrain.nexus.rdf.cursor.GraphCursor
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
 
 object nexus {
@@ -31,6 +32,14 @@ object nexus {
       */
     def primaryTypes: Set[IriNode] =
       primaryNode.map(i => graph.objects(i, rdfType).collect { case n: IriNode => n }).getOrElse(Set.empty)
+
+    /**
+      * @return the initial cursor of the ''graph'', centered in the ''primaryNode''
+      */
+    def cursor(): GraphCursor = primaryNode match {
+      case None       => GraphCursor.failed
+      case Some(node) => graph.cursor(node)
+    }
 
   }
 }
