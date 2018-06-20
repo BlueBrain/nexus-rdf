@@ -71,6 +71,17 @@ class UrlSpec extends WordSpecLike with Matchers with Inspectors with EitherValu
       withHash.value.asRelative shouldEqual None
     }
 
+    "append" in {
+      val cases = List(
+        ("http://google.com/a/", "bcd", "http://google.com/a/bcd"),
+        ("http://google.com/a?one=two&three", "bcd", "http://google.com/a/bcd?one=two&three"),
+        ("http://google.com/a#other", "bcd", "http://google.com/a/bcd#other")
+      )
+      forAll(cases) {
+        case (in, segment, expected) => (Url(in).right.value + segment) shouldEqual Url(expected).right.value
+      }
+    }
+
     "eq" in {
       val lhs = Url("hTtp://gooGle.com/a/../search?q=asd#1").right.value
       val rhs = Url("http://google.com/search?q=asd#1").right.value
