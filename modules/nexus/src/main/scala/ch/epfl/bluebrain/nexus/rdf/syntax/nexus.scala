@@ -33,6 +33,12 @@ object nexus {
       primaryNode.flatMap(_.asBlank)
 
     /**
+      * @return The optionally available iri node root ''subject'' of the Graph. This is, the subject which is not used as an object
+      */
+    def primaryIriNode: Option[IriNode] =
+      primaryNode.flatMap(_.asIri)
+
+    /**
       * @return the list of objects which have the subject found from the method ''id'' and the predicate rdf:type
       */
     def primaryTypes: Set[IriNode] =

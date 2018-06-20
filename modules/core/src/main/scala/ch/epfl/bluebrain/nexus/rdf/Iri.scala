@@ -273,6 +273,14 @@ object Iri {
     override def isAbsolute: Boolean             = true
     override def asAbsolute: Option[AbsoluteIri] = Some(this)
     override def asRelative: Option[RelativeIri] = None
+
+    /**
+      * Appends the segment to the end of the ''path'' section of the current ''AbsoluteIri''. If the path section ends with slash it
+      * directly appends, otherwise it adds a slash before appending
+      *
+      * @param segment the segment to be appended to the end of the path section
+      */
+    def +(segment: String): AbsoluteIri
   }
 
   object AbsoluteIri {
@@ -300,6 +308,8 @@ object Iri {
     override def asUrl: Option[Url] = Some(this)
     override def isUrn: Boolean     = false
     override def asUrn: Option[Urn] = None
+    override def +(segment: String): AbsoluteIri =
+      if (path.endsWithSlash) copy(path = path + segment) else copy(path = path / segment)
 
     /**
       * Returns a copy of this Url with the fragment value set to the argument fragment.
@@ -1132,6 +1142,8 @@ object Iri {
     override def asUrl: Option[Url] = None
     override def isUrn: Boolean     = true
     override def asUrn: Option[Urn] = Some(this)
+    override def +(segment: String): AbsoluteIri =
+      if (nss.endsWithSlash) copy(nss = nss + segment) else copy(nss = nss / segment)
 
     override lazy val asString: String = {
       val rstr = r.map("?+" + _.asString).getOrElse("")

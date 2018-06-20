@@ -21,10 +21,12 @@ class GraphSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
 
     "find @id from a Json-LD without it" in {
       json.asGraph.primaryNode.value shouldBe a[BNode]
+      json.asGraph.primaryBNode.value shouldBe a[BNode]
     }
 
     "find @id from Json-LD with it" in {
       typedJson.asGraph.primaryNode.value shouldEqual url"http://example.org/cars/for-sale#tesla"
+      typedJson.asGraph.primaryIriNode.value shouldEqual url"http://example.org/cars/for-sale#tesla"
     }
 
     "fail to find an @id when it is self-referenced" in {
