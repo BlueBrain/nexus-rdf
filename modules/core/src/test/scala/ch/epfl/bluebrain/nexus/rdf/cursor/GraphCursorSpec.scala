@@ -1,16 +1,19 @@
 package ch.epfl.bluebrain.nexus.rdf.cursor
 
 import ch.epfl.bluebrain.nexus.rdf.Graph._
+import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.Node.{literal, IriNode, IriOrBNode}
 import ch.epfl.bluebrain.nexus.rdf.cursor.CursorOp._
 import ch.epfl.bluebrain.nexus.rdf.cursor.GraphCursor.{FailedCursor, TopCursor}
 import ch.epfl.bluebrain.nexus.rdf.cursor.GraphCursorSpec._
+import ch.epfl.bluebrain.nexus.rdf.encoder.NodeEncoderError.{NoElementToEncode, WrongConversion, WrongType}
 import ch.epfl.bluebrain.nexus.rdf.syntax.node._
+import ch.epfl.bluebrain.nexus.rdf.syntax.node.encoder._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
 import ch.epfl.bluebrain.nexus.rdf.{Graph, Node}
-import org.scalatest.{Matchers, OptionValues, WordSpecLike}
+import org.scalatest.{EitherValues, Matchers, OptionValues, WordSpecLike}
 
-class GraphCursorSpec extends WordSpecLike with Matchers with OptionValues {
+class GraphCursorSpec extends WordSpecLike with Matchers with OptionValues with EitherValues {
   "A GraphCursor" should {
 
     /**
@@ -25,6 +28,7 @@ class GraphCursorSpec extends WordSpecLike with Matchers with OptionValues {
       *       "@type": "@id"
       *     },
       *     "geo": "http://schema.org/geo",
+      *     "other": "http://schema.org/other",
       *     "latitude": {
       *       "@id": "http://schema.org/latitude",
       *       "@type": "xsd:float"
@@ -42,6 +46,7 @@ class GraphCursorSpec extends WordSpecLike with Matchers with OptionValues {
       *     "name": "Front",
       *     "description": "Image of..."
       *   },
+      *   "other": [ 1.3, 2.4, 3.5]
       *   "geo": [{
       *     "coordinates": {
       *       "latitude": "10.75",
@@ -68,6 +73,9 @@ class GraphCursorSpec extends WordSpecLike with Matchers with OptionValues {
       (id, schema.img, imageId),
       (imageId, schema.desc, "Image of..."),
       (imageId, schema.name, "Front"),
+      (id, schema.other, literal(1.3)),
+      (id, schema.other, literal(2.4)),
+      (id, schema.other, literal(3.5)),
       (id, schema.geo, geoId1),
       (id, schema.geo, geoId2),
       (geoId1, schema.coord, coordId1),
@@ -83,7 +91,7 @@ class GraphCursorSpec extends WordSpecLike with Matchers with OptionValues {
     "obtain the cursor from the graph primary node" in {
       c.focus.value shouldEqual graph.cursor(id).focus.value
       c.history shouldEqual graph.cursor(id).history
-      c.values shouldEqual c.values
+      c.values shouldEqual graph.cursor(id).values
     }
 
     "navigate down a simple" in {
@@ -114,6 +122,38 @@ class GraphCursorSpec extends WordSpecLike with Matchers with OptionValues {
         .value shouldEqual literal(10.75f)
 
       c.downField(schema.geo).values.value shouldEqual Set(geoId1, geoId2)
+    }
+
+    "fetch encoded values" in {
+      c.downField(schema.geo)
+        .downAt(geoId1)
+        .downField(schema.coord)
+        .downField(schema.lat)
+        .focus
+        .as[Float]
+        .right
+        .value shouldEqual 10.75f
+
+      c.focus.as[AbsoluteIri].right.value shouldEqual id.value
+
+      c.downField(schema.desc).focus.as[String].right.value shouldEqual "The Empire State..."
+      c.downField(schema.other).values.asListOf[Double].right.value should contain theSameElementsAs List(1.3, 2.4, 3.5)
+    }
+
+    "fail to fetch encoded values" in {
+      c.downField(schema.geo)
+        .downAt(geoId1)
+        .downField(schema.coord)
+        .downField(schema.lat)
+        .focus
+        .as[Int]
+        .left
+        .value shouldBe a[WrongConversion]
+
+      c.downField(schema.geo).downField(schema.coord).focus.as[String].left.value shouldEqual NoElementToEncode
+      c.downField(schema.other).values.asListOf[String].left.value shouldBe a[WrongConversion]
+      c.downField(schema.other).values.asListOf[AbsoluteIri].left.value shouldBe a[WrongType]
+
     }
 
     "fail to navigate to a down property when the array element hasn't been selected" in {
@@ -195,6 +235,7 @@ object GraphCursorSpec {
     val desc: IriNode  = url"http://schema.org/description"
     val name: IriNode  = url"http://schema.org/name"
     val geo: IriNode   = url"http://schema.org/geo"
+    val other: IriNode = url"http://schema.org/other"
     val coord: IriNode = url"http://schema.org/coordinates"
     val lat: IriNode   = url"http://schema.org/latitude"
     val lng: IriNode   = url"http://schema.org/longitude"
