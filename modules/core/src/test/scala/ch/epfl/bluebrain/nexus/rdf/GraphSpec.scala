@@ -142,6 +142,10 @@ class GraphSpec extends WordSpecLike with Matchers with EitherValues {
       g.objects(b"1", p.string) shouldEqual Set[Node]("asd")
     }
 
+    "return the filtered objects as String encoded" in {
+      g.objects(b"1", p.string).map(_.as[String].right.value) shouldEqual Set("asd")
+    }
+
     "return objects with predicate http://prop/string of http://prop/int" in {
       g.objects(a, isa) shouldEqual Set(string, bool)
       g.objects(p = pred => pred == p.string || pred == p.int) shouldEqual Set[Node]("asd", 2)
