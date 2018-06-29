@@ -20,7 +20,7 @@ object NodeEncoderError {
     * @param msg the human readable message
     * @param th  the optionally available [[Throwable]]
     */
-  final case class WrongConversion(msg: String, th: Option[Throwable] = None) extends NodeEncoderError(msg)
+  final case class IllegalConversion(msg: String, th: Option[Throwable] = None) extends NodeEncoderError(msg)
 
   /**
     * The encoding failed because the [[ch.epfl.bluebrain.nexus.rdf.Node]] was of an unexpected type
@@ -28,6 +28,6 @@ object NodeEncoderError {
     * @param expectedType the expected type of [[ch.epfl.bluebrain.nexus.rdf.Node]] to be able to do the conversion to ''A''
     * @param current  the actual [[ch.epfl.bluebrain.nexus.rdf.Node]]
     */
-  final case class WrongType(expectedType: String, current: Node)
+  final case class IllegalType(expectedType: String, current: Node)
       extends NodeEncoderError(s"Expected a node of type $expectedType but found $current")
 }

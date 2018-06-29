@@ -6,7 +6,7 @@ import ch.epfl.bluebrain.nexus.rdf.Node.{literal, IriNode, IriOrBNode}
 import ch.epfl.bluebrain.nexus.rdf.cursor.CursorOp._
 import ch.epfl.bluebrain.nexus.rdf.cursor.GraphCursor.{FailedCursor, TopCursor}
 import ch.epfl.bluebrain.nexus.rdf.cursor.GraphCursorSpec._
-import ch.epfl.bluebrain.nexus.rdf.encoder.NodeEncoderError.{NoElementToEncode, WrongConversion, WrongType}
+import ch.epfl.bluebrain.nexus.rdf.encoder.NodeEncoderError.{IllegalConversion, IllegalType, NoElementToEncode}
 import ch.epfl.bluebrain.nexus.rdf.syntax.node._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.encoder._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
@@ -148,11 +148,11 @@ class GraphCursorSpec extends WordSpecLike with Matchers with OptionValues with 
         .focus
         .as[Int]
         .left
-        .value shouldBe a[WrongConversion]
+        .value shouldBe a[IllegalConversion]
 
       c.downField(schema.geo).downField(schema.coord).focus.as[String].left.value shouldEqual NoElementToEncode
-      c.downField(schema.other).values.asListOf[String].left.value shouldBe a[WrongConversion]
-      c.downField(schema.other).values.asListOf[AbsoluteIri].left.value shouldBe a[WrongType]
+      c.downField(schema.other).values.asListOf[String].left.value shouldBe a[IllegalConversion]
+      c.downField(schema.other).values.asListOf[AbsoluteIri].left.value shouldBe a[IllegalType]
 
     }
 

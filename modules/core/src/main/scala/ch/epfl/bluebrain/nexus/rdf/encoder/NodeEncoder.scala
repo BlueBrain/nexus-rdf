@@ -3,7 +3,7 @@ package ch.epfl.bluebrain.nexus.rdf.encoder
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.Node
 import ch.epfl.bluebrain.nexus.rdf.encoder.NodeEncoder.EncoderResult
-import ch.epfl.bluebrain.nexus.rdf.encoder.NodeEncoderError.{WrongConversion, WrongType}
+import ch.epfl.bluebrain.nexus.rdf.encoder.NodeEncoderError.{IllegalConversion, IllegalType}
 
 import scala.util.Try
 
@@ -33,19 +33,19 @@ object NodeEncoder {
   implicit val doubleEncoder: NodeEncoder[Double] = (node: Node) => numeric(node, _.toDouble)
 
   implicit val stringEncoder: NodeEncoder[String] = (node: Node) =>
-    node.asLiteral.toRight(WrongType("Literal", node)).flatMap { literal =>
+    node.asLiteral.toRight(IllegalType("Literal", node)).flatMap { literal =>
       if (literal.isString) Right(literal.lexicalForm)
-      else Left(WrongConversion("Expected a string literal, but found otherwise"))
+      else Left(IllegalConversion("Expected a string literal, but found otherwise"))
   }
 
   implicit val absoluteIriEncoder: NodeEncoder[AbsoluteIri] = (node: Node) =>
-    node.asIri.toRight(WrongType("Iri", node)).map(_.value)
+    node.asIri.toRight(IllegalType("Iri", node)).map(_.value)
 
   private def numeric[A](node: Node, f: String => A): EncoderResult[A] = {
-    node.asLiteral.toRight(WrongType("Literal", node)).flatMap { literal =>
+    node.asLiteral.toRight(IllegalType("Literal", node)).flatMap { literal =>
       if (literal.isNumeric)
-        Try(f(literal.lexicalForm)).toEither.left.map(err => WrongConversion(err.getMessage, Some(err)))
-      else Left(WrongConversion("Expected a numeric literal, but found otherwise"))
+        Try(f(literal.lexicalForm)).toEither.left.map(err => IllegalConversion(err.getMessage, Some(err)))
+      else Left(IllegalConversion("Expected a numeric literal, but found otherwise"))
     }
   }
 
