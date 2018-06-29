@@ -134,7 +134,7 @@ object GraphCursor {
       extends FieldCursor(lastCursor, lastOp, graph) {
 
     def focus: Option[Node]                           = Some(obj)
-    def values: Option[Iterable[Node]]                = None
+    def values: Option[Iterable[Node]]                = focus.map(List(_))
     def up: GraphCursor                               = fail(MoveUp)
     def field(p: IriNode => Boolean): GraphCursor     = fail(Field(p))
     def addOp(cursor: SCursor, op: CursorOp): SCursor = new TopCursor(obj)(cursor, op, graph)
@@ -148,7 +148,7 @@ object GraphCursor {
 
     def field(p: IriNode => Boolean): GraphCursor     = field(subject, p, parent)
     def focus: Option[Node]                           = Some(obj)
-    def values: Option[Iterable[Node]]                = None
+    def values: Option[Iterable[Node]]                = focus.map(List(_))
     def addOp(cursor: SCursor, op: CursorOp): SCursor = new NodeCursor(subject, obj, parent)(cursor, op, graph)
     def downField(p: IriNode => Boolean): GraphCursor = downField(obj, p)
     def up: GraphCursor                               = parent.addOp(this, MoveUp)
@@ -182,7 +182,7 @@ object GraphCursor {
       extends FieldCursor(lastCursor, lastOp, graph) {
 
     def focus: Option[Node]                           = Some(obj)
-    def values: Option[Iterable[Node]]                = None
+    def values: Option[Iterable[Node]]                = focus.map(List(_))
     def field(p: IriNode => Boolean): GraphCursor     = fail(Field(p))
     def addOp(cursor: SCursor, op: CursorOp): SCursor = new ArrayNodeCursor(subject, obj, parent)(cursor, op, graph)
     def downField(p: IriNode => Boolean): GraphCursor = downField(obj, p)

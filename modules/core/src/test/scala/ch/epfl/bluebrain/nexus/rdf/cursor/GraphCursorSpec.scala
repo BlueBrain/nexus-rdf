@@ -97,6 +97,7 @@ class GraphCursorSpec extends WordSpecLike with Matchers with OptionValues with 
     "navigate down a simple" in {
       c.downField(schema.desc).focus.value shouldEqual ("The Empire State...": Node)
       c.downField(schema.desc).succeeded shouldEqual true
+      c.downField(schema.desc).values.value shouldEqual List[Node]("The Empire State...")
     }
 
     "fail to navigate to a non existing property" in {
@@ -109,7 +110,7 @@ class GraphCursorSpec extends WordSpecLike with Matchers with OptionValues with 
     }
 
     "navigate down an array element" in {
-      c.downField(schema.geo).downAt(geoId1).values shouldEqual None
+      c.downField(schema.geo).downAt(geoId1).values.value shouldEqual List(geoId1)
       c.downField(schema.geo).downAt(geoId1).focus.value shouldEqual geoId1
       c.downField(schema.geo).downAt(geoId1).downField(schema.coord).focus.value shouldEqual coordId1
       c.downField(schema.geo).downAt(geoId2).downField(schema.coord).focus.value shouldEqual coordId2
