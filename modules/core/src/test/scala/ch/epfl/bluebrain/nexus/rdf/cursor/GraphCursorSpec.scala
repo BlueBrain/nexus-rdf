@@ -1,5 +1,7 @@
 package ch.epfl.bluebrain.nexus.rdf.cursor
 
+import java.util.UUID
+
 import ch.epfl.bluebrain.nexus.rdf.Graph._
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.Node.{literal, IriNode, IriOrBNode}
@@ -28,6 +30,7 @@ class GraphCursorSpec extends WordSpecLike with Matchers with OptionValues with 
       *       "@type": "@id"
       *     },
       *     "geo": "http://schema.org/geo",
+      *     "uuid": "http://schema.org/uuid",
       *     "other": "http://schema.org/other",
       *     "latitude": {
       *       "@id": "http://schema.org/latitude",
@@ -46,7 +49,8 @@ class GraphCursorSpec extends WordSpecLike with Matchers with OptionValues with 
       *     "name": "Front",
       *     "description": "Image of..."
       *   },
-      *   "other": [ 1.3, 2.4, 3.5]
+      *   "other": [ 1.3, 2.4, 3.5],
+      *   "uuid" : "b46ff2d0-f9d1-48e4-94eb-65d1a756c607",
       *   "geo": [{
       *     "coordinates": {
       *       "latitude": "10.75",
@@ -73,6 +77,7 @@ class GraphCursorSpec extends WordSpecLike with Matchers with OptionValues with 
       (id, schema.img, imageId),
       (imageId, schema.desc, "Image of..."),
       (imageId, schema.name, "Front"),
+      (id, schema.uuid, "b46ff2d0-f9d1-48e4-94eb-65d1a756c607"),
       (id, schema.other, literal(1.3)),
       (id, schema.other, literal(2.4)),
       (id, schema.other, literal(3.5)),
@@ -139,6 +144,8 @@ class GraphCursorSpec extends WordSpecLike with Matchers with OptionValues with 
 
       c.downField(schema.desc).focus.as[String].right.value shouldEqual "The Empire State..."
       c.downField(schema.other).values.asListOf[Double].right.value should contain theSameElementsAs List(1.3, 2.4, 3.5)
+      c.downField(schema.uuid).focus.as[UUID].right.value shouldEqual UUID.fromString(
+        "b46ff2d0-f9d1-48e4-94eb-65d1a756c607")
     }
 
     "fail to fetch encoded values" in {
@@ -154,6 +161,7 @@ class GraphCursorSpec extends WordSpecLike with Matchers with OptionValues with 
       c.downField(schema.geo).downField(schema.coord).focus.as[String].left.value shouldEqual NoElementToEncode
       c.downField(schema.other).values.asListOf[String].left.value shouldBe a[IllegalConversion]
       c.downField(schema.other).values.asListOf[AbsoluteIri].left.value shouldBe a[IllegalType]
+      c.downField(schema.desc).focus.as[UUID].left.value shouldBe a[IllegalConversion]
 
     }
 
@@ -237,6 +245,7 @@ object GraphCursorSpec {
     val name: IriNode  = url"http://schema.org/name"
     val geo: IriNode   = url"http://schema.org/geo"
     val other: IriNode = url"http://schema.org/other"
+    val uuid: IriNode  = url"http://schema.org/uuid"
     val coord: IriNode = url"http://schema.org/coordinates"
     val lat: IriNode   = url"http://schema.org/latitude"
     val lng: IriNode   = url"http://schema.org/longitude"
