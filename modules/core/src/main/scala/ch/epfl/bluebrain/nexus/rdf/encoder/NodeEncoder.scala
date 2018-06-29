@@ -1,5 +1,7 @@
 package ch.epfl.bluebrain.nexus.rdf.encoder
 
+import java.util.UUID
+
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.Node
 import ch.epfl.bluebrain.nexus.rdf.encoder.NodeEncoder.EncoderResult
@@ -37,6 +39,10 @@ object NodeEncoder {
       if (literal.isString) Right(literal.lexicalForm)
       else Left(IllegalConversion("Expected a string literal, but found otherwise"))
   }
+
+  implicit val uuidEncoder: NodeEncoder[UUID] = (node: Node) =>
+    stringEncoder(node).flatMap(s =>
+      Try(UUID.fromString(s)).toEither.left.map(err => IllegalConversion(err.getMessage, Some(err))))
 
   implicit val absoluteIriEncoder: NodeEncoder[AbsoluteIri] = (node: Node) =>
     node.asIri.toRight(IllegalType("Iri", node)).map(_.value)
