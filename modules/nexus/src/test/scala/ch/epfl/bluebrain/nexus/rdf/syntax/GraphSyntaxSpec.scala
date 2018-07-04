@@ -1,23 +1,27 @@
 package ch.epfl.bluebrain.nexus.rdf.syntax
 
 import ch.epfl.bluebrain.nexus.rdf.Graph._
+import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.Node
-import ch.epfl.bluebrain.nexus.rdf.Node.BNode
+import ch.epfl.bluebrain.nexus.rdf.Node.{BNode, IriNode}
+import ch.epfl.bluebrain.nexus.rdf.syntax.GraphSyntaxSpec._
 import ch.epfl.bluebrain.nexus.rdf.syntax.circe._
 import ch.epfl.bluebrain.nexus.rdf.syntax.nexus._
+import ch.epfl.bluebrain.nexus.rdf.syntax.node.encoder._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
 import io.circe.Json
 import io.circe.parser.parse
-import org.scalatest.{Matchers, OptionValues, TryValues, WordSpecLike}
+import org.scalatest._
 
 import scala.io.Source
 
-class GraphSyntaxSpec extends WordSpecLike with Matchers with TryValues with OptionValues {
+class GraphSyntaxSpec extends WordSpecLike with Matchers with TryValues with OptionValues with EitherValues {
 
   "A GraphSyntax" should {
     val self      = jsonContentOf("/self-reference.json")
     val json      = jsonContentOf("/no_id.json")
     val typedJson = jsonContentOf("/id_and_types.json")
+    val arrayJson = jsonContentOf("/array.json")
 
     "find @id from a Json-LD without it" in {
       json.asGraph.primaryNode.value shouldBe a[BNode]
@@ -65,6 +69,23 @@ class GraphSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
       other.asGraph.asJson(context(other)).success.value shouldEqual other
     }
 
+    "navigate a graph of array of objects" in {
+      val cursor = arrayJson.asGraph.cursor()
+      val result = cursor.downField(nxv.identities).downArray.map { cursor =>
+        val r = for {
+          realm <- cursor.downField(nxv.realm).focus.as[String]
+          tpe   <- cursor.downField(rdf.tpe).values.asListOf[AbsoluteIri]
+          key = if (tpe.contains(nxv.userRef.value)) nxv.user
+          else if (tpe.contains(nxv.groupRef.value)) nxv.group
+          else nxv.nonExists
+          identity <- cursor.downField(key).focus.as[String]
+        } yield (tpe, realm, identity)
+        r.right.value
+      }
+      result shouldEqual Set((List(nxv.userRef.value), "ldap2", "didac"),
+                             (List(nxv.groupRef.value), "ldap", "bbp-ou-neuroinformatics"))
+    }
+
   }
 
   def context(json: Json): Json = Json.obj("@context" -> json.hcursor.get[Json]("@context").getOrElse(Json.obj()))
@@ -72,4 +93,20 @@ class GraphSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
   final def jsonContentOf(resourcePath: String): Json =
     parse(Source.fromInputStream(getClass.getResourceAsStream(resourcePath)).mkString).toTry.success.value
 
+}
+
+object GraphSyntaxSpec {
+  object nxv {
+    val identities: IriNode = url"http://www.example.com/vocab/identities"
+    val realm: IriNode      = url"http://www.example.com/vocab/realm"
+    val group: IriNode      = url"http://www.example.com/vocab/group"
+    val user: IriNode       = url"http://www.example.com/vocab/user"
+    val userRef: IriNode    = url"http://www.example.com/vocab/UserRef"
+    val groupRef: IriNode   = url"http://www.example.com/vocab/GroupRef"
+    val nonExists: IriNode  = url"http://www.example.com/vocab/nonExists"
+  }
+  object rdf {
+    val tpe = url"http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+
+  }
 }

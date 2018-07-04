@@ -44,4 +44,10 @@ final object CursorOp {
     * @param o the triple object function used to move the cursor
     */
   final case class DownAt(o: Node => Boolean) extends CursorOp
+
+  /**
+    * If the current cursor is an [[ch.epfl.bluebrain.nexus.rdf.cursor.GraphCursor.ArrayNodeCursorSel]],
+    * attempts to provide a Set[GraphCursor]
+    */
+  final case object DownArray extends CursorOp
 }
