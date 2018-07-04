@@ -130,6 +130,14 @@ class GraphCursorSpec extends WordSpecLike with Matchers with OptionValues with 
       c.downField(schema.geo).values.value shouldEqual Set(geoId1, geoId2)
     }
 
+    "navigate down the whole array" in {
+      val result = c
+        .downField(schema.geo)
+        .downArray
+        .map(_.downField(schema.coord).downField(schema.lat).focus.as[Float].right.value)
+      result shouldEqual Set(10.75f, 40.75f)
+    }
+
     "fetch encoded values" in {
       c.downField(schema.geo)
         .downAt(geoId1)
@@ -183,6 +191,14 @@ class GraphCursorSpec extends WordSpecLike with Matchers with OptionValues with 
 
     "fail to navigate down a cursor which already failed" in {
       failedChecks(c.downField(schema.geo).downAt(coordId1).downField(schema.lat))
+    }
+
+    "return empty down array when the selection does not exists" in {
+      c.downField(schema.geo).downAt(coordId1).downArray shouldEqual Set.empty
+    }
+
+    "return empty down array when the element is not an array" in {
+      c.downField(schema.img).downArray shouldEqual Set.empty
     }
 
     "navigate to siblings" in {

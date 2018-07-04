@@ -56,6 +56,11 @@ sealed abstract class GraphCursor(private val lastCursor: SCursor, private val l
   def up: GraphCursor
 
   /**
+    * If the focus is a Node array, return the list of [[GraphCursor]] resulting from it
+    */
+  def downArray: Iterable[GraphCursor]
+
+  /**
     * If the focus is a Node array, move to the node that satisfies the given function.
     */
   def downAt(o: Node => Boolean): GraphCursor
@@ -85,6 +90,8 @@ object GraphCursor {
     def succeeded: Boolean = true
 
     def downAt(o: Node => Boolean): GraphCursor = fail(DownAt(o))
+
+    def downArray: Iterable[GraphCursor] = Set.empty
 
     private def fetchTop: GraphCursor = {
       @tailrec
@@ -162,6 +169,9 @@ object GraphCursor {
 
     def field(p: IriNode => Boolean): GraphCursor = field(subject, p, parent)
 
+    override def downArray: Iterable[GraphCursor] =
+      obj.map(new ArrayNodeCursor(subject, _, this)(this, DownArray, graph))
+
     override def downAt(o: Node => Boolean): GraphCursor =
       obj.find(o) match {
         case None       => fail(DownAt(o))
@@ -200,6 +210,7 @@ object GraphCursor {
     def downAt(o: Node => Boolean): GraphCursor       = this
     def field(p: IriNode => Boolean): GraphCursor     = this
     def downField(p: IriNode => Boolean): GraphCursor = this
+    def downArray: Iterable[GraphCursor]              = Set.empty
   }
 
   /**
