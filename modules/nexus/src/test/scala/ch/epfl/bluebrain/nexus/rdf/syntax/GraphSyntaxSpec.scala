@@ -18,10 +18,11 @@ import scala.io.Source
 class GraphSyntaxSpec extends WordSpecLike with Matchers with TryValues with OptionValues with EitherValues {
 
   "A GraphSyntax" should {
-    val self      = jsonContentOf("/self-reference.json")
-    val json      = jsonContentOf("/no_id.json")
-    val typedJson = jsonContentOf("/id_and_types.json")
-    val arrayJson = jsonContentOf("/array.json")
+    val self         = jsonContentOf("/self-reference.json")
+    val json         = jsonContentOf("/no_id.json")
+    val typedJson    = jsonContentOf("/id_and_types.json")
+    val arrayJson    = jsonContentOf("/array.json")
+    val arrayOneJson = jsonContentOf("/array-one.json")
 
     "find @id from a Json-LD without it" in {
       json.asGraph.primaryNode.value shouldBe a[BNode]
@@ -84,6 +85,13 @@ class GraphSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
       }
       result shouldEqual Set((List(nxv.userRef.value), "ldap2", "didac"),
                              (List(nxv.groupRef.value), "ldap", "bbp-ou-neuroinformatics"))
+    }
+
+    "navigate a graph of array of objects with one element" in {
+      val c = arrayOneJson.asGraph.cursor()
+      val result =
+        c.downField(nxv.identities).downArray.map(_.downField(nxv.realm).focus.as[String].right.value)
+      result shouldEqual Set("some-realm")
     }
 
   }

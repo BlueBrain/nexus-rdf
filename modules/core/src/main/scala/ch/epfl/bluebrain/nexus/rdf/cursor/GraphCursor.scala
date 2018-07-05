@@ -159,6 +159,7 @@ object GraphCursor {
     def addOp(cursor: SCursor, op: CursorOp): SCursor = new NodeCursor(subject, obj, parent)(cursor, op, graph)
     def downField(p: IriNode => Boolean): GraphCursor = downField(obj, p)
     def up: GraphCursor                               = parent.addOp(this, MoveUp)
+    override def downArray: Iterable[GraphCursor]     = Set(this)
 
   }
 
@@ -197,6 +198,7 @@ object GraphCursor {
     def addOp(cursor: SCursor, op: CursorOp): SCursor = new ArrayNodeCursor(subject, obj, parent)(cursor, op, graph)
     def downField(p: IriNode => Boolean): GraphCursor = downField(obj, p)
     def up: GraphCursor                               = parent.addOp(this, MoveUp)
+    override def downArray: Iterable[GraphCursor]     = Set(this)
 
   }
 
