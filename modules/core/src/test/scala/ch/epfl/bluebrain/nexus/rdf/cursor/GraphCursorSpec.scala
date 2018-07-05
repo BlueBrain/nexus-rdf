@@ -197,8 +197,10 @@ class GraphCursorSpec extends WordSpecLike with Matchers with OptionValues with 
       c.downField(schema.geo).downAt(coordId1).downArray shouldEqual Set.empty
     }
 
-    "return empty down array when the element is not an array" in {
-      c.downField(schema.img).downArray shouldEqual Set.empty
+    "navigate down the array of a single element" in {
+      c.downField(schema.img)
+        .downArray
+        .map(_.downField(schema.desc).field(schema.name).focus.value) shouldEqual Set[Node]("Front")
     }
 
     "navigate to siblings" in {
