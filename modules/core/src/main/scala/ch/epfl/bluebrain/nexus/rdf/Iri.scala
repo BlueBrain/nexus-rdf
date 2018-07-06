@@ -69,6 +69,8 @@ sealed abstract class Iri extends Product with Serializable {
     *         (using percent-encoding when required acording to rfc3986)
     */
   def asUri: String
+
+  override def toString: String = asString
 }
 
 object Iri {

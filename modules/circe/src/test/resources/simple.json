@@ -1,11 +1,12 @@
 {
   "@context": {
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
     "Person": {
       "@id": "http://schema.org/Person"
     },
     "birthDate": {
       "@id": "http://schema.org/birthDate",
-      "@type": "http://schema.org/Date"
+      "@type": "xsd:dateTime"
     },
     "name": {
       "@id": "http://schema.org/name"

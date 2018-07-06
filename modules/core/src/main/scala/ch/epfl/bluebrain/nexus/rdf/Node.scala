@@ -158,7 +158,7 @@ object Node {
     Literal(value)
 
   /**
-    * Creates a new Decimal literal of ''http://www.w3.org/2001/XMLSchema#decimal'' data type.
+    * Creates a new Decimal literal of ''http://www.w3.org/2001/XMLSchema#double'' data type.
     *
     * @param value the underlying double value
     */
@@ -285,6 +285,8 @@ object Node {
 
       private final implicit def fragment(string: String): Fragment = new Fragment(string)
 
+      final val dateTime = schema.withFragment("dateTime")
+
       final val string = schema.withFragment("string")
 
       final val boolean = schema.withFragment("boolean")
@@ -295,6 +297,7 @@ object Node {
       final val integer = schema.withFragment("integer")
       final val long    = schema.withFragment("long")
       final val decimal = schema.withFragment("decimal")
+      final val double = schema.withFragment("double")
       final val float = schema.withFragment("float")
 
       final val negativeInteger    = schema.withFragment("negativeInteger")
@@ -308,7 +311,7 @@ object Node {
 
       // format: off
       final val numericDataTypes: Set[AbsoluteIri] = Set(
-        byte, short, int, integer, long, decimal, float,
+        byte, short, int, integer, long, decimal, double, float,
         negativeInteger, nonNegativeInteger, nonPositiveInteger, positiveInteger,
         unsignedByte, unsignedShort, unsignedInt, unsignedLong)
       // format: on
@@ -393,12 +396,12 @@ object Node {
       new Literal(value.toString, xsd.float)
 
     /**
-      * Creates a new Decimal literal of ''http://www.w3.org/2001/XMLSchema#decimal'' data type.
+      * Creates a new Decimal literal of ''http://www.w3.org/2001/XMLSchema#double'' data type.
       *
       * @param value the underlying double value
       */
     final def apply(value: Double): Literal =
-      new Literal(value.toString, xsd.decimal)
+      new Literal(value.toString, xsd.double)
 
     final implicit def literalShow(implicit is: Show[AbsoluteIri], ls: Show[LanguageTag]): Show[Literal] = Show.show {
       case Literal(f, _, Some(tag))           => s""""$f"@${ls.show(tag)}"""
