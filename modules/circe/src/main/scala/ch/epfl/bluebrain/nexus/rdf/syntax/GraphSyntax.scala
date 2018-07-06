@@ -45,7 +45,7 @@ private[syntax] object GraphSyntax {
 
   def model(json: Json): Model = {
     val model     = ModelFactory.createDefaultModel()
-    val finalJson = json deepMerge json.removeContextIris()
+    val finalJson = json deepMerge json.removeContextIris
     RDFDataMgr.read(model, new ByteArrayInputStream(finalJson.noSpaces.getBytes), Lang.JSONLD)
     model
   }
@@ -84,7 +84,7 @@ final class GraphOps(private val graph: Graph) extends AnyVal {
     * @return [[Json]] containing JSON-LD representation of the [[Graph]]
     */
   def asJson(context: Json, id: Option[IriOrBNode]): Try[Json] = {
-    val filteredCtx                             = context.removeContextIris()
+    val filteredCtx                             = context.removeContextIris
     implicit val jenaCleanup: JenaWriterCleanup = new JenaWriterCleanup(filteredCtx)
     id match {
       case Some(iri: IriNode) => writeFramed(filteredCtx, iri)
@@ -98,7 +98,7 @@ final class GraphOps(private val graph: Graph) extends AnyVal {
     opts.setProcessingMode(JsonLdOptions.JSON_LD_1_1)
     opts.setCompactArrays(true)
     opts.setPruneBlankNodeIdentifiers(true)
-    val frame = Json.obj("@id" -> Json.fromString(id.show)).appendContextOf(jenaCleanup.cleanFromCtx())
+    val frame = Json.obj("@id" -> Json.fromString(id.show)).appendContextOf(jenaCleanup.cleanFromCtx)
     val ctx   = new JsonLDWriteContext
     ctx.setFrame(frame.noSpaces)
     ctx.setOptions(opts)
@@ -108,7 +108,7 @@ final class GraphOps(private val graph: Graph) extends AnyVal {
   private def write(c: Json)(implicit jenaCleanup: JenaWriterCleanup): Try[Json] = {
     val opts = new JsonLdOptions()
     val ctx  = new JsonLDWriteContext
-    ctx.setJsonLDContext(jenaCleanup.cleanFromCtx().noSpaces)
+    ctx.setJsonLDContext(jenaCleanup.cleanFromCtx.noSpaces)
     ctx.setOptions(opts)
     write(RDFFormat.JSONLD, ctx)(jenaCleanup).map(_ deepMerge c)
   }
@@ -146,7 +146,7 @@ private[syntax] final class JenaWriterCleanup(ctx: Json) {
     * Work around for Jena to replace the keys which are in a context with @type
     * and using the UseNativeTypes flag in the JsonLdOptions
     */
-  def cleanFromCtx(): Json = {
+  def cleanFromCtx: Json = {
 
     def inner(ctx: Json): Json =
       ctx.arrayOrObject(ctx, arr => Json.fromValues(arr.map(inner)), obj => deleteType(obj).asJson)

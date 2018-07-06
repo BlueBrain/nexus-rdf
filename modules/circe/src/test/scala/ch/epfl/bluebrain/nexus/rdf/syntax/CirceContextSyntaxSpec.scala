@@ -100,13 +100,13 @@ class CirceContextSyntaxSpec extends WordSpecLike with Matchers with Inspectors 
 
     "extract the context IRI" in {
       val context = parse("{\"@context\": \"http://schema.org/\"}").right.value
-      context.removeContextIris() shouldEqual Json.obj("@context" -> Json.obj())
+      context.removeContextIris shouldEqual Json.obj("@context" -> Json.obj())
     }
 
     "extract the context iri from an array" in {
       val json     = jsonContentOf("/context/simple-iri-context.json")
       val expected = jsonContentOf("/context/simple-iri-context-without-iri.json")
-      json.removeContextIris() shouldEqual expected
+      json.removeContextIris shouldEqual expected
     }
   }
 }
