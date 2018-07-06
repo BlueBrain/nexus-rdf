@@ -9,7 +9,7 @@
     },
     "birthDate": {
       "@id": "http://schema.org/birthDate",
-      "@type": "http://schema.org/Date"
+      "@type": "xsd:dateTime"
     },
     "birthYear": {
       "@id": "http://schema.org/birthYear"

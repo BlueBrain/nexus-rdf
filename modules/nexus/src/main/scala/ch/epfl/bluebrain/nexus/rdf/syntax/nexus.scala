@@ -15,7 +15,6 @@ object nexus {
   private final val rdfType = url"http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
 
   final implicit class NexusGraphOps(graph: Graph) {
-    private val circeOps = new GraphOps(graph)
 
     /**
       * @return The optionally available root ''subject'' of the Graph. This is, the subject which is not used as an object
@@ -60,7 +59,7 @@ object nexus {
       * @return [[Json]] containing JSON-LD representation of the [[Graph]]
       */
     def asJson(context: Json): Try[Json] =
-      circeOps.asJson(context, primaryNode)
+      graph.asJson(context, primaryNode)
 
   }
 }
