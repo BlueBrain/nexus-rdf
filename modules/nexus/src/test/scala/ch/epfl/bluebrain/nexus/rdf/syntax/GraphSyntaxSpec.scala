@@ -75,16 +75,17 @@ class GraphSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
       val result = cursor.downField(nxv.identities).downArray.map { cursor =>
         val r = for {
           realm <- cursor.downField(nxv.realm).focus.as[String]
+          admin <- cursor.downField(nxv.admin).focus.as[Boolean]
           tpe   <- cursor.downField(rdf.tpe).values.asListOf[AbsoluteIri]
           key = if (tpe.contains(nxv.userRef.value)) nxv.user
           else if (tpe.contains(nxv.groupRef.value)) nxv.group
           else nxv.nonExists
           identity <- cursor.downField(key).focus.as[String]
-        } yield (tpe, realm, identity)
+        } yield (tpe, realm, identity, admin)
         r.right.value
       }
-      result shouldEqual Set((List(nxv.userRef.value), "ldap2", "didac"),
-                             (List(nxv.groupRef.value), "ldap", "bbp-ou-neuroinformatics"))
+      result shouldEqual Set((List(nxv.userRef.value), "ldap2", "didac", false),
+                             (List(nxv.groupRef.value), "ldap", "bbp-ou-neuroinformatics", true))
     }
 
     "navigate a graph of array of objects with one element" in {
@@ -110,6 +111,7 @@ object GraphSyntaxSpec {
     val group: IriNode      = url"http://www.example.com/vocab/group"
     val user: IriNode       = url"http://www.example.com/vocab/user"
     val userRef: IriNode    = url"http://www.example.com/vocab/UserRef"
+    val admin: IriNode      = url"http://www.example.com/vocab/admin"
     val groupRef: IriNode   = url"http://www.example.com/vocab/GroupRef"
     val nonExists: IriNode  = url"http://www.example.com/vocab/nonExists"
   }
