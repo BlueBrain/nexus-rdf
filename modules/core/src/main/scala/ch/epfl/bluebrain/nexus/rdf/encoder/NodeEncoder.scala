@@ -34,6 +34,11 @@ object NodeEncoder {
 
   implicit val doubleEncoder: NodeEncoder[Double] = (node: Node) => numeric(node, _.toDouble)
 
+  implicit val booleanEncoder: NodeEncoder[Boolean] = (node: Node) =>
+    node.asLiteral.toRight(IllegalType("Literal", node)).flatMap { literal =>
+      Try(literal.lexicalForm.toBoolean).toEither.left.map(err => IllegalConversion(err.getMessage, Some(err)))
+  }
+
   implicit val stringEncoder: NodeEncoder[String] = (node: Node) =>
     node.asLiteral.toRight(IllegalType("Literal", node)).flatMap { literal =>
       if (literal.isString) Right(literal.lexicalForm)

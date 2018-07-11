@@ -5,6 +5,7 @@
     "realm": "nxv:realm",
     "group": "nxv:group",
     "user": "nxv:user",
+    "admin": "nxv:admin",
     "GroupRef": "nxv:GroupRef",
     "UserRef": "nxv:UserRef"
   },
@@ -13,12 +14,14 @@
     {
       "@type": "GroupRef",
       "realm": "ldap",
+      "admin": true,
       "group": "bbp-ou-neuroinformatics"
     },
     {
       "@type": "UserRef",
       "realm": "ldap2",
-      "user": "didac"
+      "user": "didac",
+      "admin": false
     }
   ]
 }
