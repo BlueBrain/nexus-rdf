@@ -155,6 +155,21 @@ final class Graph private[rdf] (private val underlying: G[Node, LkDiEdge]) {
     subtract(that)
 
   /**
+    * Replaces the ''target'' node with the provided ''value'' node.
+    *
+    * @param target the node to be replaced
+    * @param value  the replacement value
+    * @return a new [[Graph]] with the same triples but a replacement on the subject or object from ''target'' to ''value''
+    */
+  def replaceNode(target: Node.IriOrBNode, value: Node.IriOrBNode): Graph =
+    Graph(triples.map {
+      case (`target`, p, `target`) => (value, p, value)
+      case (`target`, p, o)        => (value, p, o)
+      case (s, p, `target`)        => (s, p, value)
+      case default                 => default
+    })
+
+  /**
     * @param node the node where to start the cursor traversal
     * @return an initial cursor from the provided ''node''
     */

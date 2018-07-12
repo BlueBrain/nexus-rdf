@@ -155,6 +155,35 @@ class GraphSpec extends WordSpecLike with Matchers with EitherValues {
       g.objects(b"50", p.string) shouldEqual Set()
     }
 
+    "replace bnode" in {
+      val iri = url"http://b"
+      g.replaceNode(b"1", iri).triples shouldEqual Set[(IriOrBNode, IriNode, Node)](
+        (a, isa, string),
+        (a, isa, bool),
+        (a, hasa, iri),
+        (iri, p.string, "asd"),
+        (iri, p.int, 2),
+        (iri, p.bool, true)
+      )
+    }
+
+    "replace iri" in {
+      val iri = url"http://b"
+      (g + ((b"1", hasa, a))).replaceNode(a, iri).triples shouldEqual Set[(IriOrBNode, IriNode, Node)](
+        (iri, isa, string),
+        (iri, isa, bool),
+        (iri, hasa, b"1"),
+        (b"1", p.string, "asd"),
+        (b"1", p.int, 2),
+        (b"1", hasa, iri),
+        (b"1", p.bool, true)
+      )
+    }
+
+    "replace unexisting bnode" in {
+      g.replaceNode(b"43", url"http://b").triples shouldEqual triples
+    }
+
     "show" in {
       val g = Graph((b"1", p.other, true): Triple)
       g.show shouldEqual s"(_:1 ${p.other.show} ${Literal(true).show})"
