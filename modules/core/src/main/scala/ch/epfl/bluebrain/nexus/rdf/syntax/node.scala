@@ -18,6 +18,15 @@ object node {
   final implicit def toLiteral(value: Int): Literal =
     Literal(value)
 
+  final implicit def toLiteral(value: Long): Literal =
+    Literal(value)
+
+  final implicit def toLiteral(value: Float): Literal =
+    Literal(value)
+
+  final implicit def toLiteral(value: Double): Literal =
+    Literal(value)
+
   final implicit def toLiteral(value: Boolean): Literal =
     Literal(value)
 

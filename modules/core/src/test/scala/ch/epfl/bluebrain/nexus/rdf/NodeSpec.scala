@@ -5,8 +5,8 @@ import cats.syntax.show._
 import ch.epfl.bluebrain.nexus.rdf.Node.IriOrBNode
 import ch.epfl.bluebrain.nexus.rdf.Node.Literal.LanguageTag
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
+import ch.epfl.bluebrain.nexus.rdf.syntax.node._
 import org.scalatest.{EitherValues, Inspectors, Matchers, WordSpecLike}
-
 class NodeSpec extends WordSpecLike with Matchers with EitherValues with Inspectors {
 
   "A BNode" should {
@@ -88,9 +88,13 @@ class NodeSpec extends WordSpecLike with Matchers with EitherValues with Inspect
         (Node.iri("urn:ab:$").right.value, "urn:ab:$"),
         (Node.iri("urn:ab:£").right.value, "urn:ab:%C2%A3"),
         (Node.literal(2), """"2"^^<http://www.w3.org/2001/XMLSchema#integer>"""),
+        (2, """"2"^^<http://www.w3.org/2001/XMLSchema#integer>"""),
+        (2L, """"2"^^<http://www.w3.org/2001/XMLSchema#long>"""),
         (Node.literal(2.toLong), """"2"^^<http://www.w3.org/2001/XMLSchema#long>"""),
         (Node.literal(2.2), """"2.2"^^<http://www.w3.org/2001/XMLSchema#double>"""),
+        (2.2, """"2.2"^^<http://www.w3.org/2001/XMLSchema#double>"""),
         (Node.literal(2.2f), """"2.2"^^<http://www.w3.org/2001/XMLSchema#float>"""),
+        (2.2f, """"2.2"^^<http://www.w3.org/2001/XMLSchema#float>"""),
         (Node.literal(true), """"true"^^<http://www.w3.org/2001/XMLSchema#boolean>"""),
         (Node.literal(2.toShort), """"2"^^<http://www.w3.org/2001/XMLSchema#short>"""),
         (Node.literal(2.toByte), """"2"^^<http://www.w3.org/2001/XMLSchema#byte>"""),
