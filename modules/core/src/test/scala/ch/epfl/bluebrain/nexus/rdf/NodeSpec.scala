@@ -3,7 +3,8 @@ package ch.epfl.bluebrain.nexus.rdf
 import cats.kernel.Eq
 import cats.syntax.show._
 import ch.epfl.bluebrain.nexus.rdf.Node.IriOrBNode
-import ch.epfl.bluebrain.nexus.rdf.Node.Literal.{xsd, LanguageTag}
+import ch.epfl.bluebrain.nexus.rdf.Node.Literal.LanguageTag
+import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
 import org.scalatest.{EitherValues, Inspectors, Matchers, WordSpecLike}
 
 class NodeSpec extends WordSpecLike with Matchers with EitherValues with Inspectors {

@@ -1,19 +1,25 @@
 package ch.epfl.bluebrain.nexus.rdf.syntax
 
-import ch.epfl.bluebrain.nexus.rdf.Graph
-import ch.epfl.bluebrain.nexus.rdf.Node.Literal
+import ch.epfl.bluebrain.nexus.rdf.Node.{IriOrBNode, Literal}
+import ch.epfl.bluebrain.nexus.rdf.encoder.GraphEncoder
+import ch.epfl.bluebrain.nexus.rdf.syntax.CirceSyntaxSpec._
 import ch.epfl.bluebrain.nexus.rdf.syntax.circe._
 import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
+import ch.epfl.bluebrain.nexus.rdf.{Graph, Node}
 import io.circe.Json
 import io.circe.parser._
+import org.scalatest.EitherValues._
 import org.scalatest._
 
-class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with EitherValues with OptionValues {
+class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with OptionValues {
 
   "CirceSyntax" should {
 
+    implicit val enc: GraphEncoder[Item] = GraphEncoder { e =>
+      e.bNode -> Graph((e.bNode, predicate.description, e.description), (e.bNode, predicate.step, e.step))
+    }
     // format: off
     val triples = Set[Graph.Triple](
       (url"http://nexus.example.com/john-doe", url"http://schema.org/name", "John Doe"),
@@ -72,6 +78,15 @@ class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with Eit
       graphArray(output) should contain theSameElementsAs graphArray(json)
     }
 
+    "convert Graph with sorted list" in {
+      val list = List(Item(1, "description elem 1"), Item(2, "description elem 2"), Item(3, "description elem 3"))
+      val json = jsonContentOf("/list.json")
+
+      val id: IriOrBNode = url"http://example.com/id"
+      val graph          = Graph().add(id, url"http://example.com/items", list)
+      graph.asJson(context(json), Some(id)).success.value shouldEqual json
+    }
+
   }
 
   def context(json: Json): Json =
@@ -79,5 +94,20 @@ class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with Eit
 
   def graphArray(json: Json): Vector[Json] =
     json.hcursor.downField("@graph").focus.flatMap(_.asArray).value
+
+}
+
+object CirceSyntaxSpec {
+
+  final case class Item(step: Int, description: String) {
+    val bNode: IriOrBNode = Node.blank(s"BNode$step").right.value
+  }
+
+  object predicate {
+    val base        = "http://vocab/elem"
+    val description = url"$base/description"
+    val step        = url"$base/step"
+
+  }
 
 }

@@ -4,9 +4,10 @@ import java.util.UUID
 
 import cats.syntax.either._
 import cats.{Eq, Show}
-import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Fragment, Url}
+import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.Node.Literal._
 import ch.epfl.bluebrain.nexus.rdf.Node.{BNode, IriNode, Literal}
+import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
 import org.parboiled2.CharPredicate._
 import org.parboiled2._
 
@@ -270,55 +271,22 @@ object Node {
       * @return true if the value is numeric, false otherwise
       */
     def isNumeric: Boolean =
-      xsd.numericDataTypes.contains(dataType)
+      numericDataTypes.contains(dataType)
 
     /**
       * @return true if the value is a string or a string tagged with a language, false otherwise
       */
     def isString: Boolean =
-      dataType == xsd.string || dataType == rdfsyntax.langString
+      dataType == xsd.string.value || dataType == rdf.langString.value
   }
 
   object Literal {
-    object xsd {
-      private final val schema = Url.unsafe("http://www.w3.org/2001/XMLSchema")
 
-      private final implicit def fragment(string: String): Fragment = new Fragment(string)
-
-      final val dateTime = schema.withFragment("dateTime")
-
-      final val string = schema.withFragment("string")
-
-      final val boolean = schema.withFragment("boolean")
-
-      final val byte    = schema.withFragment("byte")
-      final val short   = schema.withFragment("short")
-      final val int     = schema.withFragment("int")
-      final val integer = schema.withFragment("integer")
-      final val long    = schema.withFragment("long")
-      final val decimal = schema.withFragment("decimal")
-      final val double = schema.withFragment("double")
-      final val float = schema.withFragment("float")
-
-      final val negativeInteger    = schema.withFragment("negativeInteger")
-      final val nonNegativeInteger = schema.withFragment("nonNegativeInteger")
-      final val nonPositiveInteger = schema.withFragment("nonPositiveInteger")
-      final val positiveInteger    = schema.withFragment("positiveInteger")
-      final val unsignedByte       = schema.withFragment("unsignedByte")
-      final val unsignedShort      = schema.withFragment("unsignedShort")
-      final val unsignedInt        = schema.withFragment("unsignedInt")
-      final val unsignedLong       = schema.withFragment("unsignedLong")
-
-      // format: off
-      final val numericDataTypes: Set[AbsoluteIri] = Set(
-        byte, short, int, integer, long, decimal, double, float,
-        negativeInteger, nonNegativeInteger, nonPositiveInteger, positiveInteger,
-        unsignedByte, unsignedShort, unsignedInt, unsignedLong)
-      // format: on
-    }
-    object rdfsyntax {
-      final val langString = Url.unsafe("http://www.w3.org/1999/02/22-rdf-syntax-ns#langString")
-    }
+    final val numericDataTypes: Set[AbsoluteIri] = Set(
+      xsd.byte, xsd.short, xsd.int, xsd.integer, xsd.long, xsd.decimal, xsd.double, xsd.float,
+      xsd.negativeInteger, xsd.nonNegativeInteger, xsd.nonPositiveInteger, xsd.positiveInteger,
+      xsd.unsignedByte, xsd.unsignedShort, xsd.unsignedInt, xsd.unsignedLong)
+    
 
     /**
       * Creates a new Literal node from the arguments.
@@ -345,7 +313,7 @@ object Node {
       * @param languageTag the language tag
       */
     final def apply(string: String, languageTag: LanguageTag): Literal =
-      new Literal(string, rdfsyntax.langString, Some(languageTag))
+      new Literal(string, rdf.langString, Some(languageTag))
 
     /**
       * Creates a new Boolean literal of ''http://www.w3.org/2001/XMLSchema#boolean'' data type.
