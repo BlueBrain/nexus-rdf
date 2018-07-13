@@ -1,7 +1,8 @@
 package ch.epfl.bluebrain.nexus.rdf.syntax
 
-import ch.epfl.bluebrain.nexus.rdf.Node.Literal.{rdfsyntax, xsd, LanguageTag}
+import ch.epfl.bluebrain.nexus.rdf.Node.Literal.LanguageTag
 import ch.epfl.bluebrain.nexus.rdf.Node.{BNode, IriNode, IriOrBNode, Literal}
+import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
 import ch.epfl.bluebrain.nexus.rdf.{Graph, Node}
 import org.apache.jena.datatypes.BaseDatatype
@@ -27,8 +28,8 @@ object jena {
     ResourceFactory.createProperty(iriNode.value.asString)
 
   final implicit def literalToJenaLiteral(literal: Literal): JenaLiteral = literal match {
-    case Literal(lf, xsd.string, None)                             => ResourceFactory.createStringLiteral(lf)
-    case Literal(lf, rdfsyntax.langString, Some(LanguageTag(tag))) => ResourceFactory.createLangLiteral(lf, tag)
+    case Literal(lf, xsd.string.value, None)                       => ResourceFactory.createStringLiteral(lf)
+    case Literal(lf, rdf.langString.value, Some(LanguageTag(tag))) => ResourceFactory.createLangLiteral(lf, tag)
     case Literal(lf, dataType, _)                                  => ResourceFactory.createTypedLiteral(lf, new BaseDatatype(dataType.asString))
   }
 

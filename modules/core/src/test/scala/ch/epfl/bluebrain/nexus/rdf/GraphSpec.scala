@@ -3,15 +3,19 @@ package ch.epfl.bluebrain.nexus.rdf
 import cats.kernel.Eq
 import cats.syntax.show._
 import ch.epfl.bluebrain.nexus.rdf.Graph.{Triple, _}
+import ch.epfl.bluebrain.nexus.rdf.GraphSpec.{predicate, Item}
 import ch.epfl.bluebrain.nexus.rdf.Node.{IriNode, IriOrBNode, Literal}
+import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
+import ch.epfl.bluebrain.nexus.rdf.encoder.GraphEncoder
 import ch.epfl.bluebrain.nexus.rdf.syntax.node._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
-import org.scalatest.{EitherValues, Matchers, WordSpecLike}
+import org.scalatest.EitherValues._
+import org.scalatest.{Matchers, OptionValues, WordSpecLike}
 
 import scala.collection.immutable.HashSet
 
 //noinspection TypeAnnotation
-class GraphSpec extends WordSpecLike with Matchers with EitherValues {
+class GraphSpec extends WordSpecLike with Matchers with OptionValues {
 
   "An RDF Graph" should {
     val a      = url"http://a"
@@ -38,6 +42,10 @@ class GraphSpec extends WordSpecLike with Matchers with EitherValues {
     )
 
     val g = Graph(triples)
+
+    implicit val enc: GraphEncoder[Item] = GraphEncoder { e =>
+      e.bNode -> Graph((e.bNode, predicate.description, e.description), (e.bNode, predicate.step, e.step))
+    }
 
     "return the same collection of triples" in {
       g.triples shouldEqual triples
@@ -190,6 +198,60 @@ class GraphSpec extends WordSpecLike with Matchers with EitherValues {
       val snd = Graph((b"1", p.other, true): Triple)
       HashSet(fst)(snd) shouldEqual true
     }
+
+    "add an object to the graph" in {
+      val item     = Item(1, "description elem 1")
+      val expected = Set[(IriOrBNode, IriNode, Node)]((b"1", p.string, "asd"), (a, hasa, item.bNode)) ++ enc(item).graph.triples
+
+      Graph((b"1", p.string, "asd"): Triple).addObject(a, hasa, item).triples shouldEqual expected
+    }
+
+    "add an ordered list to the graph" in {
+      def subjectOf(node: Node, graph: Graph) = {
+        val results = graph.subjects(rdf.first, node)
+        results.size shouldEqual 1
+        results.headOption.value
+      }
+
+      val item1 = Item(1, "description elem 1")
+      val item2 = Item(2, "description elem 2")
+      val item3 = Item(3, "description elem 3")
+      val list  = List(item1, item2, item3)
+
+      val graph = Graph((b"1", p.string, "asd"): Triple).add(a, hasa, list)
+
+      // Fetch the linked list subjects from each of the item bNodes
+      val bnodeIds = list.map(item => item.bNode -> subjectOf(item.bNode, graph)).toMap
+
+      // Generating graph from item data
+      val itemsGraph = list.foldLeft(Graph())((acc, c) => acc ++ enc(c).graph)
+
+      val expected = itemsGraph.triples ++ Set[(IriOrBNode, IriNode, Node)](
+        (b"1", p.string, "asd"),
+        (a, hasa, bnodeIds(item1.bNode)),
+        (bnodeIds(item1.bNode), rdf.first, item1.bNode),
+        (bnodeIds(item1.bNode), rdf.rest, bnodeIds(item2.bNode)),
+        (bnodeIds(item2.bNode), rdf.first, item2.bNode),
+        (bnodeIds(item2.bNode), rdf.rest, bnodeIds(item3.bNode)),
+        (bnodeIds(item3.bNode), rdf.first, item3.bNode),
+        (bnodeIds(item3.bNode), rdf.rest, rdf.nil)
+      )
+
+      graph.triples shouldEqual expected
+    }
+
   }
 
+}
+
+object GraphSpec {
+  final case class Item(step: Int, description: String) {
+    val bNode: IriOrBNode = Node.blank(s"BNode$step").right.value
+  }
+  object predicate {
+    val base        = "http://vocab/elem"
+    val description = url"$base/description"
+    val step        = url"$base/step"
+
+  }
 }

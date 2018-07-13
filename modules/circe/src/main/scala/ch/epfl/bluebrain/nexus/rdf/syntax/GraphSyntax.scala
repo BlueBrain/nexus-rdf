@@ -5,8 +5,8 @@ import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import cats.instances.all._
 import cats.syntax.all._
 import ch.epfl.bluebrain.nexus.rdf.Graph
-import ch.epfl.bluebrain.nexus.rdf.Node.Literal.xsd
 import ch.epfl.bluebrain.nexus.rdf.Node.{IriNode, IriOrBNode}
+import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
 import ch.epfl.bluebrain.nexus.rdf.syntax.GraphSyntax._
 import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
 import ch.epfl.bluebrain.nexus.rdf.syntax.jena._

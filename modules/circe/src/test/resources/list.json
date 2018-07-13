@@ -1,0 +1,26 @@
+{
+  "@context": {
+    "nxv": "http://vocab/elem/",
+    "description": "nxv:description",
+    "step": "nxv:step",
+    "items": {
+      "@id": "http://example.com/items",
+      "@container": "@list"
+    }
+  },
+  "@id": "http://example.com/id",
+  "items": [
+    {
+      "description": "description elem 1",
+      "step": 1
+    },
+    {
+      "description": "description elem 2",
+      "step": 2
+    },
+    {
+      "description": "description elem 3",
+      "step": 3
+    }
+  ]
+}
