@@ -41,7 +41,7 @@ object nexus {
       * @return the list of objects which have the subject found from the method ''id'' and the predicate rdf:type
       */
     def primaryTypes: Set[IriNode] =
-      primaryNode.map(i => graph.types(i)).getOrElse(Set.empty)
+      primaryNode.map(graph.types).getOrElse(Set.empty)
 
     /**
       * @param  id the id for which the types should be found
