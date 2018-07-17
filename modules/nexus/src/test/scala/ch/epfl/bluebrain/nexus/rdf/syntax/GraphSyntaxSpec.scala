@@ -48,9 +48,15 @@ class GraphSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
     }
 
     "find the @type from the Json-LD with @id" in {
+      typedJson.asGraph.types(url"http://example.org/cars/for-sale#tesla") shouldEqual Set(
+        url"http://purl.org/goodrelations/v1#Offering",
+        url"http://www.w3.org/2002/07/owl#Ontology")
       typedJson.asGraph.primaryTypes shouldEqual Set(url"http://purl.org/goodrelations/v1#Offering",
                                                      url"http://www.w3.org/2002/07/owl#Ontology")
+    }
 
+    "find return no types for id which doesn't have type predicates" in {
+      typedJson.asGraph.types(url"http://example.org/cars/for-sale#other") shouldEqual Set.empty
     }
 
     "navigate to an element" in {
