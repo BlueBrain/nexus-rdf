@@ -7,13 +7,13 @@ import ch.epfl.bluebrain.nexus.rdf.syntax.circe._
 import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
-import ch.epfl.bluebrain.nexus.rdf.{Graph, Node}
+import ch.epfl.bluebrain.nexus.rdf.{Graph, Iri, Node}
 import io.circe.Json
 import io.circe.parser._
 import org.scalatest.EitherValues._
 import org.scalatest._
 
-class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with OptionValues {
+class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with OptionValues with Inspectors {
 
   "CirceSyntax" should {
 
@@ -85,6 +85,30 @@ class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
       val id: IriOrBNode = url"http://example.com/id"
       val graph          = Graph().add(id, url"http://example.com/items", list)
       graph.asJson(context(json), Some(id)).success.value shouldEqual json
+    }
+
+    "fetch the @id from the Json" in {
+      val list = List(
+        Iri.absolute("http://nexus.example.com/john-doe").right.value     -> jsonContentOf("/embed.json"),
+        Iri.absolute("http://example.com/id").right.value                 -> jsonContentOf("/list.json"),
+        Iri.absolute("http://schema.org/john-doe").right.value            -> jsonContentOf("/aliased.json"),
+        Iri.absolute("http://nexus.example.com/graph").right.value        -> jsonContentOf("/graph-simple.json"),
+        Iri.absolute("http://nexus.example.com/array-simple").right.value -> jsonContentOf("/array-simple.json"),
+        Iri.absolute("http://nexus.example.com/array-graph").right.value  -> jsonContentOf("/array-graph.json"),
+        Iri.absolute("http://example.com/other").right.value              -> jsonContentOf("/array-graph-top-id.json")
+      )
+      forAll(list) {
+        case (iri, json) =>
+          json.id.value shouldEqual iri
+      }
+    }
+    "fail to fetch the @id when not present" in {
+      Json.obj("type" -> Json.fromString("Person")).id shouldEqual None
+      Json.fromString("something").id shouldEqual None
+    }
+
+    "fail to fetch the @id when there is a @graph with several objects" in {
+      jsonContentOf("/graph.json").id shouldEqual None
     }
 
   }

@@ -4,16 +4,17 @@ import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 
 import cats.instances.all._
 import cats.syntax.all._
-import ch.epfl.bluebrain.nexus.rdf.Graph
+import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.Node.{IriNode, IriOrBNode}
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
 import ch.epfl.bluebrain.nexus.rdf.syntax.GraphSyntax._
 import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
 import ch.epfl.bluebrain.nexus.rdf.syntax.jena._
+import ch.epfl.bluebrain.nexus.rdf.{Graph, Iri}
 import com.github.jsonldjava.core.JsonLdOptions
+import io.circe._
 import io.circe.parser.parse
 import io.circe.syntax._
-import io.circe.{Json, JsonObject}
 import org.apache.jena.query.DatasetFactory
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 import org.apache.jena.riot.system.RiotLib
@@ -60,6 +61,46 @@ final class CirceOps(private val json: Json) extends AnyVal {
     * @return [[Graph]] object created from given JSON-LD
     */
   def asGraph: Graph = model(json)
+
+  /**
+    * Attempts to find the top `@id` value
+    * @return Some(iri) of found, None otherwise
+    */
+  def id: Option[AbsoluteIri] = {
+    val m = model(json)
+
+    def singleGraph(value: Json) =
+      value.hcursor.downField("@graph").focus.flatMap(_.asArray).flatMap(singleElem)
+
+    def singleElem(array: Vector[Json]) = array match {
+      case head +: IndexedSeq() => Some(head)
+      case _                    => None
+    }
+
+    def inner(value: Json, ctx: Json): Option[AbsoluteIri] = {
+
+      def asExpandedIri(key: String) =
+        value.hcursor.get[String](key).flatMap(s => Iri.absolute(m.expandPrefix(s))).toOption
+
+      def tryOthers: Option[AbsoluteIri] =
+        ctx.asObject.flatMap(_.toMap.foldLeft[Option[AbsoluteIri]](None) {
+          case (acc @ Some(_), _) => acc
+          case (_, (k, v))        => v.asString.withFilter(_ == "@id").flatMap(_ => asExpandedIri(k))
+        })
+
+      asExpandedIri("@id") orElse tryOthers
+    }
+
+    (json.asObject, json.asArray) match {
+      case (Some(_), _) =>
+        inner(json, json.contextValue) orElse singleGraph(json).flatMap(value => inner(value, json.contextValue))
+      case (_, Some(arr)) =>
+        singleElem(arr).flatMap { head =>
+          inner(head, head.contextValue) orElse singleGraph(head).flatMap(value => inner(value, head.contextValue))
+        }
+      case (_, _) => None
+    }
+  }
 }
 
 final class GraphOps(private val graph: Graph) extends AnyVal {

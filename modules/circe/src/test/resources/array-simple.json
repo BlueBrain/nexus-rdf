@@ -1,0 +1,10 @@
+[
+  {
+    "@context": {
+      "schema": "http://schema.org/"
+    },
+    "@id": "http://nexus.example.com/array-simple",
+    "@type": "schema:Person",
+    "schema:name": "John Doe"
+  }
+]
