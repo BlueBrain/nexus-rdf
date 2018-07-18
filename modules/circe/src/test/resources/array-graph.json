@@ -1,0 +1,14 @@
+[
+  {
+    "@context": {
+      "schema": "http://schema.org/"
+    },
+    "@graph" : [
+      {
+        "@id": "http://nexus.example.com/array-graph",
+        "@type": "schema:Person",
+        "schema:name": "John Doe"
+      }
+    ]
+  }
+]

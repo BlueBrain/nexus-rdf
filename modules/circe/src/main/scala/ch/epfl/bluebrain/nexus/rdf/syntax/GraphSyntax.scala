@@ -69,16 +69,37 @@ final class CirceOps(private val json: Json) extends AnyVal {
   def id: Option[AbsoluteIri] = {
     val m = model(json)
 
-    def asExpandedIri(key: String) =
-      json.hcursor.get[String](key).flatMap(s => Iri.absolute(m.expandPrefix(s))).toOption
+    def singleGraph(value: Json) =
+      value.hcursor.downField("@graph").focus.flatMap(_.asArray).flatMap(singleElem)
 
-    def tryOthers: Option[AbsoluteIri] =
-      json.contextValue.asObject.flatMap(_.toMap.foldLeft[Option[AbsoluteIri]](None) {
-        case (acc @ Some(_), _) => acc
-        case (_, (k, v))        => v.asString.withFilter(_ == "@id").flatMap(_ => asExpandedIri(k))
-      })
+    def singleElem(array: Vector[Json]) = array match {
+      case head +: IndexedSeq() => Some(head)
+      case _                    => None
+    }
 
-    asExpandedIri("@id") orElse tryOthers
+    def inner(value: Json, ctx: Json): Option[AbsoluteIri] = {
+
+      def asExpandedIri(key: String) =
+        value.hcursor.get[String](key).flatMap(s => Iri.absolute(m.expandPrefix(s))).toOption
+
+      def tryOthers: Option[AbsoluteIri] =
+        ctx.asObject.flatMap(_.toMap.foldLeft[Option[AbsoluteIri]](None) {
+          case (acc @ Some(_), _) => acc
+          case (_, (k, v))        => v.asString.withFilter(_ == "@id").flatMap(_ => asExpandedIri(k))
+        })
+
+      asExpandedIri("@id") orElse tryOthers
+    }
+
+    (json.asObject, json.asArray) match {
+      case (Some(_), _) =>
+        inner(json, json.contextValue) orElse singleGraph(json).flatMap(value => inner(value, json.contextValue))
+      case (_, Some(arr)) =>
+        singleElem(arr).flatMap { head =>
+          inner(head, head.contextValue) orElse singleGraph(head).flatMap(value => inner(value, head.contextValue))
+        }
+      case (_, _) => None
+    }
   }
 }
 
