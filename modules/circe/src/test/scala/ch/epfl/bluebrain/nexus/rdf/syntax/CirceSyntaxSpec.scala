@@ -1,6 +1,7 @@
 package ch.epfl.bluebrain.nexus.rdf.syntax
 
-import ch.epfl.bluebrain.nexus.rdf.Node.{IriOrBNode, Literal}
+import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
+import ch.epfl.bluebrain.nexus.rdf.Node.{IriNode, IriOrBNode, Literal}
 import ch.epfl.bluebrain.nexus.rdf.encoder.GraphEncoder
 import ch.epfl.bluebrain.nexus.rdf.syntax.CirceSyntaxSpec._
 import ch.epfl.bluebrain.nexus.rdf.syntax.circe._
@@ -19,6 +20,17 @@ class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
 
     implicit val enc: GraphEncoder[Item] = GraphEncoder { e =>
       e.bNode -> Graph((e.bNode, predicate.description, e.description), (e.bNode, predicate.step, e.step))
+    }
+
+    implicit val encExample = GraphEncoder[Example] { example =>
+      IriNode(example.id) -> Graph(
+        Set[Graph.Triple](
+          (IriNode(example.id), url"http://www.w3.org/1999/02/22-rdf-syntax-ns#type", example.tpe),
+          (IriNode(example.id), url"http://schema.org/name", example.name),
+          (IriNode(example.id),
+           url"http://schema.org/birthDate",
+           Literal(example.birthDate, url"http://www.w3.org/2001/XMLSchema#dateTime".value))
+        ))
     }
     // format: off
     val triples = Set[Graph.Triple](
@@ -87,6 +99,17 @@ class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
       graph.asJson(context(json), Some(id)).success.value shouldEqual json
     }
 
+    "convert to Json from entity with GraphEncoder" in {
+      val json     = jsonContentOf("/context/simple-iri-context.json")
+      val ctx      = context(json)
+      val emptyCtx = Json.obj("@context" -> Json.obj())
+      val example = Example(url"http://nexus.example.com/john-doe".value,
+                            url"http://schema.org/Person".value,
+                            "John Doe",
+                            "1999-04-09T20:00Z")
+      example.asJson(ctx).deepMerge(emptyCtx) shouldEqual json.deepMerge(emptyCtx)
+    }
+
     "fetch the @id from the Json" in {
       val list = List(
         Iri.absolute("http://nexus.example.com/john-doe").right.value     -> jsonContentOf("/embed.json"),
@@ -126,6 +149,8 @@ object CirceSyntaxSpec {
   final case class Item(step: Int, description: String) {
     val bNode: IriOrBNode = Node.blank(s"BNode$step").right.value
   }
+
+  final case class Example(id: AbsoluteIri, tpe: AbsoluteIri, name: String, birthDate: String)
 
   object predicate {
     val base        = "http://vocab/elem"

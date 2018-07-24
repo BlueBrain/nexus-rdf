@@ -7,6 +7,8 @@ import cats.syntax.all._
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.Node.{IriNode, IriOrBNode}
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
+import ch.epfl.bluebrain.nexus.rdf.encoder.GraphEncoder
+import ch.epfl.bluebrain.nexus.rdf.encoder.GraphEncoder.GraphResult
 import ch.epfl.bluebrain.nexus.rdf.syntax.GraphSyntax._
 import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
 import ch.epfl.bluebrain.nexus.rdf.syntax.jena._
@@ -26,7 +28,8 @@ trait GraphSyntax {
 
   implicit final def graphSyntax(graph: Graph): GraphOps = new GraphOps(graph)
 
-  implicit final def circeSyntax(json: Json): CirceOps = new CirceOps(json)
+  implicit final def circeSyntax(json: Json): CirceOps                    = new CirceOps(json)
+  implicit final def circeEncoderSyntax[A](value: A): CirceOpsEncoding[A] = new CirceOpsEncoding(value)
 }
 
 private[syntax] object GraphSyntax {
@@ -100,6 +103,22 @@ final class CirceOps(private val json: Json) extends AnyVal {
         }
       case (_, _) => None
     }
+  }
+}
+
+final class CirceOpsEncoding[A](private val value: A) extends AnyVal {
+  import ch.epfl.bluebrain.nexus.rdf.syntax.circe._
+
+  /**
+    * Convert [[A]] into JSON-LD representation using the implicitly available [[GraphEncoder]]
+    * and the provided context. Beware, that currently IRI contexts are not resolved and will be ignored.
+    *
+    * @param context context to use when creating JSON-LD representation
+    * @return [[Json]] containing JSON-LD representation
+    */
+  def asJson(context: Json)(implicit enc: GraphEncoder[A]): Json = {
+    val GraphResult(subject, graph) = enc(value)
+    graph.asJson(context, Some(subject)).getOrElse(graph.asJson)
   }
 }
 
