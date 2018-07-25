@@ -8,6 +8,7 @@ import ch.epfl.bluebrain.nexus.rdf.encoder.GraphEncoder
 import ch.epfl.bluebrain.nexus.rdf.syntax.CirceSyntaxSpec._
 import ch.epfl.bluebrain.nexus.rdf.syntax.circe._
 import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
+import ch.epfl.bluebrain.nexus.rdf.syntax.circe.encoding._
 import ch.epfl.bluebrain.nexus.rdf.syntax.jena._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
@@ -18,6 +19,8 @@ import org.apache.jena.rdf.model.{Model, ModelFactory}
 import org.apache.jena.riot.{Lang, RDFDataMgr}
 import org.scalatest.EitherValues._
 import org.scalatest._
+import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
+import ch.epfl.bluebrain.nexus.rdf.Graph._
 
 import scala.collection.JavaConverters._
 
@@ -89,6 +92,13 @@ class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
       val json = jsonContentOf("/embed.json")
       val id   = url"http://nexus.example.com/john-doe"
       json.asGraph.asJson(context(json), Some(id)).success.value shouldEqual json
+    }
+
+    "convert Graph to Json-LD from a root node that is a blank node" in {
+      val json = jsonContentOf("/embed-no-id.json")
+      val g    = json.asGraph
+      val id   = g.subjects(rdf.tpe, url"http://schema.org/Person").headOption.value
+      g.asJson(context(json), Some(id)).success.value shouldEqual json
     }
 
     "convert Graph with multiple entities to Json-LD  with context" in {
