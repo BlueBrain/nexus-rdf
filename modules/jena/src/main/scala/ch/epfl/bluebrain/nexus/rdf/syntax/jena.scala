@@ -1,11 +1,13 @@
 package ch.epfl.bluebrain.nexus.rdf.syntax
 
+import ch.epfl.bluebrain.nexus.rdf.Graph.Triple
 import ch.epfl.bluebrain.nexus.rdf.Node.Literal.LanguageTag
 import ch.epfl.bluebrain.nexus.rdf.Node.{BNode, IriNode, IriOrBNode, Literal}
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
 import ch.epfl.bluebrain.nexus.rdf.{Graph, Node}
 import org.apache.jena.datatypes.BaseDatatype
+import org.apache.jena.datatypes.xsd.XSDDatatype
 import org.apache.jena.rdf.model.impl.ResourceImpl
 import org.apache.jena.rdf.model.{Literal => JenaLiteral, _}
 
@@ -29,6 +31,15 @@ object jena {
 
   final implicit def literalToJenaLiteral(literal: Literal): JenaLiteral = literal match {
     case Literal(lf, xsd.string.value, None)                       => ResourceFactory.createStringLiteral(lf)
+    case Literal(lf, xsd.boolean.value, _)                         => ResourceFactory.createTypedLiteral(lf, XSDDatatype.XSDboolean)
+    case Literal(lf, xsd.integer.value, _)                         => ResourceFactory.createTypedLiteral(lf, XSDDatatype.XSDinteger)
+    case Literal(lf, xsd.int.value, _)                             => ResourceFactory.createTypedLiteral(lf, XSDDatatype.XSDint)
+    case Literal(lf, xsd.short.value, _)                           => ResourceFactory.createTypedLiteral(lf, XSDDatatype.XSDshort)
+    case Literal(lf, xsd.double.value, _)                          => ResourceFactory.createTypedLiteral(lf, XSDDatatype.XSDdouble)
+    case Literal(lf, xsd.decimal.value, _)                         => ResourceFactory.createTypedLiteral(lf, XSDDatatype.XSDdecimal)
+    case Literal(lf, xsd.float.value, _)                           => ResourceFactory.createTypedLiteral(lf, XSDDatatype.XSDfloat)
+    case Literal(lf, xsd.dateTime.value, _)                        => ResourceFactory.createTypedLiteral(lf, XSDDatatype.XSDdateTime)
+    case Literal(lf, xsd.byte.value, _)                            => ResourceFactory.createTypedLiteral(lf, XSDDatatype.XSDbyte)
     case Literal(lf, rdf.langString.value, Some(LanguageTag(tag))) => ResourceFactory.createLangLiteral(lf, tag)
     case Literal(lf, dataType, _)                                  => ResourceFactory.createTypedLiteral(lf, new BaseDatatype(dataType.asString))
   }
@@ -67,8 +78,7 @@ object jena {
     }
 
   final implicit def toGraph(model: Model): Graph =
-    model.listStatements().asScala.foldLeft(Graph()) { (graph, s) =>
-      graph + ((s.getSubject, s.getPredicate, s.getObject))
-    }
-
+    Graph(model.listStatements().asScala.foldLeft(Set.empty[Triple]) { (acc, s) =>
+      acc + ((s.getSubject, s.getPredicate, s.getObject))
+    })
 }

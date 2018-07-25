@@ -1,0 +1,32 @@
+{
+  "@context": {
+    "nxv": "http://example.com/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
+    "ageExplicit": {
+      "@type": "xsd:integer",
+      "@id": "nxv:ageExplicit"
+    },
+    "marriedExplicit": {
+      "@type": "xsd:boolean",
+      "@id": "nxv:marriedExplicit"
+    },
+    "heightExplicit": {
+      "@type": "xsd:double",
+      "@id": "nxv:heightExplicit"
+    },
+    "birthDate": {
+      "@type": "xsd:dateTime",
+      "@id": "nxv:birthDate"
+    }
+  },
+  "@type": "nxv:Person",
+  "@id": "http://nexus.example.com/john-doe",
+  "nxv:name": "John Doe",
+  "nxv:age": 12,
+  "ageExplicit": 12,
+  "nxv:married": false,
+  "marriedExplicit": false,
+  "nxv:height": 177.20,
+  "heightExplicit": 177.20,
+  "birthDate": "1999-04-09T20:00Z"
+}
