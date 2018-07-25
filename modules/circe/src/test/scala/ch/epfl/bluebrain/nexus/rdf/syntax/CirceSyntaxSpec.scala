@@ -1,18 +1,25 @@
 package ch.epfl.bluebrain.nexus.rdf.syntax
 
+import java.io.InputStream
+
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.Node.{IriNode, IriOrBNode, Literal}
 import ch.epfl.bluebrain.nexus.rdf.encoder.GraphEncoder
 import ch.epfl.bluebrain.nexus.rdf.syntax.CirceSyntaxSpec._
 import ch.epfl.bluebrain.nexus.rdf.syntax.circe._
 import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
+import ch.epfl.bluebrain.nexus.rdf.syntax.jena._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
 import ch.epfl.bluebrain.nexus.rdf.{Graph, Iri, Node}
 import io.circe.Json
 import io.circe.parser._
+import org.apache.jena.rdf.model.{Model, ModelFactory}
+import org.apache.jena.riot.{Lang, RDFDataMgr}
 import org.scalatest.EitherValues._
 import org.scalatest._
+
+import scala.collection.JavaConverters._
 
 class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with OptionValues with Inspectors {
 
@@ -134,6 +141,17 @@ class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
       jsonContentOf("/graph.json").id shouldEqual None
     }
 
+    def model(is: InputStream): Model = {
+      val model = ModelFactory.createDefaultModel()
+      RDFDataMgr.read(model, is, Lang.JSONLD)
+      model
+    }
+
+    "convert model to graph and reverse" in {
+      val result: Model   = (model(getClass.getResourceAsStream("/simple-model2.json")): Graph)
+      val expected: Model = model(getClass.getResourceAsStream("/simple-model2.json"))
+      result.listStatements().asScala.toList should contain theSameElementsAs expected.listStatements().asScala.toList
+    }
   }
 
   def context(json: Json): Json =
