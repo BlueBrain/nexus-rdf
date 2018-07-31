@@ -17,7 +17,10 @@ class Parsing {
 
   val iris = {
     import scala.collection.JavaConverters._
-    val json = parse(Source.fromFile(new File("/Users/roman/code/work/nexus/nexus-rdf/bench/src/main/resources/schema.json")).mkString).right.get
+    val json = parse(
+      Source
+        .fromFile(new File("/Users/roman/code/work/nexus/nexus-rdf/bench/src/main/resources/schema.json"))
+        .mkString).right.get
     val model = ModelFactory.createDefaultModel()
     RDFDataMgr.read(model, new ByteArrayInputStream(json.noSpaces.getBytes), Lang.JSONLD)
 
@@ -25,8 +28,8 @@ class Parsing {
       case (acc, stmt) =>
         val subj = if (stmt.getSubject.isURIResource) List(stmt.getSubject.getURI) else Nil
         val pred = if (stmt.getPredicate.isURIResource) List(stmt.getPredicate.getURI) else Nil
-        val obj = if (stmt.getObject.isURIResource) List(stmt.getObject.asResource().getURI) else Nil
-      subj ++ pred ++ obj ++ acc
+        val obj  = if (stmt.getObject.isURIResource) List(stmt.getObject.asResource().getURI) else Nil
+        subj ++ pred ++ obj ++ acc
     }
     println(s"IRIs: ${list.size}")
     list
@@ -48,7 +51,7 @@ class Parsing {
   def parseJenaIri(): Unit = {
     iris.foreach(i => {
       val iri = iriFactory.create(i)
-      val _ = iri.violations(true)
+      val _   = iri.violations(true)
     })
   }
 }
