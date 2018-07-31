@@ -99,6 +99,16 @@ lazy val root = project
   )
   .aggregate(core, circe, jena, akka, nexus)
 
+lazy val bench = project
+  .in(file("bench"))
+  .enablePlugins(JmhPlugin)
+  .settings(noPublish)
+  .settings(
+    name       := "bench",
+    moduleName := "bench",
+  )
+  .dependsOn(core, jena, circe, akka, nexus)
+
 /* ********************************************************
  ******************** Grouped Settings ********************
  **********************************************************/
