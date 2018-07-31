@@ -432,7 +432,7 @@ object IriParser {
             if (bytes == null) bytes = new Array[Byte]((numChars - i) / 3)
             var pos = 0
             while ({ ((i + 2) < numChars) && (c == '%') }) {
-              val v = Integer.parseInt(string, i + 1, i + 3, 16)
+              val v = Integer.parseInt(string.substring(i + 1, i + 3), 16)
               if (v < 0) throw new IllegalArgumentException("URLDecoder: Illegal hex characters in escape " + "(%) pattern - negative value")
               bytes({ pos += 1; pos - 1 }) = v.toByte
               i += 3
