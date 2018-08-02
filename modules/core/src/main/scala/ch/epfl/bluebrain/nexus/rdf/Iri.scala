@@ -7,8 +7,6 @@ import ch.epfl.bluebrain.nexus.rdf.Iri.Host.{IPv4Host, IPv6Host, NamedHost}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
 import ch.epfl.bluebrain.nexus.rdf.Iri._
 import ch.epfl.bluebrain.nexus.rdf.PctString._
-import org.parboiled2.ErrorFormatter
-import org.parboiled2.Parser.DeliveryScheme.{Either => E}
 
 import scala.annotation.tailrec
 import scala.collection.immutable.SortedSet
@@ -74,7 +72,6 @@ sealed abstract class Iri extends Product with Serializable {
 }
 
 object Iri {
-  private val formatter = new ErrorFormatter(showExpected = false, showTraces = false)
 
   /**
     * Attempt to construct a new Url from the argument validating the structure and the character encodings as per
@@ -103,7 +100,7 @@ object Iri {
     * @return Right(AbsoluteIri) if the string conforms to specification, Left(error) otherwise
     */
   final def absolute(string: String): Either[String, AbsoluteIri] =
-    urn(string) orElse url(string)
+    new IriParser(string).parseAbsolute
 
   /**
     * Attempt to construct a new RelativeIri from the argument as per the RFC 3987.
@@ -121,7 +118,7 @@ object Iri {
     * @return Right(Iri) if the string conforms to specification, Left(error) otherwise
     */
   final def apply(string: String): Either[String, Iri] =
-    urn(string) orElse url(string) orElse relative(string)
+    absolute(string) orElse relative(string)
 
   @SuppressWarnings(Array("EitherGet"))
   private[rdf] final def unsafe(string: String): Iri =
@@ -259,9 +256,7 @@ object Iri {
       * @return Right(url) if the string conforms to specification, Left(error) otherwise
       */
     final def apply(string: String): Either[String, RelativeIri] =
-      new IriParser(string).`irelative-ref`
-        .run()
-        .leftMap(_.format(string, formatter))
+      new IriParser(string).parseRelative
 
     final implicit val relativeIriShow: Show[RelativeIri] = Show.show(_.asUri)
 
@@ -389,13 +384,11 @@ object Iri {
       * @return Right(url) if the string conforms to specification, Left(error) otherwise
       */
     final def apply(string: String): Either[String, Url] =
-      new IriParser(string).url
-        .run()
-        .leftMap(_.format(string, formatter))
+      new IriParser(string).parseUrl
 
     @SuppressWarnings(Array("EitherGet"))
     private[rdf] def unsafe(string: String): Url =
-      new IriParser(string).url.run().right.get
+      apply(string).right.get
 
     final implicit def urlShow: Show[Url] = Show.show(_.asUri)
 
@@ -437,11 +430,8 @@ object Iri {
       * @param value the string representation of the scheme
       * @return Right(value) if successful or Left(error) if the string does not conform to the RFC 3987 format
       */
-    final def apply(value: String): Either[String, Scheme] = {
-      new IriParser(value).`scheme`
-        .run()
-        .leftMap(_.format(value, formatter))
-    }
+    final def apply(value: String): Either[String, Scheme] =
+      new IriParser(value).parseScheme
 
     final implicit val schemeShow: Show[Scheme] = Show.show(_.value)
     final implicit val schemeEq: Eq[Scheme]     = Eq.fromUniversalEquals
@@ -525,9 +515,7 @@ object Iri {
       * @return Right(UserInfo(value)) if the string conforms to specification, Left(error) otherwise
       */
     final def apply(string: String): Either[String, UserInfo] =
-      new IriParser(string).`iuserinfo`
-        .run()
-        .leftMap(_.format(string, formatter))
+      new IriParser(string).parseUserInfo
 
     final implicit val userInfoShow: Show[UserInfo] = Show.show(_.asString)
     final implicit val userInfoEq: Eq[UserInfo]     = Eq.fromUniversalEquals
@@ -650,9 +638,7 @@ object Iri {
         * @return Right(IPv4Host(bytes)) if the string conforms to specification, Left(error) otherwise
         */
       final def apply(string: String): Either[String, IPv4Host] =
-        new IriParser(string).`IPv4Address`
-          .run()
-          .leftMap(_.format(string, formatter))
+        new IriParser(string).parseIPv4
 
       /**
         * Constructs a new IPv4Host from the argument bytes.
@@ -741,9 +727,7 @@ object Iri {
         * @return Right(NamedHost(value)) if the string conforms to specification, Left(error) otherwise
         */
       final def apply(string: String): Either[String, NamedHost] =
-        new IriParser(string).`ireg-name`
-          .run()
-          .leftMap(_.format(string, formatter))
+        new IriParser(string).parseNamed
 
       final implicit val namedHostShow: Show[NamedHost] =
         Show.show(_.asString)
@@ -781,9 +765,7 @@ object Iri {
       * @return Right(port) if successful, Left(error) otherwise
       */
     final def apply(string: String): Either[String, Port] =
-      new IriParser(string).`port`
-        .run()
-        .leftMap(_.format(string, formatter))
+      new IriParser(string).parsePort
 
     final implicit val portShow: Show[Port] = Show.show(_.value.toString)
     final implicit val portEq: Eq[Port]     = Eq.fromUniversalEquals
@@ -917,9 +899,7 @@ object Iri {
       * @return Right(Path) if the parsing succeeds, Left(error) otherwise
       */
     final def abempty(string: String): Either[String, Path] =
-      new IriParser(string).`ipath-abempty`
-        .run()
-        .leftMap(_.format(string, formatter))
+      new IriParser(string).parsePathAbempty
 
     /**
       * Attempts to parse the argument string as an `isegment-nz` Segment as defined by RFC 3987.
@@ -928,10 +908,7 @@ object Iri {
       * @return Right(Path) if the parsing succeeds, Left(error) otherwise
       */
     final def segment(string: String): Either[String, Path] =
-      new IriParser(string).segment
-        .run()
-        .map(str => Segment(str, Empty))
-        .leftMap(_.format(string, formatter))
+      new IriParser(string).parsePathSegment
 
     /**
       * An empty path.
@@ -973,7 +950,6 @@ object Iri {
       def startWithSlash: Boolean    = if (rest.isEmpty) true else rest.startWithSlash
       def prepend(other: Path): Path = Slash(rest prepend other)
       def +(segment: String): Path   = if (segment.isEmpty) this else Segment(segment, this)
-
     }
 
     /**
@@ -1048,9 +1024,7 @@ object Iri {
       * @return Right(Query) if the parsing succeeds, Left(error) otherwise
       */
     final def apply(string: String): Either[String, Query] =
-      new IriParser(string).`iquery`
-        .run()
-        .leftMap(_.format(string, formatter))
+      new IriParser(string).parseQuery
 
     final implicit val queryShow: Show[Query] = Show.show(_.asString)
 
@@ -1074,9 +1048,7 @@ object Iri {
       * @return Right(Fragment) if the parsing succeeds, Left(error) otherwise
       */
     final def apply(string: String): Either[String, Fragment] =
-      new IriParser(string).`ifragment`
-        .run()
-        .leftMap(_.format(string, formatter))
+      new IriParser(string).parseFragment
 
     final implicit val fragmentShow: Show[Fragment] = Show.show(_.asString)
     final implicit val fragmentEq: Eq[Fragment]     = Eq.fromUniversalEquals
@@ -1098,9 +1070,7 @@ object Iri {
       * @return Right(NID) if the parsing succeeds, Left(error) otherwise
       */
     final def apply(string: String): Either[String, Nid] =
-      new IriParser(string).`nid`
-        .run()
-        .leftMap(_.format(string, formatter))
+      new IriParser(string).parseNid
 
     final implicit val nidShow: Show[Nid] = Show.show(_.asString)
     final implicit val nidEq: Eq[Nid]     = Eq.fromUniversalEquals
@@ -1121,9 +1091,7 @@ object Iri {
       * @return Right(Component) if the parsing succeeds, Left(error) otherwise
       */
     final def apply(string: String): Either[String, Component] =
-      new IriParser(string).`component`
-        .run()
-        .leftMap(_.format(string, formatter))
+      new IriParser(string).parseComponent
 
     final implicit val componentShow: Show[Component] = Show.show(_.asString)
     final implicit val componentEq: Eq[Component]     = Eq.fromUniversalEquals
@@ -1173,9 +1141,7 @@ object Iri {
       * @return Right(urn) if the string conforms to specification, Left(error) otherwise
       */
     final def apply(string: String): Either[String, Urn] =
-      new IriParser(string).urn
-        .run()
-        .leftMap(_.format(string, formatter))
+      new IriParser(string).parseUrn
 
     final implicit val urnShow: Show[Urn] = Show.show(_.asUri)
 
