@@ -38,6 +38,8 @@ object Vocabulary {
   object xsd {
     val base               = "http://www.w3.org/2001/XMLSchema#"
     val dateTime           = url"${base}dateTime"
+    val date               = url"${base}date"
+    val time               = url"${base}time"
     val string             = url"${base}string"
     val boolean            = url"${base}boolean"
     val byte               = url"${base}byte"
