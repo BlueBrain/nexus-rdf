@@ -5,15 +5,16 @@ import java.util.UUID
 import ch.epfl.bluebrain.nexus.rdf.Graph
 import ch.epfl.bluebrain.nexus.rdf.Node.Literal.LanguageTag
 import ch.epfl.bluebrain.nexus.rdf.Node.{IriNode, IriOrBNode, Literal}
+import ch.epfl.bluebrain.nexus.rdf.Vocabulary.xsd
 import ch.epfl.bluebrain.nexus.rdf.syntax.jena._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
 import org.apache.jena.datatypes.BaseDatatype
 import org.apache.jena.rdf.model
 import org.apache.jena.rdf.model.{Model, ModelFactory, ResourceFactory}
-import org.scalatest.{Matchers, WordSpecLike}
+import org.scalatest.{Inspectors, Matchers, WordSpecLike}
 
-class JenaSyntaxSpec extends WordSpecLike with Matchers {
+class JenaSyntaxSpec extends WordSpecLike with Matchers with Inspectors {
 
   "Jena syntax" should {
 
@@ -53,6 +54,7 @@ class JenaSyntaxSpec extends WordSpecLike with Matchers {
       val graph: Model = Graph(
         (url"http://nexus.example.com/john-doe", url"http://schema.org/name",                           "John Doe"),
         (url"http://nexus.example.com/john-doe", url"http://schema.org/birthDate",                      Literal("1999-04-09T20:00Z", url"http://schema.org/Date".value)),
+        (url"http://nexus.example.com/john-doe", url"http://schema.org/birth",                      Literal("2002-05-30T09:00:00", url"http://www.w3.org/2001/XMLSchema#dateTime".value)),
         (url"http://nexus.example.com/john-doe", url"http://www.w3.org/1999/02/22-rdf-syntax-ns#type",  url"http://schema.org/Person")
       )
       val model = ModelFactory.createDefaultModel()
@@ -64,6 +66,31 @@ class JenaSyntaxSpec extends WordSpecLike with Matchers {
 
     "convert string literal from Jena model" in {
       (ResourceFactory.createStringLiteral("testLiteral"): Literal) shouldEqual Literal("testLiteral")
+    }
+
+    "convert string literal to xsd:date from Jena model" in {
+      val list = List("2002-09-24", "2002-09-24Z", "2002-09-24-06:00", "2002-09-24+06:00")
+      forAll(list) { date =>
+        (ResourceFactory.createStringLiteral(date): Literal) shouldEqual Literal(date, xsd.date.value)
+      }
+    }
+
+    "convert string literal to xsd:dateTime from Jena model" in {
+      val list = List("2002-05-30T09:00:00",
+                      "2002-05-30T09:30:10.5",
+                      "2002-05-30T09:30:10Z",
+                      "2002-05-30T09:30:10-06:00",
+                      "2002-05-30T09:30:10+06:00")
+      forAll(list) { dateTime =>
+        (ResourceFactory.createStringLiteral(dateTime): Literal) shouldEqual Literal(dateTime, xsd.dateTime.value)
+      }
+    }
+
+    "convert string literal to xsd:time from Jena model" in {
+      val list = List("09:30:10.5", "09:00:00", "09:30:10Z", "09:30:10-06:00", "09:30:10+06:00")
+      forAll(list) { time =>
+        (ResourceFactory.createStringLiteral(time): Literal) shouldEqual Literal(time, xsd.time.value)
+      }
     }
 
     "convert typed literal from Jena model" in {
@@ -100,6 +127,7 @@ class JenaSyntaxSpec extends WordSpecLike with Matchers {
       model.triples shouldEqual Set[Graph.Triple](
         (url"http://nexus.example.com/john-doe", url"http://schema.org/name",                           "John Doe"),
         (url"http://nexus.example.com/john-doe", url"http://schema.org/birthDate",                      Literal("1999-04-09T20:00Z", url"http://schema.org/Date".value)),
+        (url"http://nexus.example.com/john-doe", url"http://schema.org/birth",                      Literal("2002-05-30T09:00:00", url"http://www.w3.org/2001/XMLSchema#dateTime".value)),
         (url"http://nexus.example.com/john-doe", url"http://www.w3.org/1999/02/22-rdf-syntax-ns#type",  url"http://schema.org/Person")
       )
       // format: off
