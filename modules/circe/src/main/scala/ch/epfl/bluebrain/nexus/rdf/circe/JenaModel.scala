@@ -14,34 +14,32 @@ import scala.util.Try
 object JenaModel {
 
   /**
-    *
-    * Attempts to build a [[Model]] from a provided json parsed using JSON-LD algorithm. The @base is going to be fetched from the @context, if available
-    *
-    * @param json the json parsed into the [[Model]]
-    * @return a Jena Model if there were no errors an a [[JenaModelErr]] when we encounter errors
-    */
-  def apply(json: Json): Either[JenaModelErr, Model] = {
-    json.hcursor.downField("@context").get[String]("@base") match {
-      case Left(_)        => apply(json, None)
-      case Right(baseStr) => Iri.absolute(baseStr).left.map(InvalidJsonLD).flatMap(base => apply(json, Some(base)))
-    }
-  }
-
-  /**
-    *
     * Attempts to build a [[Model]] from a provided json parsed using JSON-LD algorithm.
+    * The @base is extracted from the json @context when the ''base'' is None.
     *
     * @param json the json parsed into the [[Model]]
     * @param base the optionally available JSON-LD base
     * @return a Jena Model if there were no errors an a [[JenaModelErr]] when we encounter errors
     */
-  def apply(json: Json, base: Option[AbsoluteIri]): Either[JenaModelErr, Model] = {
-    val model = ModelFactory.createDefaultModel()
-    apply(json, base, model, StreamRDFLib.graph(model.getGraph))
+  def apply(json: Json, base: Option[AbsoluteIri] = None): Either[JenaModelErr, Model] = {
+    val model  = ModelFactory.createDefaultModel()
+    val stream = StreamRDFLib.graph(model.getGraph)
+    base match {
+      case Some(_) =>
+        apply(json, base, model, stream)
+      case _ =>
+        json.hcursor.downField("@context").get[String]("@base") match {
+          case Left(_) =>
+            apply(json, None, model, stream)
+          case Right(baseStr) =>
+            Iri.absolute(baseStr).left.map(InvalidJsonLD).flatMap(b => apply(json, Some(b), model, stream))
+        }
+    }
   }
 
   /**
     * Attempts to convert the provided ''json'' into the provided ''model'' using a JSON-LD parser.
+    * The @base is NOT extracted from the json @context when the ''base'' is None.
     *
     * @param json   the json parsed into the [[Model]]
     * @param base   the optionally available JSON-LD base
