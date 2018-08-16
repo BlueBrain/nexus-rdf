@@ -1,21 +1,19 @@
 package ch.epfl.bluebrain.nexus.rdf.syntax
 
-import ch.epfl.bluebrain.nexus.rdf.Graph.Triple
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
+import ch.epfl.bluebrain.nexus.rdf.Node
 import ch.epfl.bluebrain.nexus.rdf.Node.Literal.LanguageTag
 import ch.epfl.bluebrain.nexus.rdf.Node.{BNode, IriNode, IriOrBNode, Literal}
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
-import ch.epfl.bluebrain.nexus.rdf.{Graph, Node}
 import org.apache.jena.datatypes.TypeMapper
 import org.apache.jena.datatypes.xsd.XSDDatatype._
 import org.apache.jena.rdf.model.impl.ResourceImpl
 import org.apache.jena.rdf.model.{Literal => JenaLiteral, _}
 
-import scala.collection.JavaConverters._
 import scala.util.Try
 
-object jena {
+object jena extends JenaSyntax {
 
   final implicit def nodeToJenaRDFNode(node: Node): RDFNode = node match {
     case b @ BNode(_)         => iriOrBNodeToResource(b)
@@ -76,14 +74,4 @@ object jena {
       b"${rdfNode.asResource}"
     else
       url"${rdfNode.asResource.getURI}"
-
-  final implicit def toJena(graph: Graph): Model =
-    graph.triples.foldLeft(ModelFactory.createDefaultModel()) {
-      case (model, (s, o, p)) => model.add(ResourceFactory.createStatement(s, o, p))
-    }
-
-  final implicit def toGraph(model: Model): Graph =
-    Graph(model.listStatements().asScala.foldLeft(Set.empty[Triple]) { (acc, s) =>
-      acc + ((s.getSubject, s.getPredicate, s.getObject))
-    })
 }

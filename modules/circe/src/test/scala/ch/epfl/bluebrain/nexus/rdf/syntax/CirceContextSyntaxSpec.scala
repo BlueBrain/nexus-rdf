@@ -62,6 +62,15 @@ class CirceContextSyntaxSpec extends WordSpecLike with Matchers with Inspectors 
       }
     }
 
+    "added context uri to empty context value" in {
+      val list = List(
+        Json.obj("@context" -> Json.obj()).addContext(context),
+        Json.obj("@context" -> Json.arr()).addContext(context),
+        Json.obj("@context" -> Json.fromString("")).addContext(context)
+      )
+      forAll(list)(_ shouldEqual Json.obj("@context" -> Json.fromString(context.asString)))
+    }
+
     "be idempotent" in {
       forAll(mapping) {
         case (in, _) =>

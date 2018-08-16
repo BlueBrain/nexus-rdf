@@ -1,6 +1,6 @@
 package ch.epfl.bluebrain.nexus.rdf.syntax
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
+import java.io.ByteArrayOutputStream
 import java.util.UUID
 
 import cats.instances.all._
@@ -8,6 +8,8 @@ import cats.syntax.all._
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.Node.{BNode, IriNode, IriOrBNode}
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
+import ch.epfl.bluebrain.nexus.rdf.circe.JenaModel
+import ch.epfl.bluebrain.nexus.rdf.circe.JenaModel.JenaModelErr
 import ch.epfl.bluebrain.nexus.rdf.syntax.GraphSyntax._
 import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
 import ch.epfl.bluebrain.nexus.rdf.syntax.jena._
@@ -18,9 +20,9 @@ import io.circe._
 import io.circe.parser.parse
 import io.circe.syntax._
 import org.apache.jena.query.DatasetFactory
-import org.apache.jena.rdf.model.{Model, ModelFactory}
+import org.apache.jena.rdf.model.ModelFactory
 import org.apache.jena.riot.system.RiotLib
-import org.apache.jena.riot.{JsonLDWriteContext, Lang, RDFDataMgr, RDFFormat}
+import org.apache.jena.riot.{JsonLDWriteContext, RDFDataMgr, RDFFormat}
 
 import scala.util.Try
 
@@ -45,13 +47,6 @@ private[syntax] object GraphSyntax {
       xsd.dateTime.show
     )
 
-  def model(json: Json): Model = {
-    val model     = ModelFactory.createDefaultModel()
-    val finalJson = json deepMerge json.removeContextIris
-    RDFDataMgr.read(model, new ByteArrayInputStream(finalJson.noSpaces.getBytes), Lang.JSONLD)
-    model
-  }
-
   final val reservedId = url"http://dummy.com/${UUID.randomUUID()}"
 
 }
@@ -63,47 +58,46 @@ final class CirceOps(private val json: Json) extends AnyVal {
     *
     * @return [[Graph]] object created from given JSON-LD
     */
-  def asGraph: Graph = model(json)
+  def asGraph: Either[JenaModelErr, Graph] = JenaModel(json).map(_.asGraph)
 
   /**
     * Attempts to find the top `@id` value
     * @return Some(iri) of found, None otherwise
     */
-  def id: Option[AbsoluteIri] = {
-    val m = model(json)
+  def id: Option[AbsoluteIri] =
+    JenaModel(json).toOption.flatMap { m =>
+      def singleGraph(value: Json) =
+        value.hcursor.downField("@graph").focus.flatMap(_.asArray).flatMap(singleElem)
 
-    def singleGraph(value: Json) =
-      value.hcursor.downField("@graph").focus.flatMap(_.asArray).flatMap(singleElem)
+      def singleElem(array: Vector[Json]) = array match {
+        case head +: IndexedSeq() => Some(head)
+        case _                    => None
+      }
 
-    def singleElem(array: Vector[Json]) = array match {
-      case head +: IndexedSeq() => Some(head)
-      case _                    => None
+      def inner(value: Json, ctx: Json): Option[AbsoluteIri] = {
+
+        def asExpandedIri(key: String) =
+          value.hcursor.get[String](key).flatMap(s => Iri.absolute(m.expandPrefix(s))).toOption
+
+        def tryOthers: Option[AbsoluteIri] =
+          ctx.asObject.flatMap(_.toMap.foldLeft[Option[AbsoluteIri]](None) {
+            case (acc @ Some(_), _) => acc
+            case (_, (k, v))        => v.asString.withFilter(_ == "@id").flatMap(_ => asExpandedIri(k))
+          })
+
+        asExpandedIri("@id") orElse tryOthers
+      }
+
+      (json.asObject, json.asArray) match {
+        case (Some(_), _) =>
+          inner(json, json.contextValue) orElse singleGraph(json).flatMap(value => inner(value, json.contextValue))
+        case (_, Some(arr)) =>
+          singleElem(arr).flatMap { head =>
+            inner(head, head.contextValue) orElse singleGraph(head).flatMap(value => inner(value, head.contextValue))
+          }
+        case (_, _) => None
+      }
     }
-
-    def inner(value: Json, ctx: Json): Option[AbsoluteIri] = {
-
-      def asExpandedIri(key: String) =
-        value.hcursor.get[String](key).flatMap(s => Iri.absolute(m.expandPrefix(s))).toOption
-
-      def tryOthers: Option[AbsoluteIri] =
-        ctx.asObject.flatMap(_.toMap.foldLeft[Option[AbsoluteIri]](None) {
-          case (acc @ Some(_), _) => acc
-          case (_, (k, v))        => v.asString.withFilter(_ == "@id").flatMap(_ => asExpandedIri(k))
-        })
-
-      asExpandedIri("@id") orElse tryOthers
-    }
-
-    (json.asObject, json.asArray) match {
-      case (Some(_), _) =>
-        inner(json, json.contextValue) orElse singleGraph(json).flatMap(value => inner(value, json.contextValue))
-      case (_, Some(arr)) =>
-        singleElem(arr).flatMap { head =>
-          inner(head, head.contextValue) orElse singleGraph(head).flatMap(value => inner(value, head.contextValue))
-        }
-      case (_, _) => None
-    }
-  }
 }
 
 final class GraphOps(private val graph: Graph) extends AnyVal {
@@ -116,7 +110,7 @@ final class GraphOps(private val graph: Graph) extends AnyVal {
     */
   def asJson: Json = {
     val out = new ByteArrayOutputStream()
-    RDFDataMgr.write(out, graph, RDFFormat.JSONLD)
+    RDFDataMgr.write(out, graph.asJenaModel, RDFFormat.JSONLD)
     parse(out.toString).getOrElse(Json.obj())
   }
 
@@ -166,7 +160,7 @@ final class GraphOps(private val graph: Graph) extends AnyVal {
   }
 
   private def write(format: RDFFormat, ctx: JsonLDWriteContext)(implicit jenaCleanup: JenaWriterCleanup): Try[Json] = {
-    val g   = DatasetFactory.wrap(graph).asDatasetGraph
+    val g   = DatasetFactory.wrap(graph.asJenaModel).asDatasetGraph
     val out = new ByteArrayOutputStream()
     val w   = RDFDataMgr.createDatasetWriter(format)
     val pm  = RiotLib.prefixMap(g)
@@ -177,7 +171,7 @@ final class GraphOps(private val graph: Graph) extends AnyVal {
 }
 
 private[syntax] final class JenaWriterCleanup(ctx: Json) {
-  private lazy val m = model(ctx)
+  private lazy val m = JenaModel(ctx).getOrElse(ModelFactory.createDefaultModel())
 
   /**
     * Removes the "@graph" from the json document if there is only

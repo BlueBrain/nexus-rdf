@@ -26,6 +26,12 @@ final class ContextOps(private val json: Json) extends AnyVal {
           case None => jo.add("@context", contextUriString)
           case Some(value) =>
             (value.asObject, value.asArray, value.asString) match {
+              case (Some(vo), _, _) if vo.isEmpty =>
+                jo.add("@context", contextUriString)
+              case (_, Some(va), _) if va.isEmpty =>
+                jo.add("@context", contextUriString)
+              case (_, _, Some(vs)) if vs.isEmpty =>
+                jo.add("@context", contextUriString)
               case (Some(vo), _, _) if !vo.values.exists(_ == contextUriString) =>
                 jo.add("@context", Json.arr(value, contextUriString))
               case (_, Some(va), _) if !va.contains(contextUriString) =>
