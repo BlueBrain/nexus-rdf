@@ -3,6 +3,7 @@ import java.io.{ByteArrayInputStream, File}
 
 import akka.http.scaladsl.model.Uri
 import ch.epfl.bluebrain.nexus.rdf.IriParser
+import ch.epfl.bluebrain.nexus.rdf.circe.JenaModel
 import io.circe.parser._
 import org.apache.jena.iri.IRIFactory
 import org.apache.jena.rdf.model.ModelFactory
@@ -21,8 +22,7 @@ class Parsing {
       Source
         .fromFile(new File("/Users/roman/code/work/nexus/nexus-rdf/bench/src/main/resources/schema.json"))
         .mkString).right.get
-    val model = ModelFactory.createDefaultModel()
-    RDFDataMgr.read(model, new ByteArrayInputStream(json.noSpaces.getBytes), Lang.JSONLD)
+    val model = JenaModel(json).toOption.get
 
     val list = model.listStatements().asScala.foldLeft[List[String]](Nil) {
       case (acc, stmt) =>

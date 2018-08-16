@@ -1,9 +1,11 @@
 package ch.epfl.bluebrain.nexus.rdf.syntax
 
-import java.io.InputStream
-
+import ch.epfl.bluebrain.nexus.rdf.Graph._
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.Node.{IriNode, IriOrBNode, Literal}
+import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
+import ch.epfl.bluebrain.nexus.rdf.circe.JenaModel
+import ch.epfl.bluebrain.nexus.rdf.circe.JenaModel.JenaModelErr.InvalidJsonLD
 import ch.epfl.bluebrain.nexus.rdf.encoder.GraphEncoder
 import ch.epfl.bluebrain.nexus.rdf.syntax.CirceSyntaxSpec._
 import ch.epfl.bluebrain.nexus.rdf.syntax.circe._
@@ -15,12 +17,10 @@ import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
 import ch.epfl.bluebrain.nexus.rdf.{Graph, Iri, Node}
 import io.circe.Json
 import io.circe.parser._
-import org.apache.jena.rdf.model.{Model, ModelFactory}
-import org.apache.jena.riot.{Lang, RDFDataMgr}
+import org.apache.jena.graph.NodeFactory
+import org.apache.jena.rdf.model.{Model, ResourceFactory}
 import org.scalatest.EitherValues._
 import org.scalatest._
-import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
-import ch.epfl.bluebrain.nexus.rdf.Graph._
 
 import scala.collection.JavaConverters._
 
@@ -51,7 +51,7 @@ class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
     // format: on
 
     "convert valid JSON-LD into Graph" in {
-      jsonContentOf("/simple.json").asGraph.triples shouldEqual triples
+      jsonContentOf("/simple.json").asGraph.right.value.triples shouldEqual triples
     }
 
     "convert Graph to Json-LD without context" in {
@@ -84,26 +84,26 @@ class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
       val json  = jsonContentOf("/context/simple-iri-context.json")
       val id    = url"http://nexus.example.com/john-doe"
       val ctx   = context(json)
-      val graph = json.asGraph
+      val graph = json.asGraph.right.value
       graph.asJson(ctx, Some(id)).success.value deepMerge ctx shouldEqual json
     }
 
     "convert Graph with nested relationships to Json-LD  with context" in {
       val json = jsonContentOf("/embed.json")
       val id   = url"http://nexus.example.com/john-doe"
-      json.asGraph.asJson(context(json), Some(id)).success.value shouldEqual json
+      json.asGraph.right.value.asJson(context(json), Some(id)).success.value shouldEqual json
     }
 
     "convert Graph to Json-LD from a root node that is a blank node" in {
       val json = jsonContentOf("/embed-no-id.json")
-      val g    = json.asGraph
+      val g    = json.asGraph.right.value
       val id   = g.subjects(rdf.tpe, url"http://schema.org/Person").headOption.value
       g.asJson(context(json), Some(id)).success.value shouldEqual json
     }
 
     "convert Graph with multiple entities to Json-LD  with context" in {
       val json   = jsonContentOf("/graph.json")
-      val output = json.asGraph.asJson(context(json), None).success.value
+      val output = json.asGraph.right.value.asJson(context(json), None).success.value
       graphArray(output) should contain theSameElementsAs graphArray(json)
     }
 
@@ -151,15 +151,27 @@ class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
       jsonContentOf("/graph.json").id shouldEqual None
     }
 
-    def model(is: InputStream): Model = {
-      val model = ModelFactory.createDefaultModel()
-      RDFDataMgr.read(model, is, Lang.JSONLD)
-      model
+    "deal with invalid ID's" in {
+      val baseList = List.range(1, 4).map(i => jsonContentOf(s"/wrong-id-with-base-$i.json"))
+      val list     = jsonContentOf("/wrong-id.json") :: baseList
+      forAll(list)(json => JenaModel(json).left.value shouldBe a[InvalidJsonLD])
+    }
+
+    "create a model with valid @base" in {
+      val json = jsonContentOf("/id-with-base.json")
+      val m    = JenaModel(json).right.value
+      m.listStatements().asScala.toList shouldEqual List(
+        m.createStatement(
+          ResourceFactory.createResource("http://nexus.example.com/john-doe"),
+          m.createProperty("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+          m.asRDFNode(NodeFactory.createURI("http://example.com/Person"))
+        ))
     }
 
     "convert model to graph and reverse" in {
-      val result: Model   = (model(getClass.getResourceAsStream("/simple-model2.json")): Graph)
-      val expected: Model = model(getClass.getResourceAsStream("/simple-model2.json"))
+      val json            = jsonContentOf("/simple-model2.json")
+      val result: Model   = JenaModel(json).right.value.asGraph.asJenaModel
+      val expected: Model = JenaModel(json).right.value
       result.listStatements().asScala.toList should contain theSameElementsAs expected.listStatements().asScala.toList
     }
   }

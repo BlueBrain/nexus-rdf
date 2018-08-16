@@ -25,42 +25,42 @@ class GraphSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
     val arrayOneJson = jsonContentOf("/array-one.json")
 
     "find @id from a Json-LD without it" in {
-      json.asGraph.primaryNode.value shouldBe a[BNode]
-      json.asGraph.primaryBNode.value shouldBe a[BNode]
+      json.asGraph.right.value.primaryNode.value shouldBe a[BNode]
+      json.asGraph.right.value.primaryBNode.value shouldBe a[BNode]
     }
 
     "find @id from Json-LD with it" in {
-      typedJson.asGraph.primaryNode.value shouldEqual url"http://example.org/cars/for-sale#tesla"
-      typedJson.asGraph.primaryIriNode.value shouldEqual url"http://example.org/cars/for-sale#tesla"
+      typedJson.asGraph.right.value.primaryNode.value shouldEqual url"http://example.org/cars/for-sale#tesla"
+      typedJson.asGraph.right.value.primaryIriNode.value shouldEqual url"http://example.org/cars/for-sale#tesla"
     }
 
     "fail to find an @id when it is self-referenced" in {
-      self.asGraph.primaryNode shouldEqual None
+      self.asGraph.right.value.primaryNode shouldEqual None
     }
 
     "find the @type from the Json-LD without @id" in {
-      json.asGraph.primaryTypes shouldEqual Set(url"http://google.com/a")
+      json.asGraph.right.value.primaryTypes shouldEqual Set(url"http://google.com/a")
 
     }
 
     "find no types when it is self-referenced" in {
-      self.asGraph.primaryTypes shouldEqual Set.empty
+      self.asGraph.right.value.primaryTypes shouldEqual Set.empty
     }
 
     "find the @type from the Json-LD with @id" in {
-      typedJson.asGraph.types(url"http://example.org/cars/for-sale#tesla") shouldEqual Set(
+      typedJson.asGraph.right.value.types(url"http://example.org/cars/for-sale#tesla") shouldEqual Set(
         url"http://purl.org/goodrelations/v1#Offering",
         url"http://www.w3.org/2002/07/owl#Ontology")
-      typedJson.asGraph.primaryTypes shouldEqual Set(url"http://purl.org/goodrelations/v1#Offering",
-                                                     url"http://www.w3.org/2002/07/owl#Ontology")
+      typedJson.asGraph.right.value.primaryTypes shouldEqual Set(url"http://purl.org/goodrelations/v1#Offering",
+                                                                 url"http://www.w3.org/2002/07/owl#Ontology")
     }
 
     "find return no types for id which doesn't have type predicates" in {
-      typedJson.asGraph.types(url"http://example.org/cars/for-sale#other") shouldEqual Set.empty
+      typedJson.asGraph.right.value.types(url"http://example.org/cars/for-sale#other") shouldEqual Set.empty
     }
 
     "navigate to an element" in {
-      json.asGraph
+      json.asGraph.right.value
         .cursor()
         .downField(url"http://schema.org/image")
         .focus
@@ -68,16 +68,16 @@ class GraphSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
     }
 
     "return a failed cursor when @id is not found" in {
-      self.asGraph.cursor().failed shouldEqual true
+      self.asGraph.right.value.cursor().failed shouldEqual true
     }
 
     "convert back to json" in {
       val other = jsonContentOf("/id_and_type.json")
-      other.asGraph.asJson(context(other)).success.value shouldEqual other
+      other.asGraph.right.value.asJson(context(other)).success.value shouldEqual other
     }
 
     "navigate a graph of array of objects" in {
-      val cursor = arrayJson.asGraph.cursor()
+      val cursor = arrayJson.asGraph.right.value.cursor()
       val result = cursor.downField(nxv.identities).downArray.map { cursor =>
         val r = for {
           realm <- cursor.downField(nxv.realm).focus.as[String]
@@ -95,7 +95,7 @@ class GraphSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
     }
 
     "navigate a graph of array of objects with one element" in {
-      val c = arrayOneJson.asGraph.cursor()
+      val c = arrayOneJson.asGraph.right.value.cursor()
       val result =
         c.downField(nxv.identities).downArray.map(_.downField(nxv.realm).focus.as[String].right.value)
       result shouldEqual Set("some-realm")

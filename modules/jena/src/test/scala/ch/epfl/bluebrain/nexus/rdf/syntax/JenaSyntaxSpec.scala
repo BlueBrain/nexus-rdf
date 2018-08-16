@@ -56,11 +56,11 @@ class JenaSyntaxSpec extends WordSpecLike with Matchers with Inspectors {
         (url"http://nexus.example.com/john-doe", url"http://schema.org/birthDate",                      Literal("1999-04-09T20:00Z", url"http://schema.org/Date".value)),
         (url"http://nexus.example.com/john-doe", url"http://schema.org/birth",                      Literal("2002-05-30T09:00:00", url"http://www.w3.org/2001/XMLSchema#dateTime".value)),
         (url"http://nexus.example.com/john-doe", url"http://www.w3.org/1999/02/22-rdf-syntax-ns#type",  url"http://schema.org/Person")
-      )
+      ).asJenaModel
       val model = ModelFactory.createDefaultModel()
       model.read(getClass.getResourceAsStream("/simple-model.json"), "http://nexus.example.com/", "JSONLD")
 
-      graph.triples shouldEqual model.triples
+      graph.asGraph.triples shouldEqual model.asGraph.triples
     }
     // format: on
 
@@ -124,7 +124,7 @@ class JenaSyntaxSpec extends WordSpecLike with Matchers with Inspectors {
       model.read(getClass.getResourceAsStream("/simple-model.json"), "http://nexus.example.com/", "JSONLD")
 
       // format: off
-      model.triples shouldEqual Set[Graph.Triple](
+      model.asGraph.triples shouldEqual Set[Graph.Triple](
         (url"http://nexus.example.com/john-doe", url"http://schema.org/name",                           "John Doe"),
         (url"http://nexus.example.com/john-doe", url"http://schema.org/birthDate",                      Literal("1999-04-09T20:00Z", url"http://schema.org/Date".value)),
         (url"http://nexus.example.com/john-doe", url"http://schema.org/birth",                      Literal("2002-05-30T09:00:00", url"http://www.w3.org/2001/XMLSchema#dateTime".value)),
