@@ -3,7 +3,7 @@ package ch.epfl.bluebrain.nexus.rdf
 import cats.syntax.show._
 import cats.{Eq, Show}
 import ch.epfl.bluebrain.nexus.rdf.Curie.Prefix
-import ch.epfl.bluebrain.nexus.rdf.Iri.RelativeIri
+import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, RelativeIri}
 
 /**
   * A Compact URI as defined by W3C in ''CURIE Syntax 1.0''.
@@ -13,7 +13,44 @@ import ch.epfl.bluebrain.nexus.rdf.Iri.RelativeIri
   * @param prefix    the curie prefix
   * @param reference the curie reference
   */
-final case class Curie(prefix: Prefix, reference: RelativeIri)
+final case class Curie(prefix: Prefix, reference: RelativeIri) {
+
+  /**
+    * Converts the curie to an iri using the provided ''namespace'' and the curie ''reference''.
+    *
+    * @param namespace the namespace to produce the resulting iri
+    * @return an [[AbsoluteIri]] when successfully joined the ''namespace'' and ''reference'' or
+    *         an string with the error message otherwise
+    */
+  def toIri(namespace: AbsoluteIri): Either[String, AbsoluteIri] =
+    Iri.absolute(namespace.asString + reference.asString)
+
+  /**
+    * Converts the curie to an iri using the provided ''prefixMappings'' to resolve the value of the ''prefix''.
+    *
+    * @param prefixMappings the mappings to attempt to apply to the ''prefix'' value of the curie
+    * @return an [[AbsoluteIri]] when successfully joined the resolution of the prefix with the ''reference'' or
+    *         an string with the error message otherwise
+    */
+  def toIriUnsafePrefix(prefixMappings: Map[String, AbsoluteIri]): Either[String, AbsoluteIri] =
+    prefixMappings
+      .get(prefix.value)
+      .toRight(s"Could not find a namespace definition for '${prefix.value}'")
+      .flatMap(toIri)
+
+  /**
+    * Converts the curie to an iri using the provided ''prefixMappings'' to resolve the value of the ''prefix''.
+    *
+    * @param prefixMappings the mappings to attempt to apply to the ''prefix'' value of the curie
+    * @return an [[AbsoluteIri]] when successfully joined the resolution of the prefix with the ''reference'' or
+    *         an string with the error message otherwise
+    */
+  def toIri(prefixMappings: Map[Prefix, AbsoluteIri]): Either[String, AbsoluteIri] =
+    prefixMappings
+      .get(prefix)
+      .toRight(s"Could not find a namespace definition for '${prefix.value}'")
+      .flatMap(toIri)
+}
 
 object Curie {
 

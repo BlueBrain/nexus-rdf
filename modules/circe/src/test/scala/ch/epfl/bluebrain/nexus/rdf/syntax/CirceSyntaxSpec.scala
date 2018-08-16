@@ -17,7 +17,8 @@ import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
 import ch.epfl.bluebrain.nexus.rdf.{Graph, Iri, Node}
 import io.circe.Json
 import io.circe.parser._
-import org.apache.jena.rdf.model.Model
+import org.apache.jena.graph.NodeFactory
+import org.apache.jena.rdf.model.{Model, ResourceFactory}
 import org.scalatest.EitherValues._
 import org.scalatest._
 
@@ -151,8 +152,20 @@ class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
     }
 
     "deal with invalid ID's" in {
-      val list = List(jsonContentOf("/wrong-id.json"), Json.obj("@type" -> Json.fromString("Value")))
+      val baseList = List.range(1, 4).map(i => jsonContentOf(s"/wrong-id-with-base-$i.json"))
+      val list     = jsonContentOf("/wrong-id.json") :: baseList
       forAll(list)(json => JenaModel(json).left.value shouldBe a[InvalidJsonLD])
+    }
+
+    "create a model with valid @base" in {
+      val json = jsonContentOf("/id-with-base.json")
+      val m    = JenaModel(json).right.value
+      m.listStatements().asScala.toList shouldEqual List(
+        m.createStatement(
+          ResourceFactory.createResource("http://nexus.example.com/john-doe"),
+          m.createProperty("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+          m.asRDFNode(NodeFactory.createURI("http://example.com/Person"))
+        ))
     }
 
     "convert model to graph and reverse" in {

@@ -86,5 +86,33 @@ class CurieSpec extends WordSpecLike with Matchers with Inspectors with EitherVa
       val rhs = Curie("RdF:type").right.value
       Eq.eqv(lhs, rhs) shouldEqual false
     }
+
+    "fail to convert to iri when not found on prefix mappings" in {
+      val c      = Curie("rdf:type").right.value
+      val iri    = Iri.absolute("http://example.com/a").right.value
+      val prefix = Prefix("a").right.value
+      c.toIri(Map(prefix                   -> iri)).left.value
+      c.toIriUnsafePrefix(Map(prefix.value -> iri)).left.value
+    }
+
+    "fail to convert to iri when resolved curie is not an AbsoluteIri" in {
+      val c   = Curie("rdf:type?a=b").right.value
+      val iri = Iri.absolute("http://example.com/b?c=d").right.value
+      c.toIri(iri).left.value
+    }
+
+    "convert to iri with prefix map" in {
+      val c   = Curie("rdf:type").right.value
+      val iri = Iri.absolute("http://example.com/a/").right.value
+      val map = Map(Prefix("rdf").right.value -> iri)
+      c.toIri(map).right.value shouldEqual Iri.absolute("http://example.com/a/type").right.value
+    }
+
+    "convert to iri with string prefix map" in {
+      val c   = Curie("rdf:type?a=b").right.value
+      val iri = Iri.absolute("http://example.com/a").right.value
+      val map = Map("rdf" -> iri)
+      c.toIriUnsafePrefix(map).right.value shouldEqual Iri.absolute("http://example.com/atype?a=b").right.value
+    }
   }
 }
