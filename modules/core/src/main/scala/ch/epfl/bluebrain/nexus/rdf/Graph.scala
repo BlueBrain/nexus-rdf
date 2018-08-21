@@ -155,6 +155,21 @@ final class Graph private[rdf] (private val underlying: G[Node, LkDiEdge]) {
   }
 
   /**
+    * Removes the triples that match the expressions in s, p and o.
+    *
+    * @param s the triple subject
+    * @param p the triple predicate
+    * @param o the triple object
+    * @return a new graph made up of all of the triples of this graph except the triples matching s and p and o
+    */
+  def remove(s: IriOrBNode => Boolean = _ => true,
+             p: IriNode => Boolean = _ => true,
+             o: Node => Boolean = _ => true): Graph = {
+    val toRemove = select(s, p, o).map { case (s, p, o) => LkDiEdge(s, o)(p) }
+    new Graph(underlying --! toRemove)
+  }
+
+  /**
     * Removes the argument triple from this graph if it's contained.
     *
     * @param spo the triple to remove
