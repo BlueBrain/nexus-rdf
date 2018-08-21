@@ -61,6 +61,26 @@ class GraphSpec extends WordSpecLike with Matchers with OptionValues {
       (g - t).triples shouldEqual (triples - t)
     }
 
+    "subtract several triples" in {
+      val moreTriples = triples ++ Set[(IriOrBNode, IriNode, Node)](
+        (b"2", p.string, "something"),
+        (b"1", isa, b"2")
+      )
+      val graph = Graph(moreTriples)
+      graph.remove(b"1").triples shouldEqual Set[(IriOrBNode, IriNode, Node)](
+        (b"2", p.string, "something"),
+        (a, isa, string),
+        (a, isa, bool),
+        (a, hasa, b"1")
+      )
+    }
+
+    "subtract a triple selecting the subject and predicate" in {
+      val moreTriples = triples ++ Set[(IriOrBNode, IriNode, Node)]((b"1", isa, "something"))
+      val graph       = Graph(moreTriples)
+      graph.remove(b"1", isa).triples shouldEqual triples
+    }
+
     "subtract a missing triple" in {
       val t: Triple = (b"1", p.int, 3)
       (g - t).triples shouldEqual triples
