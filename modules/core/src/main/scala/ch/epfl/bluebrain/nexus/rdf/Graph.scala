@@ -41,9 +41,9 @@ final class Graph private[rdf] (private val underlying: G[Node, LkDiEdge]) {
   lazy val isConnected: Boolean =
     underlying.isConnected
 
-  private def selectAs[A](s: IriOrBNode => Boolean = _ => true,
-                          p: IriNode => Boolean = _ => true,
-                          o: Node => Boolean = _ => true,
+  private def selectAs[A](s: IriOrBNode => Boolean,
+                          p: IriNode => Boolean,
+                          o: Node => Boolean,
                           f: ((IriOrBNode, IriNode, Node)) => A): Set[A] =
     underlying.edges.foldLeft(Set.empty[A]) {
       case (acc, e) if s(e.s) && p(e.p) && o(e.o) => acc + f((e.s, e.p, e.o))
