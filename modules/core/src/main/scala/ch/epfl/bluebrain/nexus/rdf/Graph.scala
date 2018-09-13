@@ -20,26 +20,35 @@ final class Graph private[rdf] (private val underlying: G[Node, LkDiEdge]) {
   /**
     * @return the triples of this graph
     */
-  def triples: Set[Triple] =
+  lazy val triples: Set[Triple] =
     foldLeft(Set.empty[Triple])(_ + _)
 
   /**
     * @return true if the graph has at least one cycle, false otherwise
     */
-  def isCyclic: Boolean =
+  lazy val isCyclic: Boolean =
     underlying.isCyclic
 
   /**
     * @return true if the graph has no cycles, false otherwise
     */
-  def isAcyclic: Boolean =
+  lazy val isAcyclic: Boolean =
     underlying.isAcyclic
 
   /**
     * @return true if all the triples are connected through the nodes, false otherwise
     */
-  def isConnected: Boolean =
+  lazy val isConnected: Boolean =
     underlying.isConnected
+
+  private def selectAs[A](s: IriOrBNode => Boolean = _ => true,
+                          p: IriNode => Boolean = _ => true,
+                          o: Node => Boolean = _ => true,
+                          f: ((IriOrBNode, IriNode, Node)) => A): Set[A] =
+    underlying.edges.foldLeft(Set.empty[A]) {
+      case (acc, e) if s(e.s) && p(e.p) && o(e.o) => acc + f((e.s, e.p, e.o))
+      case (acc, _)                               => acc
+    }
 
   /**
     * @param s the triple subject used to test matches
@@ -50,7 +59,7 @@ final class Graph private[rdf] (private val underlying: G[Node, LkDiEdge]) {
   def select(s: IriOrBNode => Boolean = _ => true,
              p: IriNode => Boolean = _ => true,
              o: Node => Boolean = _ => true): Set[(IriOrBNode, IriNode, Node)] =
-    underlying.edges.withFilter(e => s(e.s) && p(e.p) && o(e.o)).map(e => (e.s, e.p, e.o)).toSet
+    selectAs(s, p, o, identity)
 
   /**
     * @param p the triple predicate
@@ -58,7 +67,7 @@ final class Graph private[rdf] (private val underlying: G[Node, LkDiEdge]) {
     * @return the subjects found from the provided predicate and object
     */
   def subjects(p: IriNode => Boolean = _ => true, o: Node => Boolean = _ => true): Set[IriOrBNode] =
-    select(_ => true, p, o).map { case (s, _, _) => s }
+    selectAs(_ => true, p, o, { case (s, _, _) => s })
 
   /**
     * @param s the triple subject
@@ -66,7 +75,7 @@ final class Graph private[rdf] (private val underlying: G[Node, LkDiEdge]) {
     * @return the predicates found from the provided subject and object
     */
   def predicates(s: IriOrBNode => Boolean = _ => true, o: Node => Boolean = _ => true): Set[IriNode] =
-    select(s, _ => true, o).map { case (_, p, _) => p }
+    selectAs(s, _ => true, o, { case (_, p, _) => p })
 
   /**
     * @param s the triple subject used to test matches
@@ -74,7 +83,7 @@ final class Graph private[rdf] (private val underlying: G[Node, LkDiEdge]) {
     * @return the objects found from the provided subject and predicate
     */
   def objects(s: IriOrBNode => Boolean = _ => true, p: IriNode => Boolean = _ => true): Set[Node] =
-    select(s, p, _ => true).map { case (_, _, o) => o }
+    selectAs(s, p, _ => true, { case (_, _, o) => o })
 
   /**
     * Adds the triple identified by (s, p, o) arguments to this graph.
@@ -113,21 +122,21 @@ final class Graph private[rdf] (private val underlying: G[Node, LkDiEdge]) {
   def add[A](s: IriOrBNode, p: IriNode, list: List[A])(implicit enc: GraphEncoder[A]): Graph = {
 
     @tailrec
-    def inner(ss: IriOrBNode, rest: List[A], g: Graph): Graph =
+    def inner(ss: IriOrBNode, rest: List[A], triples: Set[Triple]): Set[Triple] =
       rest match {
-        case Nil => g
+        case Nil => triples
         case h :: Nil =>
           val elem = enc(h)
-          g ++ Graph((ss, rdf.first, elem.subject), (ss, rdf.rest, rdf.nil)) ++ elem.graph
+          triples ++ Set[Triple]((ss, rdf.first, elem.subject), (ss, rdf.rest, rdf.nil)) ++ elem.graph.triples
         case h :: t =>
           val elem        = enc(h)
           val nextSubject = blank
-          val graph       = g ++ Graph((ss, rdf.first, elem.subject), (ss, rdf.rest, nextSubject)) ++ elem.graph
+          val graph       = triples ++ Set[Triple]((ss, rdf.first, elem.subject), (ss, rdf.rest, nextSubject)) ++ elem.graph.triples
           inner(nextSubject, t, graph)
       }
 
     val listBNode = blank
-    this ++ inner(listBNode, list, Graph((s, p, listBNode)))
+    this ++ Graph(inner(listBNode, list, Set[Triple]((s, p, listBNode))))
   }
 
   /**

@@ -8,6 +8,12 @@ import org.openjdk.jmh.annotations.{Benchmark, Scope, State}
   * Benchmark on Parsing
   * To run it, execute on the sbt shell: ''jmh:run -i 20 -wi 10 -f1 -t1 .*Parsing.*''
   * Which means "10 iterations" "10 warmup iterations" "1 fork" "1 thread"
+  *
+  * Result:
+  * Benchmark                                  Mode  Cnt    Score     Error  Units
+  * GraphOps.parseRemoveFromSet               thrpt   10  725,328 ± 133,843  ops/s
+  * GraphOps.parseRemoveOriginal              thrpt   10   94,264 ±   9,212  ops/s
+  * GraphOps.parseRemoveOriginalWithFunction  thrpt   10  991,081 ±  23,164  ops/s
   */
 //noinspection TypeAnnotation
 @State(Scope.Thread)

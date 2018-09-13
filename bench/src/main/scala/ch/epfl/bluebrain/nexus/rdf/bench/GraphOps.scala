@@ -13,6 +13,11 @@ import org.openjdk.jmh.annotations.{Benchmark, Scope, State}
   * Benchmark on Graph operations
   * To run it, execute on the sbt shell: ''jmh:run -i 20 -wi 10 -f1 -t1 .*GraphOps.*''
   * Which means "10 iterations" "10 warmup iterations" "1 fork" "1 thread"
+  * Results:
+  * Benchmark              Mode  Cnt     Score     Error  Units
+  * Parsing.parseAkkaUri  thrpt   10  1011,101 ± 412,756  ops/s
+  * Parsing.parseIri      thrpt   10   219,526 ±  35,304  ops/s
+  * Parsing.parseJenaIri  thrpt   10  1178,370 ± 289,768  ops/s
   */
 @State(Scope.Thread)
 class GraphOps {
