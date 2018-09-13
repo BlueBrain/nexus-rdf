@@ -50,7 +50,7 @@ final class Graph private[rdf] (private val underlying: G[Node, LkDiEdge]) {
   def select(s: IriOrBNode => Boolean = _ => true,
              p: IriNode => Boolean = _ => true,
              o: Node => Boolean = _ => true): Set[(IriOrBNode, IriNode, Node)] =
-    underlying.edges.filter(e => s(e.s) && p(e.p) && o(e.o)).map(e => (e.s, e.p, e.o)).toSet
+    underlying.edges.withFilter(e => s(e.s) && p(e.p) && o(e.o)).map(e => (e.s, e.p, e.o)).toSet
 
   /**
     * @param p the triple predicate
@@ -165,8 +165,11 @@ final class Graph private[rdf] (private val underlying: G[Node, LkDiEdge]) {
   def remove(s: IriOrBNode => Boolean = _ => true,
              p: IriNode => Boolean = _ => true,
              o: Node => Boolean = _ => true): Graph = {
-    val toRemove = select(s, p, o).map { case (s, p, o) => LkDiEdge(s, o)(p) }
-    new Graph(underlying --! toRemove)
+    val remaining = underlying.edges.foldLeft(Set.empty[LkDiEdge[Node]]) {
+      case (acc, e) if s(e.s) && p(e.p) && o(e.o) => acc
+      case (acc, e)                               => acc + LkDiEdge(e.s, e.o)(e.p)
+    }
+    new Graph(G.from(Set.empty, remaining))
   }
 
   /**
