@@ -104,8 +104,9 @@ lazy val bench = project
   .enablePlugins(JmhPlugin)
   .settings(noPublish)
   .settings(
-    name       := "bench",
-    moduleName := "bench",
+    name                := "bench",
+    moduleName          := "bench",
+    libraryDependencies ++= Seq(scalaTest % Test)
   )
   .dependsOn(core, jena, circe, akka, nexus)
 

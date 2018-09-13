@@ -1,27 +1,27 @@
 package ch.epfl.bluebrain.nexus.rdf.bench
-import java.io.{ByteArrayInputStream, File}
-
 import akka.http.scaladsl.model.Uri
 import ch.epfl.bluebrain.nexus.rdf.IriParser
 import ch.epfl.bluebrain.nexus.rdf.circe.JenaModel
-import io.circe.parser._
 import org.apache.jena.iri.IRIFactory
-import org.apache.jena.rdf.model.ModelFactory
-import org.apache.jena.riot.{Lang, RDFDataMgr}
 import org.openjdk.jmh.annotations.{Benchmark, Scope, State}
-
-import scala.io.Source
-
+/**
+  * Benchmark on Parsing
+  * To run it, execute on the sbt shell: ''jmh:run -i 20 -wi 10 -f1 -t1 .*Parsing.*''
+  * Which means "10 iterations" "10 warmup iterations" "1 fork" "1 thread"
+  *
+  * Result:
+  * Benchmark                                  Mode  Cnt    Score     Error  Units
+  * GraphOps.parseRemoveFromSet               thrpt   10  725,328 ± 133,843  ops/s
+  * GraphOps.parseRemoveOriginal              thrpt   10   94,264 ±   9,212  ops/s
+  * GraphOps.parseRemoveOriginalWithFunction  thrpt   10  991,081 ±  23,164  ops/s
+  */
 //noinspection TypeAnnotation
 @State(Scope.Thread)
 class Parsing {
 
   val iris = {
     import scala.collection.JavaConverters._
-    val json = parse(
-      Source
-        .fromFile(new File("/Users/roman/code/work/nexus/nexus-rdf/bench/src/main/resources/schema.json"))
-        .mkString).right.get
+    val json  = jsonContentOf("/schema.json")
     val model = JenaModel(json).toOption.get
 
     val list = model.listStatements().asScala.foldLeft[List[String]](Nil) {
