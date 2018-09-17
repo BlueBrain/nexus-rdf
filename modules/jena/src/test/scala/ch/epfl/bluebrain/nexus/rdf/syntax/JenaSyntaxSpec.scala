@@ -2,7 +2,7 @@ package ch.epfl.bluebrain.nexus.rdf.syntax
 
 import java.util.UUID
 
-import ch.epfl.bluebrain.nexus.rdf.Graph
+import ch.epfl.bluebrain.nexus.rdf.{Graph, GraphConfiguration}
 import ch.epfl.bluebrain.nexus.rdf.Node.Literal.LanguageTag
 import ch.epfl.bluebrain.nexus.rdf.Node.{IriNode, IriOrBNode, Literal}
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary.xsd
@@ -65,17 +65,20 @@ class JenaSyntaxSpec extends WordSpecLike with Matchers with Inspectors {
     // format: on
 
     "convert string literal from Jena model" in {
+      implicit val config = GraphConfiguration(castDateTypes = true)
       (ResourceFactory.createStringLiteral("testLiteral"): Literal) shouldEqual Literal("testLiteral")
     }
 
     "convert string literal to xsd:date from Jena model" in {
-      val list = List("2002-09-24", "2002-09-24Z", "2002-09-24-06:00", "2002-09-24+06:00")
+      implicit val config = GraphConfiguration(castDateTypes = true)
+      val list            = List("2002-09-24", "2002-09-24Z", "2002-09-24-06:00", "2002-09-24+06:00")
       forAll(list) { date =>
         (ResourceFactory.createStringLiteral(date): Literal) shouldEqual Literal(date, xsd.date.value)
       }
     }
 
     "convert string literal to xsd:dateTime from Jena model" in {
+      implicit val config = GraphConfiguration(castDateTypes = true)
       val list = List("2002-05-30T09:00:00",
                       "2002-05-30T09:30:10.5",
                       "2002-05-30T09:30:10Z",
@@ -87,19 +90,30 @@ class JenaSyntaxSpec extends WordSpecLike with Matchers with Inspectors {
     }
 
     "convert string literal to xsd:time from Jena model" in {
-      val list = List("09:30:10.5", "09:00:00", "09:30:10Z", "09:30:10-06:00", "09:30:10+06:00")
+      implicit val config = GraphConfiguration(castDateTypes = true)
+      val list            = List("09:30:10.5", "09:00:00", "09:30:10Z", "09:30:10-06:00", "09:30:10+06:00")
       forAll(list) { time =>
         (ResourceFactory.createStringLiteral(time): Literal) shouldEqual Literal(time, xsd.time.value)
       }
     }
 
+    "do not convert to string literal when castDateTypes = false" in {
+      implicit val config = GraphConfiguration(castDateTypes = false)
+      val list            = List("09:30:10.5", "09:00:00", "09:30:10Z", "09:30:10-06:00", "09:30:10+06:00")
+      forAll(list) { time =>
+        (ResourceFactory.createStringLiteral(time): Literal) shouldEqual Literal(time)
+      }
+    }
+
     "convert typed literal from Jena model" in {
+      implicit val config = GraphConfiguration(castDateTypes = true)
       val convertedLiteral: Literal =
         ResourceFactory.createTypedLiteral("1999-04-09T20:00Z", new BaseDatatype("http://schema.org/Date"))
       convertedLiteral shouldEqual Literal("1999-04-09T20:00Z", url"http://schema.org/Date".value)
     }
 
     "convert literal with lang from Jena model" in {
+      implicit val config = GraphConfiguration(castDateTypes = true)
       (ResourceFactory.createLangLiteral("bonjour", "fr"): Literal) shouldEqual Literal("bonjour",
                                                                                         LanguageTag("fr").toOption.get)
     }

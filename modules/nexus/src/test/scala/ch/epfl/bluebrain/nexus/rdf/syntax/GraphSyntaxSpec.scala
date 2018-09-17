@@ -2,7 +2,7 @@ package ch.epfl.bluebrain.nexus.rdf.syntax
 
 import ch.epfl.bluebrain.nexus.rdf.Graph._
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
-import ch.epfl.bluebrain.nexus.rdf.Node
+import ch.epfl.bluebrain.nexus.rdf.{GraphConfiguration, Node}
 import ch.epfl.bluebrain.nexus.rdf.Node.{BNode, IriNode}
 import ch.epfl.bluebrain.nexus.rdf.syntax.GraphSyntaxSpec._
 import ch.epfl.bluebrain.nexus.rdf.syntax.circe._
@@ -18,11 +18,12 @@ import scala.io.Source
 class GraphSyntaxSpec extends WordSpecLike with Matchers with TryValues with OptionValues with EitherValues {
 
   "A GraphSyntax" should {
-    val self         = jsonContentOf("/self-reference.json")
-    val json         = jsonContentOf("/no_id.json")
-    val typedJson    = jsonContentOf("/id_and_types.json")
-    val arrayJson    = jsonContentOf("/array.json")
-    val arrayOneJson = jsonContentOf("/array-one.json")
+    val self            = jsonContentOf("/self-reference.json")
+    val json            = jsonContentOf("/no_id.json")
+    val typedJson       = jsonContentOf("/id_and_types.json")
+    val arrayJson       = jsonContentOf("/array.json")
+    val arrayOneJson    = jsonContentOf("/array-one.json")
+    implicit val config = GraphConfiguration(castDateTypes = true)
 
     "find @id from a Json-LD without it" in {
       json.asGraph.right.value.primaryNode.value shouldBe a[BNode]

@@ -1,6 +1,6 @@
 package ch.epfl.bluebrain.nexus.rdf.syntax
 
-import ch.epfl.bluebrain.nexus.rdf.Graph
+import ch.epfl.bluebrain.nexus.rdf.{Graph, GraphConfiguration}
 import ch.epfl.bluebrain.nexus.rdf.Graph.Triple
 import ch.epfl.bluebrain.nexus.rdf.syntax.JenaSyntax.{JenaGraphSyntax, JenaModelSyntax}
 import ch.epfl.bluebrain.nexus.rdf.syntax.jena._
@@ -25,7 +25,7 @@ private[syntax] object JenaSyntax {
   }
 
   final class JenaModelSyntax(private val m: Model) extends AnyVal {
-    def asGraph: Graph =
+    def asGraph(implicit config: GraphConfiguration = GraphConfiguration(castDateTypes = true)): Graph =
       Graph(m.listStatements().asScala.foldLeft(Set.empty[Triple]) { (acc, s) =>
         acc + ((s.getSubject, s.getPredicate, s.getObject))
       })

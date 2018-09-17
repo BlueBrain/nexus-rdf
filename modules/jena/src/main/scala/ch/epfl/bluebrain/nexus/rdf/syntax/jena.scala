@@ -1,11 +1,11 @@
 package ch.epfl.bluebrain.nexus.rdf.syntax
 
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
-import ch.epfl.bluebrain.nexus.rdf.Node
 import ch.epfl.bluebrain.nexus.rdf.Node.Literal.LanguageTag
 import ch.epfl.bluebrain.nexus.rdf.Node.{BNode, IriNode, IriOrBNode, Literal}
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
+import ch.epfl.bluebrain.nexus.rdf.{GraphConfiguration, Node}
 import org.apache.jena.datatypes.TypeMapper
 import org.apache.jena.datatypes.xsd.XSDDatatype._
 import org.apache.jena.rdf.model.impl.ResourceImpl
@@ -14,6 +14,8 @@ import org.apache.jena.rdf.model.{Literal => JenaLiteral, _}
 import scala.util.Try
 
 object jena extends JenaSyntax {
+
+  private val typeMapper = TypeMapper.getInstance()
 
   final implicit def nodeToJenaRDFNode(node: Node): RDFNode = node match {
     case b @ BNode(_)         => iriOrBNodeToResource(b)
@@ -36,7 +38,7 @@ object jena extends JenaSyntax {
 
   private def castToDatatype(lexicalText: String, dataType: AbsoluteIri): Option[JenaLiteral] =
     Try {
-      val tpe     = TypeMapper.getInstance().getSafeTypeByName(dataType.asString)
+      val tpe     = typeMapper.getSafeTypeByName(dataType.asString)
       val literal = ResourceFactory.createTypedLiteral(lexicalText, tpe)
       literal.getValue //It will crash whenever the literal does not match the desired datatype
       literal
@@ -50,14 +52,17 @@ object jena extends JenaSyntax {
   final implicit def propertyToIriNode(property: Property): IriNode =
     url"${property.getURI}"
 
-  final implicit def jenaLiteralToLiteral(literal: JenaLiteral): Literal =
+  final implicit def jenaLiteralToLiteral(literal: JenaLiteral)(implicit config: GraphConfiguration): Literal =
     if (literal.getLanguage == null || literal.getLanguage.isEmpty)
       if (literal.getDatatype == null || literal.getDatatype == XSDstring)
-        (castToDatatype(literal.getLexicalForm, xsd.dateTime.value) orElse
-          castToDatatype(literal.getLexicalForm, xsd.date.value) orElse
-          castToDatatype(literal.getLexicalForm, xsd.time.value))
-          .map(l => Literal(l.getLexicalForm, url"${l.getDatatypeURI}"))
-          .getOrElse(Literal(literal.getLexicalForm))
+        if (config.castDateTypes)
+          (castToDatatype(literal.getLexicalForm, xsd.dateTime.value) orElse
+            castToDatatype(literal.getLexicalForm, xsd.date.value) orElse
+            castToDatatype(literal.getLexicalForm, xsd.time.value))
+            .map(l => Literal(l.getLexicalForm, url"${l.getDatatypeURI}"))
+            .getOrElse(Literal(literal.getLexicalForm))
+        else
+          Literal(literal.getLexicalForm)
       else
         Option(literal.getDatatypeURI)
           .map(dataType => Literal(literal.getLexicalForm, url"$dataType".value))
@@ -67,7 +72,7 @@ object jena extends JenaSyntax {
         .map(Literal(literal.getLexicalForm, _))
         .getOrElse(Literal(literal.getLexicalForm))
 
-  final implicit def jenaRDFNodeToNode(rdfNode: RDFNode): Node =
+  final implicit def jenaRDFNodeToNode(rdfNode: RDFNode)(implicit config: GraphConfiguration): Node =
     if (rdfNode.isLiteral)
       jenaLiteralToLiteral(rdfNode.asLiteral())
     else if (rdfNode.isAnon)
