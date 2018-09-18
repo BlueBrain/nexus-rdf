@@ -14,7 +14,7 @@ import ch.epfl.bluebrain.nexus.rdf.syntax.GraphSyntax._
 import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
 import ch.epfl.bluebrain.nexus.rdf.syntax.jena._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
-import ch.epfl.bluebrain.nexus.rdf.{Graph, Iri}
+import ch.epfl.bluebrain.nexus.rdf.{Graph, GraphConfiguration, Iri}
 import com.github.jsonldjava.core.JsonLdOptions
 import io.circe._
 import io.circe.parser.parse
@@ -58,7 +58,9 @@ final class CirceOps(private val json: Json) extends AnyVal {
     *
     * @return [[Graph]] object created from given JSON-LD
     */
-  def asGraph: Either[JenaModelErr, Graph] = JenaModel(json).map(_.asGraph)
+  def asGraph(
+      implicit config: GraphConfiguration = GraphConfiguration(castDateTypes = true)): Either[JenaModelErr, Graph] =
+    JenaModel(json).map(_.asGraph)
 
   /**
     * Attempts to find the top `@id` value
