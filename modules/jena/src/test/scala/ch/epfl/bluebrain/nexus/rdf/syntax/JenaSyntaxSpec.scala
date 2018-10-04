@@ -2,19 +2,19 @@ package ch.epfl.bluebrain.nexus.rdf.syntax
 
 import java.util.UUID
 
-import ch.epfl.bluebrain.nexus.rdf.{Graph, GraphConfiguration}
+import ch.epfl.bluebrain.nexus.rdf.Node.Literal
 import ch.epfl.bluebrain.nexus.rdf.Node.Literal.LanguageTag
-import ch.epfl.bluebrain.nexus.rdf.Node.{IriNode, IriOrBNode, Literal}
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary.xsd
 import ch.epfl.bluebrain.nexus.rdf.syntax.jena._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
+import ch.epfl.bluebrain.nexus.rdf.{Graph, GraphConfiguration}
 import org.apache.jena.datatypes.BaseDatatype
 import org.apache.jena.rdf.model
 import org.apache.jena.rdf.model.{Model, ModelFactory, ResourceFactory}
-import org.scalatest.{Inspectors, Matchers, WordSpecLike}
+import org.scalatest.{EitherValues, Inspectors, Matchers, WordSpecLike}
 
-class JenaSyntaxSpec extends WordSpecLike with Matchers with Inspectors {
+class JenaSyntaxSpec extends WordSpecLike with Matchers with Inspectors with EitherValues {
 
   "Jena syntax" should {
 
@@ -60,20 +60,20 @@ class JenaSyntaxSpec extends WordSpecLike with Matchers with Inspectors {
       val model = ModelFactory.createDefaultModel()
       model.read(getClass.getResourceAsStream("/simple-model.json"), "http://nexus.example.com/", "JSONLD")
 
-      graph.asGraph.triples shouldEqual model.asGraph.triples
+      graph.asGraph.right.value.triples shouldEqual model.asGraph.right.value.triples
     }
     // format: on
 
     "convert string literal from Jena model" in {
       implicit val config = GraphConfiguration(castDateTypes = true)
-      (ResourceFactory.createStringLiteral("testLiteral"): Literal) shouldEqual Literal("testLiteral")
+      jenaToLiteral(ResourceFactory.createStringLiteral("testLiteral")).right.value shouldEqual Literal("testLiteral")
     }
 
     "convert string literal to xsd:date from Jena model" in {
       implicit val config = GraphConfiguration(castDateTypes = true)
       val list            = List("2002-09-24", "2002-09-24Z", "2002-09-24-06:00", "2002-09-24+06:00")
       forAll(list) { date =>
-        (ResourceFactory.createStringLiteral(date): Literal) shouldEqual Literal(date, xsd.date.value)
+        jenaToLiteral(ResourceFactory.createStringLiteral(date)).right.value shouldEqual Literal(date, xsd.date.value)
       }
     }
 
@@ -85,7 +85,8 @@ class JenaSyntaxSpec extends WordSpecLike with Matchers with Inspectors {
                       "2002-05-30T09:30:10-06:00",
                       "2002-05-30T09:30:10+06:00")
       forAll(list) { dateTime =>
-        (ResourceFactory.createStringLiteral(dateTime): Literal) shouldEqual Literal(dateTime, xsd.dateTime.value)
+        jenaToLiteral(ResourceFactory.createStringLiteral(dateTime)).right.value shouldEqual Literal(dateTime,
+                                                                                                     xsd.dateTime.value)
       }
     }
 
@@ -93,7 +94,7 @@ class JenaSyntaxSpec extends WordSpecLike with Matchers with Inspectors {
       implicit val config = GraphConfiguration(castDateTypes = true)
       val list            = List("09:30:10.5", "09:00:00", "09:30:10Z", "09:30:10-06:00", "09:30:10+06:00")
       forAll(list) { time =>
-        (ResourceFactory.createStringLiteral(time): Literal) shouldEqual Literal(time, xsd.time.value)
+        jenaToLiteral(ResourceFactory.createStringLiteral(time)).right.value shouldEqual Literal(time, xsd.time.value)
       }
     }
 
@@ -101,36 +102,47 @@ class JenaSyntaxSpec extends WordSpecLike with Matchers with Inspectors {
       implicit val config = GraphConfiguration(castDateTypes = false)
       val list            = List("09:30:10.5", "09:00:00", "09:30:10Z", "09:30:10-06:00", "09:30:10+06:00")
       forAll(list) { time =>
-        (ResourceFactory.createStringLiteral(time): Literal) shouldEqual Literal(time)
+        jenaToLiteral(ResourceFactory.createStringLiteral(time)).right.value shouldEqual Literal(time)
       }
     }
 
     "convert typed literal from Jena model" in {
       implicit val config = GraphConfiguration(castDateTypes = true)
-      val convertedLiteral: Literal =
-        ResourceFactory.createTypedLiteral("1999-04-09T20:00Z", new BaseDatatype("http://schema.org/Date"))
+      val convertedLiteral =
+        jenaToLiteral(ResourceFactory.createTypedLiteral("1999-04-09T20:00Z",
+                                                         new BaseDatatype("http://schema.org/Date"))).right.value
       convertedLiteral shouldEqual Literal("1999-04-09T20:00Z", url"http://schema.org/Date".value)
     }
 
     "convert literal with lang from Jena model" in {
       implicit val config = GraphConfiguration(castDateTypes = true)
-      (ResourceFactory.createLangLiteral("bonjour", "fr"): Literal) shouldEqual Literal("bonjour",
-                                                                                        LanguageTag("fr").toOption.get)
+      jenaToLiteral(ResourceFactory.createLangLiteral("bonjour", "fr")).right.value shouldEqual
+        Literal("bonjour", LanguageTag("fr").toOption.get)
     }
 
     "convert IRI from Jena resource" in {
-      (ResourceFactory.createResource("http://nexus.example.com/example-uri"): IriOrBNode) shouldEqual url"http://nexus.example.com/example-uri"
+      toIriOrBNode(ResourceFactory.createResource("http://nexus.example.com/example-uri")).right.value shouldEqual url"http://nexus.example.com/example-uri"
+    }
+
+    "fail to convert wrong IRI from Jena resource" in {
+      toIriOrBNode(ResourceFactory.createResource("file:///some/path with space")).left.value should startWith(
+        "'file:///some/path with space' could not be converted to Iri.")
     }
 
     "convert blank node from Jena model" in {
       val jenaResource = ResourceFactory.createResource()
       val id           = jenaResource.getId.getLabelString
 
-      (jenaResource: IriOrBNode) shouldEqual b"$id"
+      toIriOrBNode(jenaResource).right.value shouldEqual b"$id"
     }
 
     "convert property from Jena model" in {
-      (ResourceFactory.createProperty("http://nexus.example.com/example-property"): IriNode) shouldEqual url"http://nexus.example.com/example-property"
+      propToIriNode(ResourceFactory.createProperty("http://nexus.example.com/example-property")).right.value shouldEqual url"http://nexus.example.com/example-property"
+    }
+
+    "fail to convert wrong property from Jena model" in {
+      propToIriNode(ResourceFactory.createProperty("file:///some/path with space")).left.value should startWith(
+        "'file:///some/path with space' could not be converted to Iri.")
     }
 
     "convert Jena Model to Graph" in {
@@ -138,7 +150,7 @@ class JenaSyntaxSpec extends WordSpecLike with Matchers with Inspectors {
       model.read(getClass.getResourceAsStream("/simple-model.json"), "http://nexus.example.com/", "JSONLD")
 
       // format: off
-      model.asGraph.triples shouldEqual Set[Graph.Triple](
+      model.asGraph.right.value.triples shouldEqual Set[Graph.Triple](
         (url"http://nexus.example.com/john-doe", url"http://schema.org/name",                           "John Doe"),
         (url"http://nexus.example.com/john-doe", url"http://schema.org/birthDate",                      Literal("1999-04-09T20:00Z", url"http://schema.org/Date".value)),
         (url"http://nexus.example.com/john-doe", url"http://schema.org/birth",                      Literal("2002-05-30T09:00:00", url"http://www.w3.org/2001/XMLSchema#dateTime".value)),

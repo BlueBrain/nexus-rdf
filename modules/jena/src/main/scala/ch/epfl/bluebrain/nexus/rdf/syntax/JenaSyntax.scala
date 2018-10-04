@@ -25,9 +25,19 @@ private[syntax] object JenaSyntax {
   }
 
   final class JenaModelSyntax(private val m: Model) extends AnyVal {
-    def asGraph(implicit config: GraphConfiguration = GraphConfiguration(castDateTypes = true)): Graph =
-      Graph(m.listStatements().asScala.foldLeft(Set.empty[Triple]) { (acc, s) =>
-        acc + ((s.getSubject, s.getPredicate, s.getObject))
-      })
+    def asGraph(implicit config: GraphConfiguration = GraphConfiguration(castDateTypes = true)): Either[String, Graph] =
+      m.listStatements()
+        .asScala
+        .foldLeft[Either[String, Set[Triple]]](Right(Set.empty)) {
+          case (Right(acc), s) =>
+            val results = for {
+              ss <- jena.toIriOrBNode(s.getSubject)
+              pp <- jena.propToIriNode(s.getPredicate)
+              oo <- jena.rdfNodeToNode(s.getObject)
+            } yield ((ss, pp, oo))
+            results.map(acc + _)
+          case (l @ Left(_), _) => l
+        }
+        .map(Graph.apply)
   }
 }

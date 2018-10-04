@@ -10,6 +10,7 @@ import ch.epfl.bluebrain.nexus.rdf.Node.{BNode, IriNode, IriOrBNode}
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
 import ch.epfl.bluebrain.nexus.rdf.circe.JenaModel
 import ch.epfl.bluebrain.nexus.rdf.circe.JenaModel.JenaModelErr
+import ch.epfl.bluebrain.nexus.rdf.circe.JenaModel.JenaModelErr.InvalidJsonLD
 import ch.epfl.bluebrain.nexus.rdf.syntax.GraphSyntax._
 import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
 import ch.epfl.bluebrain.nexus.rdf.syntax.jena._
@@ -60,7 +61,7 @@ final class CirceOps(private val json: Json) extends AnyVal {
     */
   def asGraph(
       implicit config: GraphConfiguration = GraphConfiguration(castDateTypes = true)): Either[JenaModelErr, Graph] =
-    JenaModel(json).map(_.asGraph)
+    JenaModel(json).flatMap(_.asGraph.left.map(InvalidJsonLD(_)))
 
   /**
     * Attempts to find the top `@id` value

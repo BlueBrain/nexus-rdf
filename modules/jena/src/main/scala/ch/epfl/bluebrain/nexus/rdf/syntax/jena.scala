@@ -1,11 +1,11 @@
 package ch.epfl.bluebrain.nexus.rdf.syntax
 
-import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
+import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Url}
 import ch.epfl.bluebrain.nexus.rdf.Node.Literal.LanguageTag
 import ch.epfl.bluebrain.nexus.rdf.Node.{BNode, IriNode, IriOrBNode, Literal}
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
-import ch.epfl.bluebrain.nexus.rdf.{GraphConfiguration, Node}
+import ch.epfl.bluebrain.nexus.rdf.{GraphConfiguration, Iri, Node}
 import org.apache.jena.datatypes.TypeMapper
 import org.apache.jena.datatypes.xsd.XSDDatatype._
 import org.apache.jena.rdf.model.impl.ResourceImpl
@@ -14,6 +14,8 @@ import org.apache.jena.rdf.model.{Literal => JenaLiteral, _}
 import scala.util.Try
 
 object jena extends JenaSyntax {
+  private implicit def eitherUriToNode(maybeUrl: Either[String, Url]): Either[String, IriNode] =
+    maybeUrl.map(IriNode(_))
 
   private val typeMapper = TypeMapper.getInstance()
 
@@ -44,39 +46,50 @@ object jena extends JenaSyntax {
       literal
     }.toOption
 
-  final implicit def resourceToIriOrBNode(resource: Resource): IriOrBNode =
-    Option(resource.getURI)
-      .map(uri => url"$uri")
-      .getOrElse(b"${resource.getId.getLabelString}")
-
-  final implicit def propertyToIriNode(property: Property): IriNode =
-    url"${property.getURI}"
-
-  final implicit def jenaLiteralToLiteral(literal: JenaLiteral)(implicit config: GraphConfiguration): Literal =
+  def jenaToLiteral(literal: JenaLiteral)(implicit config: GraphConfiguration): Either[String, Literal] =
     if (literal.getLanguage == null || literal.getLanguage.isEmpty)
       if (literal.getDatatype == null || literal.getDatatype == XSDstring)
         if (config.castDateTypes)
           (castToDatatype(literal.getLexicalForm, xsd.dateTime.value) orElse
             castToDatatype(literal.getLexicalForm, xsd.date.value) orElse
-            castToDatatype(literal.getLexicalForm, xsd.time.value))
-            .map(l => Literal(l.getLexicalForm, url"${l.getDatatypeURI}"))
-            .getOrElse(Literal(literal.getLexicalForm))
-        else
-          Literal(literal.getLexicalForm)
+            castToDatatype(literal.getLexicalForm, xsd.time.value)) match {
+            case Some(l) =>
+              val tpe = l.getDatatypeURI
+              Iri.url(tpe).left.map(errorMsg(tpe, _)).map(Literal(l.getLexicalForm, _))
+            case _ =>
+              Right(Literal(literal.getLexicalForm))
+          } else
+          Right(Literal(literal.getLexicalForm))
       else
-        Option(literal.getDatatypeURI)
-          .map(dataType => Literal(literal.getLexicalForm, url"$dataType".value))
-          .getOrElse(Literal(literal.getLexicalForm))
-    else
-      LanguageTag(literal.getLanguage)
-        .map(Literal(literal.getLexicalForm, _))
-        .getOrElse(Literal(literal.getLexicalForm))
+        Option(literal.getDatatypeURI) match {
+          case Some(dataType) =>
+            Iri.url(dataType).left.map(errorMsg(dataType, _)).map(Literal(literal.getLexicalForm, _))
+          case _ => Right(Literal(literal.getLexicalForm))
+        } else
+      Right(
+        LanguageTag(literal.getLanguage)
+          .map(Literal(literal.getLexicalForm, _))
+          .getOrElse(Literal(literal.getLexicalForm)))
 
-  final implicit def jenaRDFNodeToNode(rdfNode: RDFNode)(implicit config: GraphConfiguration): Node =
+  def toIriOrBNode(resource: Resource): Either[String, IriOrBNode] =
+    Option(resource.getURI) match {
+      case Some(uri) if !uri.isEmpty =>
+        Iri.url(uri).left.map(errorMsg(uri, _))
+      case _ =>
+        Right(b"${resource.getId.getLabelString}")
+    }
+
+  def propToIriNode(property: Property): Either[String, IriNode] =
+    Iri.url(property.getURI).left.map(errorMsg(property.getURI, _))
+
+  def rdfNodeToNode(rdfNode: RDFNode)(implicit config: GraphConfiguration): Either[String, Node] =
     if (rdfNode.isLiteral)
-      jenaLiteralToLiteral(rdfNode.asLiteral())
+      jenaToLiteral(rdfNode.asLiteral())
     else if (rdfNode.isAnon)
-      b"${rdfNode.asResource}"
+      Right(b"${rdfNode.asResource}")
     else
-      url"${rdfNode.asResource.getURI}"
+      Iri.url(rdfNode.asResource.getURI)
+
+  private def errorMsg(iriString: String, err: String): String =
+    s"'$iriString' could not be converted to Iri. Reason: '$err'"
 }
