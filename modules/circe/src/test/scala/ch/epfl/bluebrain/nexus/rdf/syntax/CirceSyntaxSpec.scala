@@ -170,9 +170,14 @@ class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
 
     "convert model to graph and reverse" in {
       val json            = jsonContentOf("/simple-model2.json")
-      val result: Model   = JenaModel(json).right.value.asGraph.asJenaModel
+      val result: Model   = JenaModel(json).right.value.asGraph.right.value.asJenaModel
       val expected: Model = JenaModel(json).right.value
       result.listStatements().asScala.toList should contain theSameElementsAs expected.listStatements().asScala.toList
+    }
+
+    "deal with invalid ID's at the graph level" in {
+      val json = jsonContentOf("/wrong-id-2.json")
+      JenaModel(json).left.value shouldBe a[InvalidJsonLD]
     }
   }
 
