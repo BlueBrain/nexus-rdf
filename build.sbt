@@ -30,7 +30,7 @@ val akkaStreamVersion = "2.5.17"
 val catsVersion       = "1.4.0"
 val circeVersion      = "0.10.0"
 val parboiledVersion  = "2.1.5"
-val jenaVersion       = "3.8.0"
+val jenaVersion       = "3.9.0"
 val scalaGraphVersion = "1.12.5"
 val scalaTestVersion  = "3.0.5"
 
