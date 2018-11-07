@@ -74,6 +74,8 @@ class UrlSpec extends WordSpecLike with Matchers with Inspectors with EitherValu
     "append" in {
       val cases = List(
         ("http://google.com/a/", "bcd", "http://google.com/a/bcd"),
+        ("http://google.com/a/", "/bcd", "http://google.com/a/bcd"),
+        ("http://google.com/a/", "/", "http://google.com/a/"),
         ("http://google.com/a?one=two&three", "bcd", "http://google.com/a/bcd?one=two&three"),
         ("http://google.com/a#other", "bcd", "http://google.com/a/bcd#other")
       )
