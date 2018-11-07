@@ -26,25 +26,27 @@ scalafmt: {
 
 // Dependency versions
 val akkaHttpVersion   = "10.1.5"
-val akkaStreamVersion = "2.5.17"
+val akkaStreamVersion = "2.5.18"
 val catsVersion       = "1.4.0"
-val circeVersion      = "0.10.0"
+val circeVersion      = "0.10.1"
 val parboiledVersion  = "2.1.5"
 val jenaVersion       = "3.9.0"
 val scalaGraphVersion = "1.12.5"
 val scalaTestVersion  = "3.0.5"
+val jsonldJavaVersion = "0.12.2"
 
 // Dependency modules
-lazy val akkaHttpCore = "com.typesafe.akka" %% "akka-http-core" % akkaHttpVersion
-lazy val akkaStream   = "com.typesafe.akka" %% "akka-stream"    % akkaStreamVersion
-lazy val catsCore     = "org.typelevel"     %% "cats-core"      % catsVersion
-lazy val circeCore    = "io.circe"          %% "circe-core"     % circeVersion
-lazy val circeParser  = "io.circe"          %% "circe-parser"   % circeVersion
-lazy val jenaCore     = "org.apache.jena"   % "jena-core"       % jenaVersion
-lazy val jenaArq      = "org.apache.jena"   % "jena-arq"        % jenaVersion
-lazy val parboiled2   = "org.parboiled"     %% "parboiled"      % parboiledVersion
-lazy val scalaGraph   = "org.scala-graph"   %% "graph-core"     % scalaGraphVersion
-lazy val scalaTest    = "org.scalatest"     %% "scalatest"      % scalaTestVersion
+lazy val akkaHttpCore = "com.typesafe.akka"      %% "akka-http-core" % akkaHttpVersion
+lazy val akkaStream   = "com.typesafe.akka"      %% "akka-stream"    % akkaStreamVersion
+lazy val catsCore     = "org.typelevel"          %% "cats-core"      % catsVersion
+lazy val circeCore    = "io.circe"               %% "circe-core"     % circeVersion
+lazy val circeParser  = "io.circe"               %% "circe-parser"   % circeVersion
+lazy val jenaCore     = "org.apache.jena"        % "jena-core"       % jenaVersion
+lazy val jenaArq      = "org.apache.jena"        % "jena-arq"        % jenaVersion
+lazy val parboiled2   = "org.parboiled"          %% "parboiled"      % parboiledVersion
+lazy val scalaGraph   = "org.scala-graph"        %% "graph-core"     % scalaGraphVersion
+lazy val scalaTest    = "org.scalatest"          %% "scalatest"      % scalaTestVersion
+lazy val jsonLdJava   = "com.github.jsonld-java" % "jsonld-java"     % jsonldJavaVersion
 
 lazy val core = project
   .in(file("modules/core"))
@@ -69,7 +71,7 @@ lazy val jena = project
   .settings(
     name                := "rdf-jena",
     moduleName          := "rdf-jena",
-    libraryDependencies ++= Seq(jenaCore, jenaArq, scalaTest % Test)
+    libraryDependencies ++= Seq(jenaCore, jenaArq, jsonLdJava, scalaTest % Test)
   )
 
 lazy val akka = project

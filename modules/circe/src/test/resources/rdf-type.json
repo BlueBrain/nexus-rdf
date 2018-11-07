@@ -1,0 +1,10 @@
+{
+  "@context": {
+    "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+  },
+  "@id": "http://example.com/main/id",
+  "rdf:type": {
+    "@id": "http://example.com/rdf/id",
+    "rdf:label": "someLabel"
+  }
+}

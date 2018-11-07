@@ -1,5 +1,7 @@
 package ch.epfl.bluebrain.nexus.rdf.syntax
 
+import java.io.ByteArrayOutputStream
+
 import ch.epfl.bluebrain.nexus.rdf.Graph._
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.Node.{IriNode, IriOrBNode, Literal}
@@ -15,14 +17,20 @@ import ch.epfl.bluebrain.nexus.rdf.syntax.jena._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
 import ch.epfl.bluebrain.nexus.rdf.{Graph, Iri, Node}
+import com.github.jsonldjava.core.{JsonLdApi, JsonLdOptions, RDFDataset}
+import com.github.jsonldjava.utils.JsonUtils
 import io.circe.Json
 import io.circe.parser._
 import org.apache.jena.graph.NodeFactory
+import org.apache.jena.query.DatasetFactory
 import org.apache.jena.rdf.model.{Model, ResourceFactory}
+import org.apache.jena.riot.system.RiotLib
+import org.apache.jena.riot.{JsonLDWriteContext, RDFDataMgr, RDFFormat}
 import org.scalatest.EitherValues._
 import org.scalatest._
 
 import scala.collection.JavaConverters._
+import scala.util.Try
 
 class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with OptionValues with Inspectors {
 
@@ -178,6 +186,44 @@ class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
     "deal with invalid ID's at the graph level" in {
       val json = jsonContentOf("/wrong-id-2.json")
       JenaModel(json).left.value shouldBe a[InvalidJsonLD]
+    }
+
+    "deal with rdf type with more fields" in {
+      val input = jsonContentOf("/rdf-type.json")
+      // the original Json (A) converted to a Jena Model
+      val jsonModel: Model = JenaModel(input).right.value
+      // the framing (B)
+      val frame: String = jsonContentOf("/rdf-type-framing.json").noSpaces
+      val opts          = new JsonLdOptions
+      opts.setProcessingMode(JsonLdOptions.JSON_LD_1_0)
+      val ds = new RDFDataset()
+      ds.addTriple("http://example.com/main/id",
+                   "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+                   "http://example.com/rdf/id")
+      ds.addTriple("http://example.com/rdf/id",
+                   "http://www.w3.org/1999/02/22-rdf-syntax-ns#label",
+                   "someLabel",
+                   null,
+                   null)
+      val in = new JsonLdApi(opts).fromRDF(ds, true)
+//      val in = JsonUtils.fromString(input.noSpaces)
+      val f = JsonUtils.fromString(frame)
+
+      val g   = DatasetFactory.create(jsonModel).asDatasetGraph
+      val out = new ByteArrayOutputStream()
+      val w   = RDFDataMgr.createDatasetWriter(RDFFormat.JSONLD_FRAME_FLAT)
+
+      val pm  = RiotLib.prefixMap(g)
+      val ctx = new JsonLDWriteContext()
+      ctx.setOptions(opts)
+      ctx.setFrame(frame)
+      val output = Try {
+        w.write(out, g, pm, null, ctx)
+      }.flatMap(_ => parse(out.toString).toTry)
+      println(output.success.value)
+
+      import com.github.jsonldjava.core.JsonLdProcessor
+      println(JsonLdProcessor.frame(in, f, opts))
     }
   }
 
