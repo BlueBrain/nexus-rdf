@@ -306,7 +306,9 @@ object Iri {
     override def isUrn: Boolean     = false
     override def asUrn: Option[Urn] = None
     override def +(segment: String): AbsoluteIri =
-      if (path.endsWithSlash) copy(path = path + segment) else copy(path = path / segment)
+      if (segment.startsWith("/")) this + segment.drop(1)
+      else if (path.endsWithSlash) copy(path = path + segment)
+      else copy(path = path / segment)
 
     /**
       * Returns a copy of this Url with the fragment value set to the argument fragment.
