@@ -72,11 +72,6 @@ class GraphSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
       self.asGraph.right.value.cursor().failed shouldEqual true
     }
 
-    "convert back to json" in {
-      val other = jsonContentOf("/id_and_type.json")
-      other.asGraph.right.value.asJson(context(other)).success.value shouldEqual other
-    }
-
     "navigate a graph of array of objects" in {
       val cursor = arrayJson.asGraph.right.value.cursor()
       val result = cursor.downField(nxv.identities).downArray.map { cursor =>
