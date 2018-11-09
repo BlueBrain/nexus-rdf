@@ -21,6 +21,6 @@ final class CirceOpsEncoding[A](private val value: A) extends AnyVal {
     */
   def asJson(context: Json)(implicit enc: GraphEncoder[A]): Json = {
     val GraphResult(subject, graph) = enc(value)
-    graph.asJson(context, Some(subject)).getOrElse(graph.asJson)
+    graph.asJson(context, subject).getOrElse(graph.asJson)
   }
 }
