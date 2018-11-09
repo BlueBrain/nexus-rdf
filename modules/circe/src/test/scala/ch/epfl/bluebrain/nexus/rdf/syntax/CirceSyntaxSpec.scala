@@ -66,12 +66,10 @@ class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
     }
 
     "convert Graph to Json-LD ignoring the IRI context" in {
-      // format: off
-      val graph = Graph(triples)
-      // format: on
+      val graph   = Graph(triples)
       val context = parse("{\"@context\": \"http://schema.org/\"}").right.value
 
-      graph.asJson(context, None).success.value shouldEqual Json.obj(
+      graph.asJson(context, url"http://nexus.example.com/john-doe").success.value shouldEqual Json.obj(
         "@context"                    -> Json.obj(),
         "@id"                         -> Json.fromString("http://nexus.example.com/john-doe"),
         "@type"                       -> Json.fromString("http://schema.org/Person"),
@@ -85,26 +83,20 @@ class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
       val id    = url"http://nexus.example.com/john-doe"
       val ctx   = context(json)
       val graph = json.asGraph.right.value
-      graph.asJson(ctx, Some(id)).success.value deepMerge ctx shouldEqual json
+      graph.asJson(ctx, id).success.value deepMerge ctx shouldEqual json
     }
 
     "convert Graph with nested relationships to Json-LD  with context" in {
       val json = jsonContentOf("/embed.json")
       val id   = url"http://nexus.example.com/john-doe"
-      json.asGraph.right.value.asJson(context(json), Some(id)).success.value shouldEqual json
+      json.asGraph.right.value.asJson(context(json), id).success.value shouldEqual json
     }
 
     "convert Graph to Json-LD from a root node that is a blank node" in {
       val json = jsonContentOf("/embed-no-id.json")
       val g    = json.asGraph.right.value
       val id   = g.subjects(rdf.tpe, url"http://schema.org/Person").headOption.value
-      g.asJson(context(json), Some(id)).success.value shouldEqual json
-    }
-
-    "convert Graph with multiple entities to Json-LD  with context" in {
-      val json   = jsonContentOf("/graph.json")
-      val output = json.asGraph.right.value.asJson(context(json), None).success.value
-      graphArray(output) should contain theSameElementsAs graphArray(json)
+      g.asJson(context(json), id).success.value shouldEqual json
     }
 
     "convert Graph with sorted list" in {
@@ -113,7 +105,7 @@ class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
 
       val id: IriOrBNode = url"http://example.com/id"
       val graph          = Graph().add(id, url"http://example.com/items", list)
-      graph.asJson(context(json), Some(id)).success.value shouldEqual json
+      graph.asJson(context(json), id).success.value shouldEqual json
     }
 
     "convert to Json from entity with GraphEncoder" in {

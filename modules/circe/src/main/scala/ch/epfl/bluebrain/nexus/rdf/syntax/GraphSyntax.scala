@@ -3,8 +3,7 @@ package ch.epfl.bluebrain.nexus.rdf.syntax
 import java.io.ByteArrayOutputStream
 import java.util.UUID
 
-import cats.instances.all._
-import cats.syntax.all._
+import cats.implicits._
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.Node.{BNode, IriNode, IriOrBNode}
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
@@ -61,7 +60,7 @@ final class CirceOps(private val json: Json) extends AnyVal {
     */
   def asGraph(
       implicit config: GraphConfiguration = GraphConfiguration(castDateTypes = true)): Either[JenaModelErr, Graph] =
-    JenaModel(json).flatMap(_.asGraph.left.map(InvalidJsonLD(_)))
+    JenaModel(json).flatMap(_.asGraph.left.map(InvalidJsonLD))
 
   /**
     * Attempts to find the top `@id` value
@@ -121,18 +120,17 @@ final class GraphOps(private val graph: Graph) extends AnyVal {
     * Convert [[Graph]] into JSON-LD representation using provided context. Beware, that currently IRI contexts are
     * not resolved and will be ignored.
     *
-    * @param id      the optionally provided initial entity @id
+    * @param id      the provided initial entity @id
     * @param context context to use when creating JSON-LD representation
     * @return [[Json]] containing JSON-LD representation of the [[Graph]]
     */
-  def asJson(context: Json, id: Option[IriOrBNode]): Try[Json] = {
+  def asJson(context: Json, id: IriOrBNode): Try[Json] = {
     val filteredCtx                             = context.removeContextIris
     implicit val jenaCleanup: JenaWriterCleanup = new JenaWriterCleanup(filteredCtx)
     id match {
-      case Some(`reservedId`) => writeFramed(filteredCtx, reservedId).map(removeKey(_, "@id"))
-      case Some(iri: IriNode) => writeFramed(filteredCtx, iri)
-      case Some(blank: BNode) => graph.replaceNode(blank, reservedId).asJson(context, Some(reservedId))
-      case _                  => write(filteredCtx)
+      case `reservedId` => writeFramed(filteredCtx, reservedId).map(removeKey(_, "@id"))
+      case iri: IriNode => writeFramed(filteredCtx, iri)
+      case blank: BNode => graph.replaceNode(blank, reservedId).asJson(context, reservedId)
     }
   }
 
@@ -152,14 +150,6 @@ final class GraphOps(private val graph: Graph) extends AnyVal {
     ctx.setFrame(frame.noSpaces)
     ctx.setOptions(opts)
     write(RDFFormat.JSONLD_FRAME_FLAT, ctx)(jenaCleanup).map(_ deepMerge c)
-  }
-
-  private def write(c: Json)(implicit jenaCleanup: JenaWriterCleanup): Try[Json] = {
-    val opts = new JsonLdOptions()
-    val ctx  = new JsonLDWriteContext
-    ctx.setJsonLDContext(jenaCleanup.cleanFromCtx.noSpaces)
-    ctx.setOptions(opts)
-    write(RDFFormat.JSONLD, ctx)(jenaCleanup).map(_ deepMerge c)
   }
 
   private def write(format: RDFFormat, ctx: JsonLDWriteContext)(implicit jenaCleanup: JenaWriterCleanup): Try[Json] = {
