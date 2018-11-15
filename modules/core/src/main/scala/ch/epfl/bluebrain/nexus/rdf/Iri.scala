@@ -186,7 +186,7 @@ object Iri {
             case Empty =>
               base.path -> (if (query.isDefined) query else base.query)
             case _ if path.startWithSlash =>
-              path -> query
+              removeDotSegments(path) -> query
             case _ =>
               merge(base) -> query
           }
@@ -207,10 +207,10 @@ object Iri {
 
     private def merge(base: Url): Path =
       if (base.authority.isDefined && base.path.isEmpty) Slash(path)
-      else removeDotSegments(path :: deleteLast(base.path))
+      else removeDotSegments(path.prepend(deleteLast(base.path), allowSlashDup = true))
 
     private def merge(base: Urn): Path =
-      removeDotSegments(path :: deleteLast(base.nss))
+      removeDotSegments(path.prepend(deleteLast(base.nss), allowSlashDup = true))
 
     private def deleteLast(path: Path, withSlash: Boolean = false): Path =
       path match {
@@ -280,6 +280,14 @@ object Iri {
     def +(segment: String): AbsoluteIri
 
     /**
+      * Appends the path to the end of the ''path'' section of the current ''AbsoluteIri''. If the path section ends with slash it
+      * directly appends, otherwise it adds a slash before appending
+      *
+      * @param path the path to be appended to the end of the path section
+      */
+    def +(path: Path): AbsoluteIri
+
+    /**
       * @return the path from an [[Url]] or the nss from a [[Urn]]
       */
     def path: Path
@@ -314,6 +322,8 @@ object Iri {
       if (segment.startsWith("/")) this + segment.drop(1)
       else if (path.endsWithSlash) copy(path = path + segment)
       else copy(path = path / segment)
+
+    override def +(p: Path): AbsoluteIri = copy(path = p :: path)
 
     /**
       * Returns a copy of this Url with the fragment value set to the argument fragment.
@@ -799,10 +809,10 @@ object Iri {
     def head: Head
 
     /**
-      * @param skipSlash a flag to decide whether it should skip slashes or not when returning the tail element
+      * @param dropSlash a flag to decide whether it should skip slashes or not when returning the tail element
       * @return the remainder of this [[Path]] after subtracting its head.
       */
-    def tail(skipSlash: Boolean = false): Path
+    def tail(dropSlash: Boolean = false): Path
 
     /**
       * @return false if the path contains no characters, true otherwise
@@ -869,20 +879,24 @@ object Iri {
     }
 
     /**
+      * Adds the ''other'' path to the end of the current path. This operation does not
+      * create double slashes when merging paths.
+      *
       * @param other the path to be suffixed to the current path
       * @return the current path plus the provided path
       *         Ex: current = "/a/b/c/d", other = "/e/f" will output "/a/b/c/d/e/f"
-      *         current = "/a/b/c/def", other = "ghi/f" will output "/a/b/c/def/ghi/f"
+      *         current = "/a/b/c/def/", other = "/ghi/f" will output "/a/b/c/def/ghi/f"
       */
-    def ::(other: Path): Path = other prepend this
+    def ::(other: Path): Path = other.prepend(this, allowSlashDup = false)
 
     /**
-      * @param other the path to be prepended to the current path
+      * @param other         the path to be prepended to the current path
+      * @param allowSlashDup a flag to decide whether or not we allow slash duplication on path merging
       * @return the current path plus the provided path
       *         Ex: current = "/e/f", other = "/a/b/c/d" will output "/a/b/c/d/e/f"
       *         current = "ghi/f", other = "/a/b/c/def" will output "/a/b/c/def/ghi/f"
       **/
-    def prepend(other: Path): Path
+    def prepend(other: Path, allowSlashDup: Boolean = false): Path
 
     /**
       * @param segment the segment to be appended to a path
@@ -904,13 +918,13 @@ object Iri {
       *
       * @return a list of segments represented as string
       */
-    def toSegments: List[String]
+    def segments: Seq[String]
 
     /**
       * Number of segments present on the current path. A `/` is not counted as a segment.
       * E.g.: `/a/b//c/d` will have 4 segments. The same as `/a/b/c/d`
       */
-    def segments: Int
+    def size: Int
   }
 
   object Path {
@@ -957,21 +971,21 @@ object Iri {
       */
     final case object Empty extends Empty {
       type Head = this.type
-      def isEmpty: Boolean               = true
-      def head: Head                     = this
-      def tail(skipSlash: Boolean): Path = this
-      def isSlash: Boolean               = false
-      def isSegment: Boolean             = false
-      def asEmpty: Option[Empty]         = Some(this)
-      def asSlash: Option[Slash]         = None
-      def asSegment: Option[Segment]     = None
-      def asString: String               = ""
-      def pctEncoded: String             = ""
-      def startWithSlash: Boolean        = false
-      def prepend(other: Path): Path     = other
-      def +(segment: String): Path       = if (segment.isEmpty) this else Segment(segment, this)
-      def toSegments: List[String]       = List.empty
-      def segments: Int                  = 0
+      def isEmpty: Boolean                                   = true
+      def head: Head                                         = this
+      def tail(dropSlash: Boolean): Path                     = this
+      def isSlash: Boolean                                   = false
+      def isSegment: Boolean                                 = false
+      def asEmpty: Option[Empty]                             = Some(this)
+      def asSlash: Option[Slash]                             = None
+      def asSegment: Option[Segment]                         = None
+      def asString: String                                   = ""
+      def pctEncoded: String                                 = ""
+      def startWithSlash: Boolean                            = false
+      def prepend(other: Path, allowSlashDup: Boolean): Path = other
+      def +(segment: String): Path                           = if (segment.isEmpty) this else Segment(segment, this)
+      def segments: Seq[String]                              = Vector.empty
+      def size: Int                                          = 0
     }
 
     /**
@@ -983,7 +997,7 @@ object Iri {
       type Head = Char
       def isEmpty: Boolean               = false
       def head                           = '/'
-      def tail(skipSlash: Boolean): Path = if (skipSlash && rest.endsWithSlash) rest.tail(skipSlash) else rest
+      def tail(dropSlash: Boolean): Path = if (dropSlash && rest.endsWithSlash) rest.tail(dropSlash) else rest
       def isSlash: Boolean               = true
       def isSegment: Boolean             = false
       def asEmpty: Option[Empty]         = None
@@ -992,10 +1006,12 @@ object Iri {
       def asString: String               = rest.asString + "/"
       def pctEncoded: String             = rest.pctEncoded + "/"
       def startWithSlash: Boolean        = if (rest.isEmpty) true else rest.startWithSlash
-      def prepend(other: Path): Path     = Slash(rest prepend other)
-      def +(segment: String): Path       = if (segment.isEmpty) this else Segment(segment, this)
-      def toSegments: List[String]       = rest.toSegments
-      def segments: Int                  = rest.segments
+      def prepend(other: Path, allowSlashDup: Boolean): Path =
+        if (!allowSlashDup && other.endsWithSlash) prepend(other.tail(), allowSlashDup)
+        else Slash(rest.prepend(other, allowSlashDup))
+      def +(segment: String): Path = if (segment.isEmpty) this else Segment(segment, this)
+      def segments: Seq[String]    = rest.segments
+      def size: Int                = rest.size
     }
 
     /**
@@ -1006,30 +1022,21 @@ object Iri {
     final case class Segment private[rdf] (segment: String, rest: Path) extends Path {
       type Head = String
 
-      def isEmpty: Boolean               = false
-      def head: String                   = segment
-      def tail(skipSlash: Boolean): Path = if (skipSlash && rest.endsWithSlash) rest.tail(skipSlash) else rest
-      def isSlash: Boolean               = false
-      def isSegment: Boolean             = true
-      def asEmpty: Option[Empty]         = None
-      def asSlash: Option[Slash]         = None
-      def asSegment: Option[Segment]     = Some(this)
-      def asString: String               = rest.asString + segment
-      def pctEncoded: String             = rest.pctEncoded + pctEncode(segment)
-      def startWithSlash: Boolean        = rest.startWithSlash
-      def prepend(other: Path): Path     = (rest prepend other) + segment
-      def +(s: String): Path             = if (segment.isEmpty) this else Segment(segment + s, rest)
-      def toSegments: List[String] = {
-        @tailrec
-        def inner(acc: List[String], curr: Path): List[String] = {
-          curr match {
-            case Segment(newCurr, rest) => inner(newCurr :: acc, rest)
-            case other                  => other.toSegments ++ acc
-          }
-        }
-        inner(List.empty, this)
-      }
-      def segments: Int = 1 + rest.segments
+      def isEmpty: Boolean                                   = false
+      def head: String                                       = segment
+      def tail(dropSlash: Boolean): Path                     = if (dropSlash && rest.endsWithSlash) rest.tail(dropSlash) else rest
+      def isSlash: Boolean                                   = false
+      def isSegment: Boolean                                 = true
+      def asEmpty: Option[Empty]                             = None
+      def asSlash: Option[Slash]                             = None
+      def asSegment: Option[Segment]                         = Some(this)
+      def asString: String                                   = rest.asString + segment
+      def pctEncoded: String                                 = rest.pctEncoded + pctEncode(segment)
+      def startWithSlash: Boolean                            = rest.startWithSlash
+      def prepend(other: Path, allowSlashDup: Boolean): Path = rest.prepend(other, allowSlashDup) + segment
+      def +(s: String): Path                                 = if (segment.isEmpty) this else Segment(segment + s, rest)
+      def segments: Seq[String]                              = rest.segments :+ segment
+      def size: Int                                          = 1 + rest.size
     }
 
     final implicit val pathShow: Show[Path] = Show.show(_.asString)
@@ -1176,6 +1183,8 @@ object Iri {
     override val path: Path         = nss
     override def +(segment: String): AbsoluteIri =
       if (nss.endsWithSlash) copy(nss = nss + segment) else copy(nss = nss / segment)
+
+    override def +(p: Path): AbsoluteIri = copy(nss = p :: path)
 
     override lazy val asString: String = {
       val rstr = r.map("?+" + _.asString).getOrElse("")
