@@ -278,6 +278,11 @@ object Iri {
       * @param segment the segment to be appended to the end of the path section
       */
     def +(segment: String): AbsoluteIri
+
+    /**
+      * @return the path from an [[Url]] or the nss from a [[Urn]]
+      */
+    def path: Path
   }
 
   object AbsoluteIri {
@@ -1168,6 +1173,7 @@ object Iri {
     override def asUrl: Option[Url] = None
     override def isUrn: Boolean     = true
     override def asUrn: Option[Urn] = Some(this)
+    override val path: Path = nss
     override def +(segment: String): AbsoluteIri =
       if (nss.endsWithSlash) copy(nss = nss + segment) else copy(nss = nss / segment)
 
