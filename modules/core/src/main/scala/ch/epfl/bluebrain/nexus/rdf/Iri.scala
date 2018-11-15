@@ -779,9 +779,25 @@ object Iri {
   sealed abstract class Path extends Product with Serializable {
 
     /**
+      * The type of the Head element of this path
+      */
+    type Head
+
+    /**
       * @return true if the path contains no characters, false otherwise
       */
     def isEmpty: Boolean
+
+    /**
+      * @return the [[Head]] element of this [[Path]]
+      */
+    def head: Head
+
+    /**
+      * @param skipSlash a flag to decide whether it should skip slashes or not when returning the tail element
+      * @return the remainder of this [[Path]] after subtracting its head.
+      */
+    def tail(skipSlash: Boolean = false): Path
 
     /**
       * @return false if the path contains no characters, true otherwise
@@ -876,6 +892,20 @@ object Iri {
       *         or Segment(segment + string, rest) if current is a Segment
       */
     def +(string: String): Path
+
+    /**
+      * Converts the current path to a list of segments. A `/` is not counted as a segment.
+      * E.g.: /a/b//c/d will be converted to List("a", "b", "c", "d")
+      *
+      * @return a list of segments represented as string
+      */
+    def toSegments: List[String]
+
+    /**
+      * Number of segments present on the current path. A `/` is not counted as a segment.
+      * E.g.: `/a/b//c/d` will have 4 segments. The same as `/a/b/c/d`
+      */
+    def segments: Int
   }
 
   object Path {
@@ -921,18 +951,22 @@ object Iri {
       * An empty path.
       */
     final case object Empty extends Empty {
-      def isEmpty: Boolean           = true
-      def isSlash: Boolean           = false
-      def isSegment: Boolean         = false
-      def asEmpty: Option[Empty]     = Some(this)
-      def asSlash: Option[Slash]     = None
-      def asSegment: Option[Segment] = None
-      def asString: String           = ""
-      def pctEncoded: String         = ""
-      def startWithSlash: Boolean    = false
-      def prepend(other: Path): Path = other
-      def +(segment: String): Path   = if (segment.isEmpty) this else Segment(segment, this)
-
+      type Head = this.type
+      def isEmpty: Boolean               = true
+      def head: Head                     = this
+      def tail(skipSlash: Boolean): Path = this
+      def isSlash: Boolean               = false
+      def isSegment: Boolean             = false
+      def asEmpty: Option[Empty]         = Some(this)
+      def asSlash: Option[Slash]         = None
+      def asSegment: Option[Segment]     = None
+      def asString: String               = ""
+      def pctEncoded: String             = ""
+      def startWithSlash: Boolean        = false
+      def prepend(other: Path): Path     = other
+      def +(segment: String): Path       = if (segment.isEmpty) this else Segment(segment, this)
+      def toSegments: List[String]       = List.empty
+      def segments: Int                  = 0
     }
 
     /**
@@ -941,17 +975,22 @@ object Iri {
       * @param rest the remainder of the path (excluding the '/')
       */
     final case class Slash(rest: Path) extends Path {
-      def isEmpty: Boolean           = false
-      def isSlash: Boolean           = true
-      def isSegment: Boolean         = false
-      def asEmpty: Option[Empty]     = None
-      def asSlash: Option[Slash]     = Some(this)
-      def asSegment: Option[Segment] = None
-      def asString: String           = rest.asString + "/"
-      def pctEncoded: String         = rest.pctEncoded + "/"
-      def startWithSlash: Boolean    = if (rest.isEmpty) true else rest.startWithSlash
-      def prepend(other: Path): Path = Slash(rest prepend other)
-      def +(segment: String): Path   = if (segment.isEmpty) this else Segment(segment, this)
+      type Head = Char
+      def isEmpty: Boolean               = false
+      def head                           = '/'
+      def tail(skipSlash: Boolean): Path = if (skipSlash && rest.endsWithSlash) rest.tail(skipSlash) else rest
+      def isSlash: Boolean               = true
+      def isSegment: Boolean             = false
+      def asEmpty: Option[Empty]         = None
+      def asSlash: Option[Slash]         = Some(this)
+      def asSegment: Option[Segment]     = None
+      def asString: String               = rest.asString + "/"
+      def pctEncoded: String             = rest.pctEncoded + "/"
+      def startWithSlash: Boolean        = if (rest.isEmpty) true else rest.startWithSlash
+      def prepend(other: Path): Path     = Slash(rest prepend other)
+      def +(segment: String): Path       = if (segment.isEmpty) this else Segment(segment, this)
+      def toSegments: List[String]       = rest.toSegments
+      def segments: Int                  = rest.segments
     }
 
     /**
@@ -960,17 +999,32 @@ object Iri {
       * @param rest the remainder of the path (excluding the segment denoted by this)
       */
     final case class Segment private[rdf] (segment: String, rest: Path) extends Path {
-      def isEmpty: Boolean           = false
-      def isSlash: Boolean           = false
-      def isSegment: Boolean         = true
-      def asEmpty: Option[Empty]     = None
-      def asSlash: Option[Slash]     = None
-      def asSegment: Option[Segment] = Some(this)
-      def asString: String           = rest.asString + segment
-      def pctEncoded: String         = rest.pctEncoded + pctEncode(segment)
-      def startWithSlash: Boolean    = rest.startWithSlash
-      def prepend(other: Path): Path = (rest prepend other) + segment
-      def +(s: String): Path         = if (segment.isEmpty) this else Segment(segment + s, rest)
+      type Head = String
+
+      def isEmpty: Boolean               = false
+      def head: String                   = segment
+      def tail(skipSlash: Boolean): Path = if (skipSlash && rest.endsWithSlash) rest.tail(skipSlash) else rest
+      def isSlash: Boolean               = false
+      def isSegment: Boolean             = true
+      def asEmpty: Option[Empty]         = None
+      def asSlash: Option[Slash]         = None
+      def asSegment: Option[Segment]     = Some(this)
+      def asString: String               = rest.asString + segment
+      def pctEncoded: String             = rest.pctEncoded + pctEncode(segment)
+      def startWithSlash: Boolean        = rest.startWithSlash
+      def prepend(other: Path): Path     = (rest prepend other) + segment
+      def +(s: String): Path             = if (segment.isEmpty) this else Segment(segment + s, rest)
+      def toSegments: List[String] = {
+        @tailrec
+        def inner(acc: List[String], curr: Path): List[String] = {
+          curr match {
+            case Segment(newCurr, rest) => inner(newCurr :: acc, rest)
+            case other                  => other.toSegments ++ acc
+          }
+        }
+        inner(List.empty, this)
+      }
+      def segments: Int = 1 + rest.segments
     }
 
     final implicit val pathShow: Show[Path] = Show.show(_.asString)

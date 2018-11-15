@@ -140,5 +140,44 @@ class PathSpec extends WordSpecLike with Matchers with Inspectors with EitherVal
         case (result, expected) => result shouldEqual expected
       }
     }
+
+    "return the head" in {
+      Path("/a/b/c/").right.value.head shouldEqual '/'
+      Path("/a/b/c").right.value.head shouldEqual "c"
+      Path.Empty.head shouldEqual Path.Empty
+    }
+
+    "return the tail" in {
+      Path("/a/b/c/").right.value.tail() shouldEqual Path("/a/b/c").right.value
+      Path("/a/b/c").right.value.tail() shouldEqual Path("/a/b/").right.value
+      Path.Empty.tail() shouldEqual Path.Empty
+      Path("/a/b/c").right.value.tail().tail().tail().tail().tail() shouldEqual Path("/").right.value
+
+      Path("/a/b/c/").right.value.tail(skipSlash = true) shouldEqual Path("/a/b/c").right.value
+      Path("/a/b/c///").right.value.tail(skipSlash = true) shouldEqual Path("/a/b/c").right.value
+      Path("/a/b/c").right.value.tail().tail(skipSlash = true) shouldEqual Path("/a/b").right.value
+      Path.Empty.tail(skipSlash = true) shouldEqual Path.Empty
+      Path("/a/b/c").right.value.tail(skipSlash = true).tail(skipSlash = true) shouldEqual Path("/a").right.value
+    }
+
+    "to segments" in {
+      val cases =
+        List(Path("/a/b/c/d/e/").right.value, Path("/a//b/c//d//e//").right.value, Path("/a/b/c/d/e").right.value)
+      forAll(cases) { path =>
+        path.toSegments shouldEqual List("a", "b", "c", "d", "e")
+      }
+      Path.Empty.toSegments shouldEqual List.empty[String]
+      Path("/a/").right.value.toSegments shouldEqual List("a")
+    }
+
+    "number of segments" in {
+      val cases =
+        List(Path("/a/b/c/d/e/").right.value, Path("/a//b/c//d//e//").right.value, Path("/a/b/c/d/e").right.value)
+      forAll(cases) { path =>
+        path.segments shouldEqual 5
+      }
+      Path.Empty.segments shouldEqual 0
+      Path("/a/").right.value.segments shouldEqual 1
+    }
   }
 }
