@@ -1173,7 +1173,7 @@ object Iri {
     override def asUrl: Option[Url] = None
     override def isUrn: Boolean     = true
     override def asUrn: Option[Urn] = Some(this)
-    override val path: Path = nss
+    override val path: Path         = nss
     override def +(segment: String): AbsoluteIri =
       if (nss.endsWithSlash) copy(nss = nss + segment) else copy(nss = nss / segment)
 
