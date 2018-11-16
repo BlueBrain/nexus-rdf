@@ -1042,6 +1042,15 @@ object Iri {
     final implicit val pathShow: Show[Path] = Show.show(_.asString)
 
     final implicit val pathEq: Eq[Path] = Eq.fromUniversalEquals
+
+    final implicit class StringPathSyntax(private val segment: String) extends AnyVal {
+
+      /**
+        * @param string the segment to be appended to a previous ''segment''
+        * @return / segment / string
+        */
+      def /(string: String): Path = Segment(string, Slash(Segment(segment, Path./)))
+    }
   }
 
   /**

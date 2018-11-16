@@ -125,6 +125,11 @@ class PathSpec extends WordSpecLike with Matchers with Inspectors with EitherVal
       segment("a").right.value / "b" / "c" shouldEqual Segment("c", Slash(Segment("b", Slash(Segment("a", Empty)))))
     }
 
+    "build" in {
+      val path = "a" / "b" / "c"
+      path shouldEqual Path("/a/b/c").right.value
+    }
+
     "join two paths" in {
       val cases = List(
         (Path("/e/f").right.value, Path("/a/b/c/d").right.value)           -> Path("/a/b/c/d/e/f").right.value,

@@ -2,6 +2,7 @@ package ch.epfl.bluebrain.nexus.rdf
 
 import cats.kernel.Eq
 import cats.syntax.show._
+import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
 import ch.epfl.bluebrain.nexus.rdf.Iri._
 import org.scalatest.{EitherValues, Inspectors, Matchers, WordSpecLike}
 
@@ -95,6 +96,7 @@ class UrlSpec extends WordSpecLike with Matchers with Inspectors with EitherValu
       forAll(cases) {
         case (in, p, expected) => (Url(in).right.value + Path(p).right.value) shouldEqual Url(expected).right.value
       }
+      Url("http://google.com/a").right.value + ("b" / "c") shouldEqual Url("http://google.com/a/b/c").right.value
     }
 
     "eq" in {
