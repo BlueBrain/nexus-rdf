@@ -268,12 +268,13 @@ private[rdf] class IriParser(val input: ParserInput)
   private def `ipath-noscheme`: Rule0 = {
     def setPath(value: String): Unit = {
       val res = (_path, value) match {
-        case (Segment(el, Slash(acc)), "..") if el != ".." => acc
-        case (Segment(el, acc), "..") if el != ".."        => acc
-        case (Slash(acc), "..")                            => acc
-        case (acc, ".")                                    => acc
-        case (acc, el) if el.length == 0                   => Slash(acc)
-        case (acc, el)                                     => Segment(el, Slash(acc))
+        case (Segment(el, Slash(acc)), "..") if el != ".."        => acc
+        case (Segment(el, acc), "..") if el != ".." && el != "."  => acc
+        case (Slash(acc), "..")                                   => acc
+        case (acc, ".")                                           => acc
+        case (acc, el) if el.length == 0                          => Slash(acc)
+        case (Path.Empty, el)                                     => Segment(el, Path.Empty)
+        case (acc, el)                                            => Segment(el, Slash(acc))
       }
       _path = res
     }

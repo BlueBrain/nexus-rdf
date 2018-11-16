@@ -125,20 +125,66 @@ class PathSpec extends WordSpecLike with Matchers with Inspectors with EitherVal
       segment("a").right.value / "b" / "c" shouldEqual Segment("c", Slash(Segment("b", Slash(Segment("a", Empty)))))
     }
 
+    "build" in {
+      val path = "a" / "b" / "c"
+      path shouldEqual Path("/a/b/c").right.value
+    }
+
     "join two paths" in {
       val cases = List(
-        (Path("/e/f").right.value :: Path("/a/b/c/d").right.value)           -> Path("/a/b/c/d/e/f").right.value,
-        (segment("ghi").right.value / "f" :: Path("/a/b/c/def").right.value) -> Path("/a/b/c/defghi/f").right.value,
-        (Empty :: Path("/a/b").right.value)                                  -> Path("/a/b").right.value,
-        (Empty :: Slash(Empty))                                              -> Slash(Empty),
-        (Slash(Empty) :: Empty)                                              -> Slash(Empty),
-        (Path("/e/f/").right.value :: Path("/a/b/c/d").right.value)          -> Path("/a/b/c/d/e/f/").right.value,
-        (Path("/e/f/").right.value :: Path("/a/b/c/d/").right.value)         -> Path("/a/b/c/d//e/f/").right.value,
-        (Empty :: Empty)                                                     -> Empty
+        (Path("/e/f").right.value, Path("/a/b/c/d").right.value)           -> Path("/a/b/c/d/e/f").right.value,
+        (segment("ghi").right.value / "f", Path("/a/b/c/def").right.value) -> Path("/a/b/c/defghi/f").right.value,
+        (Empty, Path("/a/b").right.value)                                  -> Path("/a/b").right.value,
+        (Empty, Slash(Empty))                                              -> Slash(Empty),
+        (Slash(Empty), Empty)                                              -> Slash(Empty),
+        (Path("/e/f/").right.value, Path("/a/b/c/d").right.value)          -> Path("/a/b/c/d/e/f/").right.value,
+        (Path("/e/f/").right.value, Path("/a/b/c/d/").right.value)         -> Path("/a/b/c/d/e/f/").right.value,
+        (Empty, Empty)                                                     -> Empty
       )
       forAll(cases) {
-        case (result, expected) => result shouldEqual expected
+        case ((left, right), expected) => left :: right shouldEqual expected
       }
+      Path("/e/f/").right.value.prepend(Path("/a/b/c/d/").right.value, allowSlashDup = true) shouldEqual Path(
+        "/a/b/c/d//e/f/").right.value
+    }
+
+    "return the head" in {
+      Path("/a/b/c/").right.value.head shouldEqual '/'
+      Path("/a/b/c").right.value.head shouldEqual "c"
+      Path.Empty.head shouldEqual Path.Empty
+    }
+
+    "return the tail" in {
+      Path("/a/b/c/").right.value.tail() shouldEqual Path("/a/b/c").right.value
+      Path("/a/b/c").right.value.tail() shouldEqual Path("/a/b/").right.value
+      Path.Empty.tail() shouldEqual Path.Empty
+      Path("/a/b/c").right.value.tail().tail().tail().tail().tail() shouldEqual Path("/").right.value
+
+      Path("/a/b/c/").right.value.tail(dropSlash = true) shouldEqual Path("/a/b/c").right.value
+      Path("/a/b/c///").right.value.tail(dropSlash = true) shouldEqual Path("/a/b/c").right.value
+      Path("/a/b/c").right.value.tail().tail(dropSlash = true) shouldEqual Path("/a/b").right.value
+      Path.Empty.tail(dropSlash = true) shouldEqual Path.Empty
+      Path("/a/b/c").right.value.tail(dropSlash = true).tail(dropSlash = true) shouldEqual Path("/a").right.value
+    }
+
+    "to segments" in {
+      val cases =
+        List(Path("/a/b/c/d/e/").right.value, Path("/a//b/c//d//e//").right.value, Path("/a/b/c/d/e").right.value)
+      forAll(cases) { path =>
+        path.segments shouldEqual List("a", "b", "c", "d", "e")
+      }
+      Path.Empty.segments shouldEqual List.empty[String]
+      Path("/a/").right.value.segments shouldEqual List("a")
+    }
+
+    "number of segments" in {
+      val cases =
+        List(Path("/a/b/c/d/e/").right.value, Path("/a//b/c//d//e//").right.value, Path("/a/b/c/d/e").right.value)
+      forAll(cases) { path =>
+        path.size shouldEqual 5
+      }
+      Path.Empty.size shouldEqual 0
+      Path("/a/").right.value.size shouldEqual 1
     }
   }
 }

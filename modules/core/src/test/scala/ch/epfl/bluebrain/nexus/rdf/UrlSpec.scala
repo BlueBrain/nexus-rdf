@@ -2,6 +2,7 @@ package ch.epfl.bluebrain.nexus.rdf
 
 import cats.kernel.Eq
 import cats.syntax.show._
+import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
 import ch.epfl.bluebrain.nexus.rdf.Iri._
 import org.scalatest.{EitherValues, Inspectors, Matchers, WordSpecLike}
 
@@ -71,7 +72,7 @@ class UrlSpec extends WordSpecLike with Matchers with Inspectors with EitherValu
       withHash.value.asRelative shouldEqual None
     }
 
-    "append" in {
+    "append segment" in {
       val cases = List(
         ("http://google.com/a/", "bcd", "http://google.com/a/bcd"),
         ("http://google.com/a/", "/bcd", "http://google.com/a/bcd"),
@@ -82,6 +83,20 @@ class UrlSpec extends WordSpecLike with Matchers with Inspectors with EitherValu
       forAll(cases) {
         case (in, segment, expected) => (Url(in).right.value + segment) shouldEqual Url(expected).right.value
       }
+    }
+
+    "append path" in {
+      val cases = List(
+        ("http://google.com/a/", "/b/c/d", "http://google.com/a/b/c/d"),
+        ("http://google.com/a/", "/", "http://google.com/a/"),
+        ("http://google.com/a/", "/bcd", "http://google.com/a/bcd"),
+        ("http://google.com/a?one=two&three", "/b/c/d", "http://google.com/a/b/c/d?one=two&three"),
+        ("http://google.com/a#other", "/b/c/d", "http://google.com/a/b/c/d#other")
+      )
+      forAll(cases) {
+        case (in, p, expected) => (Url(in).right.value + Path(p).right.value) shouldEqual Url(expected).right.value
+      }
+      Url("http://google.com/a").right.value + ("b" / "c") shouldEqual Url("http://google.com/a/b/c").right.value
     }
 
     "eq" in {
