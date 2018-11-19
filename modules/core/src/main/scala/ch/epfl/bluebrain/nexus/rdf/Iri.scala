@@ -856,7 +856,7 @@ object Iri {
 
     /**
       * @param other the other path
-      * @return true if this path starts with a slash ('/'), false otherwise
+      * @return true if this path starts with the provided ''other'' path, false otherwise
       */
     def startsWith(other: Path): Boolean = {
       @tailrec

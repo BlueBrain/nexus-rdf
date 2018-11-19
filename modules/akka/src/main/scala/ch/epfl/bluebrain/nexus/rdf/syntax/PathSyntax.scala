@@ -42,6 +42,6 @@ object PathSyntax {
     /**
       * Convert this [[Iri.Path]] to [[Uri.Path]]
       */
-    def toUriIriPath: Uri.Path = inner(Uri.Path.Empty, path.reverse)
+    def toUriPath: Uri.Path = inner(Uri.Path.Empty, path.reverse)
   }
 }

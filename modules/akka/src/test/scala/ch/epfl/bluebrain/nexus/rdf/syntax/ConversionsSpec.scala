@@ -27,10 +27,10 @@ class ConversionsSpec extends WordSpecLike with Matchers with EitherValues {
 
   "An Iri.Path" should {
     "be converted to Uri.Path" in {
-      Path("/a/b/c").right.value.toUriIriPath shouldEqual Uri.Path("/a/b/c")
-      Path("/a/b/c/d/").right.value.toUriIriPath shouldEqual Uri.Path("/a/b/c/d/")
-      Path("/").right.value.toUriIriPath shouldEqual Uri.Path("/")
-      Path("").right.value.toUriIriPath shouldEqual Uri.Path("")
+      Path("/a/b/c").right.value.toUriPath shouldEqual Uri.Path("/a/b/c")
+      Path("/a/b/c/d/").right.value.toUriPath shouldEqual Uri.Path("/a/b/c/d/")
+      Path("/").right.value.toUriPath shouldEqual Uri.Path("/")
+      Path("").right.value.toUriPath shouldEqual Uri.Path("")
     }
   }
 
