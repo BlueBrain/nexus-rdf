@@ -186,5 +186,20 @@ class PathSpec extends WordSpecLike with Matchers with Inspectors with EitherVal
       Path.Empty.size shouldEqual 0
       Path("/a/").right.value.size shouldEqual 1
     }
+
+    "starts with another path" in {
+      val cases = List(Path("/a/b//c/d") -> true,
+                       Path("/a/b//c") -> true,
+                       Path("/a/b//")  -> true,
+                       Path("/a")      -> true,
+                       Path("/")       -> true,
+                       Path("//")      -> false,
+                       Path("/a/c")    -> false)
+      forAll(cases) {
+        case (other, expected) => abcd.right.value startsWith other.right.value shouldEqual expected
+      }
+      Path("/").right.value startsWith Path("/").right.value shouldEqual true
+      Path.Empty startsWith Path("/").right.value shouldEqual false
+    }
   }
 }

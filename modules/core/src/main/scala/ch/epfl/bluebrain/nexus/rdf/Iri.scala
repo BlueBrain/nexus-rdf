@@ -855,6 +855,21 @@ object Iri {
     def startWithSlash: Boolean
 
     /**
+      * @param other the other path
+      * @return true if this path starts with the provided ''other'' path, false otherwise
+      */
+    def startsWith(other: Path): Boolean = {
+      @tailrec
+      def inner(remainingCurr: Path, remainingOther: Path): (Path, Path) = {
+        if (remainingOther.isEmpty) remainingCurr -> remainingOther
+        else if (remainingCurr.head == remainingOther.head) inner(remainingCurr.tail(), remainingOther.tail())
+        else remainingCurr -> remainingOther
+      }
+      val (_, otherResult) = inner(this.reverse, other.reverse)
+      otherResult.isEmpty
+    }
+
+    /**
       * @return the UTF-8 representation of this Path
       */
     def asString: String
