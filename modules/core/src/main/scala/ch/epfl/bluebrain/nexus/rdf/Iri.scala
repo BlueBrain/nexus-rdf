@@ -936,6 +936,14 @@ object Iri {
     def segments: Seq[String]
 
     /**
+      * Returns the last segment, if any. A `/` is not counted as a segment.
+      * Example: /a/b/c/ will return "c"
+      *
+      * @return the last segment.
+      */
+    def lastSegment: Option[String]
+
+    /**
       * Number of segments present on the current path. A `/` is not counted as a segment.
       * E.g.: `/a/b//c/d` will have 4 segments. The same as `/a/b/c/d`
       */
@@ -1000,6 +1008,7 @@ object Iri {
       def prepend(other: Path, allowSlashDup: Boolean): Path = other
       def +(segment: String): Path                           = if (segment.isEmpty) this else Segment(segment, this)
       def segments: Seq[String]                              = Vector.empty
+      def lastSegment: Option[String]                        = None
       def size: Int                                          = 0
     }
 
@@ -1024,9 +1033,10 @@ object Iri {
       def prepend(other: Path, allowSlashDup: Boolean): Path =
         if (!allowSlashDup && other.endsWithSlash) prepend(other.tail(), allowSlashDup)
         else Slash(rest.prepend(other, allowSlashDup))
-      def +(segment: String): Path = if (segment.isEmpty) this else Segment(segment, this)
-      def segments: Seq[String]    = rest.segments
-      def size: Int                = rest.size
+      def +(segment: String): Path    = if (segment.isEmpty) this else Segment(segment, this)
+      def segments: Seq[String]       = rest.segments
+      def lastSegment: Option[String] = rest.lastSegment
+      def size: Int                   = rest.size
     }
 
     /**
@@ -1051,6 +1061,7 @@ object Iri {
       def prepend(other: Path, allowSlashDup: Boolean): Path = rest.prepend(other, allowSlashDup) + segment
       def +(s: String): Path                                 = if (segment.isEmpty) this else Segment(segment + s, rest)
       def segments: Seq[String]                              = rest.segments :+ segment
+      def lastSegment: Option[String]                        = Some(segment)
       def size: Int                                          = 1 + rest.size
     }
 
