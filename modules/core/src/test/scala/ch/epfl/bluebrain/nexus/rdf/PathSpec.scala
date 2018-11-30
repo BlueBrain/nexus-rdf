@@ -177,6 +177,13 @@ class PathSpec extends WordSpecLike with Matchers with Inspectors with EitherVal
       Path("/a/").right.value.segments shouldEqual List("a")
     }
 
+    "return the last segment" in {
+      Path("/a/b/c").right.value.lastSegment shouldEqual Some("c")
+      Path("/a/b/c/").right.value.lastSegment shouldEqual Some("c")
+      Path("/a/b//c//").right.value.lastSegment shouldEqual Some("c")
+      Path.Empty.lastSegment shouldEqual None
+    }
+
     "number of segments" in {
       val cases =
         List(Path("/a/b/c/d/e/").right.value, Path("/a//b/c//d//e//").right.value, Path("/a/b/c/d/e").right.value)
