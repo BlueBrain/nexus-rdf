@@ -7,10 +7,17 @@
       "@id" : "https://example.com/some-other"
     }
   },
-  "@id" : "https://example.nexus.com/nexus/v1/resources/org/project/_/Movie_Test",
+  "@id": "Movie_Test",
   "@type" : "Movie",
   "some" : {
-    "@id" : "https://example.nexus.com/nexus/v1/projects/org/project"
+    "@id" : "a"
   },
-  "some-other": "https://example.nexus.com/nexus/v1/resources/org/project/_/other"
+  "some-other": "other",
+  "test": {
+    "@id": "https://example.nexus.com/nexus/v1/projects/org/project"
+  },
+  "test-id": {
+    "@id": "https://example.nexus.com/nexus/v1/resources/project"
+  },
+  "test-2": "../../../project"
 }
