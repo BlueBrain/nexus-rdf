@@ -1,0 +1,23 @@
+{
+  "@context": {
+    "@base": "https://example.nexus.com/nexus/v1/resources/org/project/_/",
+    "@vocab": "https://example.nexus.com/nexus/v1/vocabs/org/project/",
+    "some-other": {
+      "@type": "@id",
+      "@id" : "https://example.com/some-other"
+    }
+  },
+  "@id": "Movie_Test",
+  "@type": "Movie",
+  "some": {
+    "@id": "https://example.nexus.com/nexus/v1/resources/org/project/_/a"
+  },
+  "some-other": "other",
+  "test": {
+    "@id": "https://example.nexus.com/nexus/v1/projects/org/project"
+  },
+  "test-id": {
+    "@id": "../../../project"
+  },
+  "test-2": "../../../project"
+}

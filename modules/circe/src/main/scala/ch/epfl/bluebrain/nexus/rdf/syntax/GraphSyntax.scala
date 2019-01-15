@@ -5,7 +5,7 @@ import java.util.UUID
 
 import cats.implicits._
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
-import ch.epfl.bluebrain.nexus.rdf.Node.{BNode, IriNode, IriOrBNode}
+import ch.epfl.bluebrain.nexus.rdf.Node.{BNode, IriNode, IriOrBNode, Literal}
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
 import ch.epfl.bluebrain.nexus.rdf.circe.JenaModel
 import ch.epfl.bluebrain.nexus.rdf.circe.JenaModel.JenaModelErr
@@ -159,7 +159,8 @@ final class GraphOps(private val graph: Graph) extends AnyVal {
     val pm  = RiotLib.prefixMap(g)
     Try {
       w.write(out, g, pm, null, ctx)
-    }.flatMap(_ => parse(out.toString).map(jenaCleanup.removeSingleGraph).map(jenaCleanup.cleanFromJson).toTry)
+    }.flatMap(_ =>
+      parse(out.toString).map(jenaCleanup.removeSingleGraph).map(jenaCleanup.cleanFromJson(_, graph)).toTry)
   }
 }
 
@@ -213,9 +214,14 @@ private[syntax] final class JenaWriterCleanup(ctx: Json) {
     * }}}
     * will be converted to: "age": 2
     *
+    * It also deals with relative Iris caused @base, expanding them when required
+    *
     * @param json the json to be cleaned
     */
-  private[syntax] def cleanFromJson(json: Json): Json = {
+  private[syntax] def cleanFromJson(json: Json, g: Graph): Json = {
+    val stringValues = g.triples.collect { case (_, _, lt: Literal) => lt.lexicalForm }
+    val maybeBase    = json.contextValue.hcursor.get[String]("@base").flatMap(Iri.absolute)
+
     def inner(ctx: Json): Json =
       ctx.arrayOrObject(ctx, arr => Json.fromValues(arr.map(inner)), obj => deleteType(obj))
 
@@ -239,7 +245,22 @@ private[syntax] final class JenaWriterCleanup(ctx: Json) {
         .flatMap(Json.fromFloat)
 
     def recursiveFollow(jObj: JsonObject): Json =
-      JsonObject.fromIterable(jObj.toVector.map { case (k, v) => k -> inner(v) }).asJson
+      JsonObject
+        .fromIterable(jObj.toVector.map {
+          case (k, v) =>
+            k -> (v.asString match {
+              case Some(s) if s.startsWith("../") && !stringValues.contains(s) =>
+                expandWithBase(s).map(Json.fromString).getOrElse(inner(v))
+              case _ =>
+                inner(v)
+            })
+        })
+        .asJson
+
+    def expandWithBase(s: String) =
+      (maybeBase -> Iri.relative(s.substring(3))).mapN { (base, relative) =>
+        relative.resolve(base).asString
+      }
 
     def deleteType(jObj: JsonObject): Json =
       if (jObj.contains("@type") && jObj.contains("@value") && jObj.size == 2)
