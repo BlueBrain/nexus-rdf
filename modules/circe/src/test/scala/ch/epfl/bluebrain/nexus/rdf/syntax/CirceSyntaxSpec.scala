@@ -171,6 +171,14 @@ class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
       val json = jsonContentOf("/wrong-id-2.json")
       JenaModel(json).left.value shouldBe a[InvalidJsonLD]
     }
+
+    "convert json with @base to graph and back" in {
+      val json     = jsonContentOf("/simple-with-base.json")
+      val graph    = json.asGraph.right.value
+      val id       = url"https://example.nexus.com/nexus/v1/resources/org/project/_/Movie_Test"
+      val expected = jsonContentOf("/simple-with-base-output.json")
+      graph.asJson(Json.obj("@context" -> json.contextValue), id).success.value shouldEqual expected
+    }
   }
 
   def context(json: Json): Json =

@@ -188,13 +188,14 @@ private[syntax] final class JenaWriterCleanup(ctx: Json) {
   def cleanFromCtx: Json = {
 
     def inner(ctx: Json): Json =
-      ctx.arrayOrObject(ctx, arr => Json.fromValues(arr.map(inner)), obj => deleteType(obj).asJson)
+      ctx.arrayOrObject(ctx, arr => Json.fromValues(arr.map(inner)), obj => deleteTypeAndBas(obj).asJson)
 
-    def deleteType(jObj: JsonObject): JsonObject =
+    def deleteTypeAndBas(jObj: JsonObject): JsonObject =
       JsonObject.fromIterable(
         jObj.toVector
           .filter {
             case ("@type", j) => j.asString.forall(s => !knownTypes.contains(m.expandPrefix(s)))
+            case ("@base", _) => false
             case _            => true
           }
           .map { case (k, v) => k -> inner(v) })
