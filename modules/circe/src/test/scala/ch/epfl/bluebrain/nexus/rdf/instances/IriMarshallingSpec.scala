@@ -49,8 +49,8 @@ class IriMarshallingSpec extends WordSpecLike with Matchers with Inspectors with
   }
 
   "A Url" should {
-    val urlString = "http:://example.com/a"
-    val url       = Iri.url("http:://example.com/a").right.value
+    val urlString = "http://example.com/a"
+    val url       = Iri.url("http://example.com/a").right.value
     "be encoded" in {
       url.asJson shouldEqual Json.fromString(urlString)
     }
