@@ -117,6 +117,15 @@ final class GraphOps(private val graph: Graph) extends AnyVal {
   }
 
   /**
+    * Convert [[Graph]] into JSON-LD expanded representation.
+    *
+    * @param id the provided initial entity @id
+    * @return [[Json]] containing JSON-LD representation of the [[Graph]]
+    */
+  def asExpandedJson(id: IriOrBNode): Try[Json] =
+    asJson(Json.obj(), id)
+
+  /**
     * Convert [[Graph]] into JSON-LD representation using provided context. Beware, that currently IRI contexts are
     * not resolved and will be ignored.
     *

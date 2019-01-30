@@ -72,11 +72,14 @@ final class ContextOps(private val json: Json) extends AnyVal {
     * @return the context in the form {"@context": {...}}
     */
   def removeContextIris: Json = {
-    val ctx = json.contextValue
-    (ctx.asString, ctx.asArray) match {
-      case (Some(_), _)   => Json.obj("@context" -> Json.obj())
-      case (_, Some(arr)) => Json.obj("@context" -> Json.arr(arr.filterNot(_.isString): _*))
-      case _              => Json.obj("@context" -> ctx)
+    if (json == Json.obj()) json
+    else {
+      val ctx = json.contextValue
+      (ctx.asString, ctx.asArray) match {
+        case (Some(_), _)   => Json.obj("@context" -> Json.obj())
+        case (_, Some(arr)) => Json.obj("@context" -> Json.arr(arr.filterNot(_.isString): _*))
+        case _              => Json.obj("@context" -> ctx)
+      }
     }
   }
 }

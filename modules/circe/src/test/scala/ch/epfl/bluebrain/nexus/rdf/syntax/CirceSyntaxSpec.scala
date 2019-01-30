@@ -108,7 +108,7 @@ class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
       graph.asJson(context(json), id).success.value shouldEqual json
     }
 
-    "convert to Json from entity with GraphEncoder" in {
+    "convert to compacted Json from entity with GraphEncoder" in {
       val json     = jsonContentOf("/context/simple-iri-context.json")
       val ctx      = context(json)
       val emptyCtx = Json.obj("@context" -> Json.obj())
@@ -117,6 +117,19 @@ class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
                             "John Doe",
                             "1999-04-09T20:00Z")
       example.asJson(ctx).deepMerge(emptyCtx) shouldEqual json.deepMerge(emptyCtx)
+    }
+
+    "convert to expanded Json from entity with GraphEncoder" in {
+      val example = Example(url"http://nexus.example.com/john-doe".value,
+                            url"http://schema.org/Person".value,
+                            "John Doe",
+                            "1999-04-09T20:00Z")
+      example.asExpandedJson shouldEqual Json.obj(
+        "@id"                         -> Json.fromString(example.id.asString),
+        "@type"                       -> Json.fromString(example.tpe.asString),
+        "http://schema.org/birthDate" -> Json.fromString(example.birthDate),
+        "http://schema.org/name"      -> Json.fromString(example.name)
+      )
     }
 
     "fetch the @id from the Json" in {
@@ -178,6 +191,21 @@ class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
       val id       = url"https://example.nexus.com/nexus/v1/resources/org/project/_/Movie_Test"
       val expected = jsonContentOf("/simple-with-base-output.json")
       graph.asJson(Json.obj("@context" -> json.contextValue), id).success.value shouldEqual expected
+    }
+
+    "convert to graph and back to expanded Json-LD" in {
+      // format: off
+      val jsons = List(
+        (jsonContentOf("/simple-model2.json"),    jsonContentOf("/simple-model2-expanded.json"),    url"http://nexus.example.com/john-doe".value),
+        (jsonContentOf("/simple-with-base.json"), jsonContentOf("/simple-with-base-expanded.json"), url"https://example.nexus.com/nexus/v1/resources/org/project/_/Movie_Test".value
+        )
+      )
+      // format: on
+      forAll(jsons) {
+        case (json, expected, id) =>
+          val graph = json.asGraph.right.value
+          graph.asExpandedJson(id).success.value shouldEqual expected
+      }
     }
   }
 

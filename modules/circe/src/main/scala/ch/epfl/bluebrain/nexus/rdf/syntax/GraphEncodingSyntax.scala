@@ -23,4 +23,14 @@ final class CirceOpsEncoding[A](private val value: A) extends AnyVal {
     val GraphResult(subject, graph) = enc(value)
     graph.asJson(context, subject).getOrElse(graph.asJson)
   }
+
+  /**
+    * Convert [[A]] into an expanded JSON-LD representation using the implicitly available [[GraphEncoder]].
+    *
+    * @return [[Json]] containing JSON-LD representation
+    */
+  def asExpandedJson(implicit enc: GraphEncoder[A]): Json = {
+    val GraphResult(subject, graph) = enc(value)
+    graph.asExpandedJson(subject).getOrElse(graph.asJson)
+  }
 }
