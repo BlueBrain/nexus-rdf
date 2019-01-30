@@ -72,7 +72,7 @@ final class ContextOps(private val json: Json) extends AnyVal {
     * @return the context in the form {"@context": {...}}
     */
   def removeContextIris: Json = {
-    if(json == Json.obj()) json
+    if (json == Json.obj()) json
     else {
       val ctx = json.contextValue
       (ctx.asString, ctx.asArray) match {
