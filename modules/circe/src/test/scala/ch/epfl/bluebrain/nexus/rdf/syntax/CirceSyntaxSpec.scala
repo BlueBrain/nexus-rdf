@@ -179,6 +179,21 @@ class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
       val expected = jsonContentOf("/simple-with-base-output.json")
       graph.asJson(Json.obj("@context" -> json.contextValue), id).success.value shouldEqual expected
     }
+
+    "convert to graph and back to expanded Json-LD" in {
+      // format: off
+      val jsons = List(
+        (jsonContentOf("/simple-model2.json"),    jsonContentOf("/simple-model2-expanded.json"),    url"http://nexus.example.com/john-doe".value),
+        (jsonContentOf("/simple-with-base.json"), jsonContentOf("/simple-with-base-expanded.json"), url"https://example.nexus.com/nexus/v1/resources/org/project/_/Movie_Test".value
+        )
+      )
+      // format: on
+      forAll(jsons) {
+        case (json, expected, id) =>
+          val graph = json.asGraph.right.value
+          graph.asExpandedJson(id).success.value shouldEqual expected
+      }
+    }
   }
 
   def context(json: Json): Json =
