@@ -35,16 +35,16 @@ trait GraphSyntax {
 private[syntax] object GraphSyntax {
   val knownTypes: Set[String] =
     Set(
-      xsd.boolean.show,
-      xsd.int.show,
-      xsd.integer.show,
-      xsd.string.show,
-      xsd.decimal.show,
-      xsd.double.show,
-      xsd.float.show,
-      xsd.long.show,
-      xsd.string.show,
-      xsd.dateTime.show
+      xsd.boolean.toString,
+      xsd.int.toString,
+      xsd.integer.toString,
+      xsd.string.toString,
+      xsd.decimal.toString,
+      xsd.double.toString,
+      xsd.float.toString,
+      xsd.long.toString,
+      xsd.string.toString,
+      xsd.dateTime.toString
     )
 
   final val reservedId = url"http://dummy.com/${UUID.randomUUID()}"
@@ -154,7 +154,7 @@ final class GraphOps(private val graph: Graph) extends AnyVal {
     opts.setProcessingMode(JsonLdOptions.JSON_LD_1_1)
     opts.setCompactArrays(true)
     opts.setPruneBlankNodeIdentifiers(true)
-    val frame = Json.obj("@id" -> Json.fromString(id.show)).appendContextOf(jenaCleanup.cleanFromCtx)
+    val frame = Json.obj("@id" -> Json.fromString(id.toString)).appendContextOf(jenaCleanup.cleanFromCtx)
     val ctx   = new JsonLDWriteContext
     ctx.setFrame(frame.noSpaces)
     ctx.setOptions(opts)
@@ -275,16 +275,16 @@ private[syntax] final class JenaWriterCleanup(ctx: Json) {
       if (jObj.contains("@type") && jObj.contains("@value") && jObj.size == 2)
         (jObj("@type").flatMap(_.asString).map(m.expandPrefix), jObj("@value"))
           .mapN {
-            case (t, value) if t == xsd.boolean.show  => tryBoolean(value)
-            case (t, value) if t == xsd.int.show      => tryInt(value)
-            case (t, value) if t == xsd.integer.show  => tryInt(value)
-            case (t, value) if t == xsd.long.show     => tryLong(value)
-            case (t, value) if t == xsd.float.show    => tryFloat(value)
-            case (t, value) if t == xsd.decimal.show  => tryDouble(value)
-            case (t, value) if t == xsd.double.show   => tryDouble(value)
-            case (t, value) if t == xsd.dateTime.show => value.asString.map(Json.fromString)
-            case (t, value) if t == xsd.string.show   => value.asString.map(Json.fromString)
-            case _                                    => None
+            case (t, value) if t == xsd.boolean.toString  => tryBoolean(value)
+            case (t, value) if t == xsd.int.toString      => tryInt(value)
+            case (t, value) if t == xsd.integer.toString  => tryInt(value)
+            case (t, value) if t == xsd.long.toString     => tryLong(value)
+            case (t, value) if t == xsd.float.toString    => tryFloat(value)
+            case (t, value) if t == xsd.decimal.toString  => tryDouble(value)
+            case (t, value) if t == xsd.double.toString   => tryDouble(value)
+            case (t, value) if t == xsd.dateTime.toString => value.asString.map(Json.fromString)
+            case (t, value) if t == xsd.string.toString   => value.asString.map(Json.fromString)
+            case _                                        => None
           }
           .flatten
           .getOrElse(recursiveFollow(jObj))

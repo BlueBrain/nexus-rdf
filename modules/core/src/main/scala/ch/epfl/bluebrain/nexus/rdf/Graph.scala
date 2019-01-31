@@ -15,7 +15,7 @@ import scala.annotation.tailrec
   * An RDF Graph representation.
   */
 @SuppressWarnings(Array("IsInstanceOf"))
-final class Graph private[rdf] (private val underlying: G[Node, LkDiEdge]) {
+final class Graph private[rdf] (private[rdf] val underlying: G[Node, LkDiEdge]) {
 
   /**
     * @return the triples of this graph

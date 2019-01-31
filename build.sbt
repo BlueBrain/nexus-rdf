@@ -25,26 +25,28 @@ scalafmt: {
  */
 
 // Dependency versions
-val akkaHttpVersion   = "10.1.5"
-val akkaStreamVersion = "2.5.20"
-val catsVersion       = "1.5.0"
-val circeVersion      = "0.11.1"
-val parboiledVersion  = "2.1.5"
-val jenaVersion       = "3.10.0"
-val scalaGraphVersion = "1.12.5"
-val scalaTestVersion  = "3.0.5"
+val akkaHttpVersion      = "10.1.5"
+val akkaStreamVersion    = "2.5.20"
+val catsVersion          = "1.5.0"
+val circeVersion         = "0.11.1"
+val parboiledVersion     = "2.1.5"
+val jenaVersion          = "3.10.0"
+val scalaGraphVersion    = "1.12.5"
+val scalaGraphDotVersion = "1.12.1"
+val scalaTestVersion     = "3.0.5"
 
 // Dependency modules
-lazy val akkaHttpCore = "com.typesafe.akka" %% "akka-http-core" % akkaHttpVersion
-lazy val akkaStream   = "com.typesafe.akka" %% "akka-stream"    % akkaStreamVersion
-lazy val catsCore     = "org.typelevel"     %% "cats-core"      % catsVersion
-lazy val circeCore    = "io.circe"          %% "circe-core"     % circeVersion
-lazy val circeParser  = "io.circe"          %% "circe-parser"   % circeVersion
-lazy val jenaCore     = "org.apache.jena"   % "jena-core"       % jenaVersion
-lazy val jenaArq      = "org.apache.jena"   % "jena-arq"        % jenaVersion
-lazy val parboiled2   = "org.parboiled"     %% "parboiled"      % parboiledVersion
-lazy val scalaGraph   = "org.scala-graph"   %% "graph-core"     % scalaGraphVersion
-lazy val scalaTest    = "org.scalatest"     %% "scalatest"      % scalaTestVersion
+lazy val akkaHttpCore  = "com.typesafe.akka" %% "akka-http-core" % akkaHttpVersion
+lazy val akkaStream    = "com.typesafe.akka" %% "akka-stream"    % akkaStreamVersion
+lazy val catsCore      = "org.typelevel"     %% "cats-core"      % catsVersion
+lazy val circeCore     = "io.circe"          %% "circe-core"     % circeVersion
+lazy val circeParser   = "io.circe"          %% "circe-parser"   % circeVersion
+lazy val jenaCore      = "org.apache.jena"   % "jena-core"       % jenaVersion
+lazy val jenaArq       = "org.apache.jena"   % "jena-arq"        % jenaVersion
+lazy val parboiled2    = "org.parboiled"     %% "parboiled"      % parboiledVersion
+lazy val scalaGraph    = "org.scala-graph"   %% "graph-core"     % scalaGraphVersion
+lazy val scalaGraphDot = "org.scala-graph"   %% "graph-dot"      % scalaGraphDotVersion
+lazy val scalaTest     = "org.scalatest"     %% "scalatest"      % scalaTestVersion
 
 lazy val core = project
   .in(file("modules/core"))
@@ -61,6 +63,15 @@ lazy val circe = project
     name                := "rdf-circe",
     moduleName          := "rdf-circe",
     libraryDependencies ++= Seq(circeCore, circeParser, scalaTest % Test)
+  )
+
+lazy val dot = project
+  .in(file("modules/dot"))
+  .dependsOn(core, circe % "compile->compile;test->test")
+  .settings(
+    name                := "rdf-dot",
+    moduleName          := "rdf-dot",
+    libraryDependencies ++= Seq(scalaGraphDot, scalaTest % Test)
   )
 
 lazy val jena = project
@@ -97,7 +108,7 @@ lazy val root = project
     name       := "rdf",
     moduleName := "rdf"
   )
-  .aggregate(core, circe, jena, akka, nexus)
+  .aggregate(core, circe, jena, akka, dot, nexus)
 
 lazy val bench = project
   .in(file("bench"))

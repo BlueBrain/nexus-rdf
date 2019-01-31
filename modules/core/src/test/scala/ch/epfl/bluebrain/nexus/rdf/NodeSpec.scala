@@ -84,9 +84,9 @@ class NodeSpec extends WordSpecLike with Matchers with EitherValues with Inspect
     "show" in {
       val cases = List[(Node, String)](
         (Node.blank("123").right.value, "_:123"),
-        (Node.iri("https://a.b").right.value, "https://a.b"),
-        (Node.iri("urn:ab:$").right.value, "urn:ab:$"),
-        (Node.iri("urn:ab:£").right.value, "urn:ab:%C2%A3"),
+        (Node.iri("https://a.b").right.value, "<https://a.b>"),
+        (Node.iri("urn:ab:$").right.value, "<urn:ab:$>"),
+        (Node.iri("urn:ab:£").right.value, "<urn:ab:%C2%A3>"),
         (Node.literal(2), """"2"^^<http://www.w3.org/2001/XMLSchema#integer>"""),
         (2, """"2"^^<http://www.w3.org/2001/XMLSchema#integer>"""),
         (2L, """"2"^^<http://www.w3.org/2001/XMLSchema#long>"""),
@@ -106,6 +106,31 @@ class NodeSpec extends WordSpecLike with Matchers with EitherValues with Inspect
           node.show shouldEqual str
       }
     }
+
+    "to String" in {
+      val cases = List[(Node, String)](
+        (Node.blank("123").right.value, "_:123"),
+        (Node.iri("https://a.b").right.value, "https://a.b"),
+        (Node.iri("urn:ab:$").right.value, "urn:ab:$"),
+        (Node.iri("urn:ab:£").right.value, "urn:ab:%C2%A3"),
+        (Node.literal(2), "2"),
+        (2, "2"),
+        (2L, "2"),
+        (Node.literal(2.toLong), "2"),
+        (Node.literal(2.2), "2.2"),
+        (2.2, "2.2"),
+        (Node.literal(2.2f), "2.2"),
+        (2.2f, "2.2"),
+        (Node.literal(true), "true"),
+        (Node.literal("a"), "a"),
+        (Node.literal("a", LanguageTag("en").right.value), "a")
+      )
+      forAll(cases) {
+        case (node: Node, str) =>
+          node.toString shouldEqual str
+      }
+    }
+
     "eq" in {
       val cases = List[(Either[String, Node], Either[String, Node])](
         (Node.blank("123"), Node.blank("123")),
@@ -124,13 +149,24 @@ class NodeSpec extends WordSpecLike with Matchers with EitherValues with Inspect
     "show" in {
       val cases = List[(IriOrBNode, String)](
         (Node.blank("123").right.value, "_:123"),
-        (Node.iri("https://a.b").right.value, "https://a.b")
+        (Node.iri("https://a.b").right.value, "<https://a.b>")
       )
       forAll(cases) {
         case (node: Node, str) =>
           node.show shouldEqual str
       }
     }
+    "to String" in {
+      val cases = List[(IriOrBNode, String)](
+        (Node.blank("123").right.value, "_:123"),
+        (Node.iri("https://a.b").right.value, "https://a.b")
+      )
+      forAll(cases) {
+        case (node: Node, str) =>
+          node.toString shouldEqual str
+      }
+    }
+
     "eq" in {
       val cases = List[(Either[String, IriOrBNode], Either[String, IriOrBNode])](
         (Node.blank("123"), Node.blank("123")),
