@@ -3,6 +3,7 @@ package ch.epfl.bluebrain.nexus.rdf
 import java.util.UUID
 
 import cats.syntax.either._
+import cats.syntax.show._
 import cats.{Eq, Show}
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.Node.Literal._
@@ -192,6 +193,7 @@ object Node {
     override def isIri: Boolean         = false
     override def asBlank: Option[BNode] = Some(this)
     override def asIri: Option[IriNode] = None
+    override def toString: String       = s"_:$id"
   }
 
   object BNode {
@@ -218,7 +220,7 @@ object Node {
         .leftMap(_.format(id, formatter))
     }
 
-    final implicit val bnodeShow: Show[BNode] = Show.show(n => s"_:${n.id}")
+    final implicit val bnodeShow: Show[BNode] = Show.show(_.toString)
     final implicit val bnodeEq: Eq[BNode]     = Eq.fromUniversalEquals
 
     //noinspection TypeAnnotation
@@ -239,11 +241,13 @@ object Node {
     override def isIri: Boolean         = true
     override def asBlank: Option[BNode] = None
     override def asIri: Option[IriNode] = Some(this)
+    override def toString: String = value.show
   }
 
   object IriNode {
     final implicit def iriNodeShow(implicit is: Show[AbsoluteIri]): Show[IriNode] =
-      Show.show(i => is.show(i.value))
+      Show.show(i => s"<${is.show(i.value)}>"
+      )
 
     final implicit val iriNodeEq: Eq[IriNode] = Eq.fromUniversalEquals
   }
@@ -266,6 +270,7 @@ object Node {
     override def asBlank: Option[BNode]     = None
     override def asIri: Option[IriNode]     = None
     override def asLiteral: Option[Literal] = Some(this)
+    override def toString: String = lexicalForm
 
     /**
       * @return true if the value is numeric, false otherwise
