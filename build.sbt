@@ -27,7 +27,7 @@ scalafmt: {
 // Dependency versions
 val akkaHttpVersion      = "10.1.5"
 val akkaStreamVersion    = "2.5.20"
-val catsVersion          = "1.5.0"
+val catsVersion          = "1.6.0"
 val circeVersion         = "0.11.1"
 val parboiledVersion     = "2.1.5"
 val jenaVersion          = "3.10.0"
@@ -48,88 +48,34 @@ lazy val scalaGraph    = "org.scala-graph"   %% "graph-core"     % scalaGraphVer
 lazy val scalaGraphDot = "org.scala-graph"   %% "graph-dot"      % scalaGraphDotVersion
 lazy val scalaTest     = "org.scalatest"     %% "scalatest"      % scalaTestVersion
 
-lazy val core = project
-  .in(file("modules/core"))
-  .settings(
-    name                := "rdf-core",
-    moduleName          := "rdf-core",
-    libraryDependencies ++= Seq(catsCore, parboiled2, scalaGraph, scalaTest % Test)
-  )
-
-lazy val circe = project
-  .in(file("modules/circe"))
-  .dependsOn(jena)
-  .settings(
-    name                := "rdf-circe",
-    moduleName          := "rdf-circe",
-    libraryDependencies ++= Seq(circeCore, circeParser, scalaTest % Test)
-  )
-
-lazy val dot = project
-  .in(file("modules/dot"))
-  .dependsOn(core, circe % "compile->compile;test->test")
-  .settings(
-    name                := "rdf-dot",
-    moduleName          := "rdf-dot",
-    libraryDependencies ++= Seq(scalaGraphDot, scalaTest % Test)
-  )
-
-lazy val jena = project
-  .in(file("modules/jena"))
-  .dependsOn(core)
-  .settings(
-    name                := "rdf-jena",
-    moduleName          := "rdf-jena",
-    libraryDependencies ++= Seq(jenaCore, jenaArq, scalaTest % Test)
-  )
-
-lazy val akka = project
-  .in(file("modules/akka"))
-  .dependsOn(core)
-  .settings(
-    name                := "rdf-akka",
-    moduleName          := "rdf-akka",
-    libraryDependencies ++= Seq(akkaHttpCore, akkaStream, scalaTest % Test)
-  )
-
-lazy val nexus = project
-  .in(file("modules/nexus"))
-  .dependsOn(circe)
-  .settings(
-    name                := "rdf-nexus",
-    moduleName          := "rdf-nexus",
-    libraryDependencies ++= Seq(scalaTest % Test)
-  )
-
 lazy val root = project
   .in(file("."))
-  .settings(noPublish)
+  .enablePlugins(JmhPlugin)
   .settings(
     name       := "rdf",
-    moduleName := "rdf"
+    moduleName := "rdf",
+    libraryDependencies ++= Seq(
+      catsCore,
+      circeCore,
+      circeParser,
+      jenaCore,
+      jenaArq,
+      parboiled2,
+      scalaGraph,
+      scalaGraphDot,
+      akkaHttpCore % Test,
+      scalaTest    % Test
+    ),
+    sourceDirectory in Jmh     := (sourceDirectory in Test).value,
+    classDirectory in Jmh      := (classDirectory in Test).value,
+    dependencyClasspath in Jmh := (dependencyClasspath in Test).value,
+    compile in Jmh             := (compile in Jmh).dependsOn(compile in Test).value,
+    run in Jmh                 := (run in Jmh).dependsOn(Keys.compile in Jmh).evaluated
   )
-  .aggregate(core, circe, jena, akka, dot, nexus)
-
-lazy val bench = project
-  .in(file("bench"))
-  .enablePlugins(JmhPlugin)
-  .settings(noPublish)
-  .settings(
-    name                := "bench",
-    moduleName          := "bench",
-    libraryDependencies ++= Seq(scalaTest % Test)
-  )
-  .dependsOn(core, jena, circe, akka, nexus)
 
 /* ********************************************************
  ******************** Grouped Settings ********************
  **********************************************************/
-
-lazy val noPublish = Seq(
-  publishLocal    := {},
-  publish         := {},
-  publishArtifact := false,
-)
 
 inThisBuild(
   List(
