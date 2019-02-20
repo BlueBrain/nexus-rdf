@@ -1,36 +1,23 @@
 package ch.epfl.bluebrain.nexus.rdf.syntax
 
-import ch.epfl.bluebrain.nexus.rdf.encoder.GraphEncoder
-import ch.epfl.bluebrain.nexus.rdf.encoder.GraphEncoder.GraphResult
-import ch.epfl.bluebrain.nexus.rdf.syntax.circe._
-import io.circe._
+import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
+import ch.epfl.bluebrain.nexus.rdf.Node.IriOrBNode
+import ch.epfl.bluebrain.nexus.rdf.encoder.GraphEncoder.GraphEncoderResult
+import ch.epfl.bluebrain.nexus.rdf.encoder.{GraphEncoder, PrimaryNode}
 
 trait GraphEncodingSyntax {
 
-  implicit final def circeEncoderSyntax[A](value: A): CirceOpsEncoding[A] = new CirceOpsEncoding(value)
+  implicit final def graphEncodingSyntax[A](value: A): GraphOpsEncoding[A] = new GraphOpsEncoding(value)
 }
 
-final class CirceOpsEncoding[A](private val value: A) extends AnyVal {
+final class GraphOpsEncoding[A](private val value: A) extends AnyVal {
 
-  /**
-    * Convert [[A]] into JSON-LD representation using the implicitly available [[GraphEncoder]]
-    * and the provided context. Beware, that currently IRI contexts are not resolved and will be ignored.
-    *
-    * @param context context to use when creating JSON-LD representation
-    * @return [[Json]] containing JSON-LD representation
-    */
-  def asJson(context: Json)(implicit enc: GraphEncoder[A]): Json = {
-    val GraphResult(subject, graph) = enc(value)
-    graph.asJson(context, subject).getOrElse(graph.asJson)
-  }
+  def asGraph(primaryNode: IriOrBNode)(implicit enc: GraphEncoder[A]): GraphEncoderResult =
+    enc(primaryNode, value)
 
-  /**
-    * Convert [[A]] into an expanded JSON-LD representation using the implicitly available [[GraphEncoder]].
-    *
-    * @return [[Json]] containing JSON-LD representation
-    */
-  def asExpandedJson(implicit enc: GraphEncoder[A]): Json = {
-    val GraphResult(subject, graph) = enc(value)
-    graph.asExpandedJson(subject).getOrElse(graph.asJson)
-  }
+  def asGraph(id: AbsoluteIri)(implicit enc: GraphEncoder[A]): GraphEncoderResult =
+    enc(id, value)
+
+  def asGraph(implicit enc: GraphEncoder[A], P: PrimaryNode[A]): GraphEncoderResult =
+    enc(value)
 }

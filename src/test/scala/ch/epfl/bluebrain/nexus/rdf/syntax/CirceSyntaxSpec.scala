@@ -1,20 +1,16 @@
 package ch.epfl.bluebrain.nexus.rdf.syntax
 
-import ch.epfl.bluebrain.nexus.rdf.Graph._
+import ch.epfl.bluebrain.nexus.rdf.GraphSpec.Item
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
-import ch.epfl.bluebrain.nexus.rdf.Node.{IriNode, IriOrBNode, Literal}
+import ch.epfl.bluebrain.nexus.rdf.Node.{blank, IriOrBNode, Literal}
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
-import ch.epfl.bluebrain.nexus.rdf.circe.JenaModel
-import ch.epfl.bluebrain.nexus.rdf.circe.JenaModel.JenaModelErr.InvalidJsonLD
-import ch.epfl.bluebrain.nexus.rdf.encoder.GraphEncoder
+import ch.epfl.bluebrain.nexus.rdf.encoder.GraphEncoder.SubjectGraph
+import ch.epfl.bluebrain.nexus.rdf.encoder.{GraphEncoder, PrimaryNode}
+import ch.epfl.bluebrain.nexus.rdf.instances._
+import ch.epfl.bluebrain.nexus.rdf.jena.JenaModel
+import ch.epfl.bluebrain.nexus.rdf.jena.JenaModel.JenaModelErr.InvalidJsonLD
 import ch.epfl.bluebrain.nexus.rdf.syntax.CirceSyntaxSpec._
-import ch.epfl.bluebrain.nexus.rdf.syntax.circe._
-import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
-import ch.epfl.bluebrain.nexus.rdf.syntax.circe.encoding._
-import ch.epfl.bluebrain.nexus.rdf.syntax.jena._
-import ch.epfl.bluebrain.nexus.rdf.syntax.node._
-import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
-import ch.epfl.bluebrain.nexus.rdf.{Graph, Iri, Node}
+import ch.epfl.bluebrain.nexus.rdf.{Graph, Iri, Node, Resources}
 import io.circe.Json
 import io.circe.parser._
 import org.apache.jena.graph.NodeFactory
@@ -24,24 +20,32 @@ import org.scalatest._
 
 import scala.collection.JavaConverters._
 
-class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with OptionValues with Inspectors {
+class CirceSyntaxSpec
+    extends WordSpecLike
+    with Matchers
+    with TryValues
+    with OptionValues
+    with Inspectors
+    with Resources {
 
   "CirceSyntax" should {
 
-    implicit val enc: GraphEncoder[Item] = GraphEncoder { e =>
-      e.bNode -> Graph((e.bNode, predicate.description, e.description), (e.bNode, predicate.step, e.step))
+    implicit val enc: GraphEncoder[Item] = GraphEncoder[Item] { (id, e) =>
+      Graph((id, predicate.description, e.description), (id, predicate.step, e.step))
     }
 
-    implicit val encExample = GraphEncoder[Example] { example =>
-      IriNode(example.id) -> Graph(
+    implicit val primaryNodeItem: PrimaryNode[Item] = _.bNode
+    implicit val encExample = GraphEncoder[Example] { (id, example) =>
+      Graph(
         Set[Graph.Triple](
-          (IriNode(example.id), url"http://www.w3.org/1999/02/22-rdf-syntax-ns#type", example.tpe),
-          (IriNode(example.id), url"http://schema.org/name", example.name),
-          (IriNode(example.id),
-           url"http://schema.org/birthDate",
-           Literal(example.birthDate, url"http://www.w3.org/2001/XMLSchema#dateTime".value))
+          (id, rdf.tpe, example.tpe),
+          (id, url"http://schema.org/name", example.name),
+          (id, url"http://schema.org/birthDate", Literal(example.birthDate, xsd.dateTime.value))
         ))
     }
+
+    implicit val primaryNodeExample: PrimaryNode[Example] = _.id
+
     // format: off
     val triples = Set[Graph.Triple](
       (url"http://nexus.example.com/john-doe", url"http://schema.org/name", "John Doe"),
@@ -51,25 +55,25 @@ class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
     // format: on
 
     "convert valid JSON-LD into Graph" in {
-      jsonContentOf("/simple.json").asGraph.right.value.triples shouldEqual triples
+      jsonContentOf("/simple.json").asGraph(blank).right.value.graph.triples shouldEqual triples
     }
 
-    "convert Graph to Json-LD without context" in {
+    "convert Graph to Json-LD with context" in {
 
       // format: off
-      val graph = Graph(triples)
+      val graph = SubjectGraph(url"http://nexus.example.com/john-doe", Graph(triples))
       // format: on
-      val json = graph.asJson.asObject.value
+      val json = graph.as[Json].right.value.asObject.value
       json("@id").value.asString.value shouldEqual "http://nexus.example.com/john-doe"
-      json("birthDate").value.asString.value shouldEqual "1999-04-09T20:00Z"
-      json("name").value.asString.value shouldEqual "John Doe"
+      json("http://schema.org/birthDate").value.asString.value shouldEqual "1999-04-09T20:00Z"
+      json("http://schema.org/name").value.asString.value shouldEqual "John Doe"
     }
 
     "convert Graph to Json-LD ignoring the IRI context" in {
-      val graph   = Graph(triples)
+      val graph   = SubjectGraph(url"http://nexus.example.com/john-doe", Graph(triples))
       val context = parse("{\"@context\": \"http://schema.org/\"}").right.value
 
-      graph.asJson(context, url"http://nexus.example.com/john-doe").success.value shouldEqual Json.obj(
+      graph.as[Json](context).right.value shouldEqual Json.obj(
         "@context"                    -> Json.obj(),
         "@id"                         -> Json.fromString("http://nexus.example.com/john-doe"),
         "@type"                       -> Json.fromString("http://schema.org/Person"),
@@ -80,23 +84,22 @@ class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
 
     "convert Graph to Json-LD ignoring the IRI context in an array" in {
       val json  = jsonContentOf("/context/simple-iri-context.json")
-      val id    = url"http://nexus.example.com/john-doe"
       val ctx   = context(json)
-      val graph = json.asGraph.right.value
-      graph.asJson(ctx, id).success.value deepMerge ctx shouldEqual json
+      val graph = SubjectGraph(url"http://nexus.example.com/john-doe", Graph(triples))
+      graph.as[Json](ctx).right.value deepMerge ctx shouldEqual json
     }
 
     "convert Graph with nested relationships to Json-LD  with context" in {
       val json = jsonContentOf("/embed.json")
       val id   = url"http://nexus.example.com/john-doe"
-      json.asGraph.right.value.asJson(context(json), id).success.value shouldEqual json
+      json.asGraph(id).right.value.as[Json](context(json)).right.value shouldEqual json
     }
 
     "convert Graph to Json-LD from a root node that is a blank node" in {
       val json = jsonContentOf("/embed-no-id.json")
-      val g    = json.asGraph.right.value
-      val id   = g.subjects(rdf.tpe, url"http://schema.org/Person").headOption.value
-      g.asJson(context(json), id).success.value shouldEqual json
+      val g    = json.asGraph(blank).right.value
+      val id   = g.graph.subjects(rdf.tpe, url"http://schema.org/Person").headOption.value
+      g.graph.as[Json](id, context(json)).right.value shouldEqual json
     }
 
     "convert Graph with sorted list" in {
@@ -104,8 +107,8 @@ class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
       val json = jsonContentOf("/list.json")
 
       val id: IriOrBNode = url"http://example.com/id"
-      val graph          = Graph().add(id, url"http://example.com/items", list)
-      graph.asJson(context(json), id).success.value shouldEqual json
+      val graph          = Graph().add(id, url"http://example.com/items", list).right.value
+      SubjectGraph(id, graph).as[Json](context(json)).right.value shouldEqual json
     }
 
     "convert to compacted Json from entity with GraphEncoder" in {
@@ -116,7 +119,7 @@ class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
                             url"http://schema.org/Person".value,
                             "John Doe",
                             "1999-04-09T20:00Z")
-      example.asJson(ctx).deepMerge(emptyCtx) shouldEqual json.deepMerge(emptyCtx)
+      example.as[Json](ctx).right.value.deepMerge(emptyCtx) shouldEqual json.deepMerge(emptyCtx)
     }
 
     "convert to expanded Json from entity with GraphEncoder" in {
@@ -124,7 +127,7 @@ class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
                             url"http://schema.org/Person".value,
                             "John Doe",
                             "1999-04-09T20:00Z")
-      example.asExpandedJson shouldEqual Json.obj(
+      example.as[Json].right.value shouldEqual Json.obj(
         "@id"                         -> Json.fromString(example.id.asString),
         "@type"                       -> Json.fromString(example.tpe.asString),
         "http://schema.org/birthDate" -> Json.fromString(example.birthDate),
@@ -175,7 +178,7 @@ class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
 
     "convert model to graph and reverse" in {
       val json            = jsonContentOf("/simple-model2.json")
-      val result: Model   = JenaModel(json).right.value.asGraph.right.value.asJenaModel
+      val result: Model   = JenaModel(json).right.value.asGraph(blank).right.value.as[Model].right.value
       val expected: Model = JenaModel(json).right.value
       result.listStatements().asScala.toList should contain theSameElementsAs expected.listStatements().asScala.toList
     }
@@ -187,10 +190,10 @@ class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
 
     "convert json with @base to graph and back" in {
       val json     = jsonContentOf("/simple-with-base.json")
-      val graph    = json.asGraph.right.value
       val id       = url"https://example.nexus.com/nexus/v1/resources/org/project/_/Movie_Test"
+      val graph    = json.asGraph(id).right.value
       val expected = jsonContentOf("/simple-with-base-output.json")
-      graph.asJson(Json.obj("@context" -> json.contextValue), id).success.value shouldEqual expected
+      graph.as[Json](Json.obj("@context" -> json.contextValue)).right.value shouldEqual expected
     }
 
     "convert to graph and back to expanded Json-LD" in {
@@ -203,8 +206,8 @@ class CirceSyntaxSpec extends WordSpecLike with Matchers with TryValues with Opt
       // format: on
       forAll(jsons) {
         case (json, expected, id) =>
-          val graph = json.asGraph.right.value
-          graph.asExpandedJson(id).success.value shouldEqual expected
+          val graph = json.asGraph(id).right.value
+          graph.as[Json].right.value shouldEqual expected
       }
     }
   }

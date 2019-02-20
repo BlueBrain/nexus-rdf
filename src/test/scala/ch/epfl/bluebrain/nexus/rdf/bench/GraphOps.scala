@@ -1,11 +1,10 @@
 package ch.epfl.bluebrain.nexus.rdf.bench
 
-import ch.epfl.bluebrain.nexus.rdf.Graph
-import ch.epfl.bluebrain.nexus.rdf.Graph._
+import ch.epfl.bluebrain.nexus.rdf.{Graph, Resources}
 import ch.epfl.bluebrain.nexus.rdf.Node.IriNode
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
-import ch.epfl.bluebrain.nexus.rdf.syntax.circe._
-import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
+import ch.epfl.bluebrain.nexus.rdf.instances._
+import ch.epfl.bluebrain.nexus.rdf.syntax._
 import org.openjdk.jmh.annotations.{Benchmark, Scope, State}
 
 //noinspection TypeAnnotation
@@ -20,11 +19,11 @@ import org.openjdk.jmh.annotations.{Benchmark, Scope, State}
   * Parsing.parseJenaIri  thrpt   10  1178,370 ± 289,768  ops/s
   */
 @State(Scope.Thread)
-class GraphOps {
+class GraphOps extends Resources {
 
   val json       = jsonContentOf("/schema.json")
-  val graph      = json.asGraph.right.get
   val s: IriNode = url"http://example.com/id"
+  val graph      = json.asGraph(s).right.get.graph
 
   @Benchmark
   def parseRemoveOriginal(): Unit = {

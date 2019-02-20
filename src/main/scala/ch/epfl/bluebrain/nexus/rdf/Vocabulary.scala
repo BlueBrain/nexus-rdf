@@ -2,7 +2,7 @@ package ch.epfl.bluebrain.nexus.rdf
 
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.Node.IriNode
-import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
+import ch.epfl.bluebrain.nexus.rdf.syntax._
 
 // $COVERAGE-OFF$
 object Vocabulary {

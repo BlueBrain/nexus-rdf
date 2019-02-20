@@ -6,9 +6,9 @@ import ch.epfl.bluebrain.nexus.rdf.Graph.{Triple, _}
 import ch.epfl.bluebrain.nexus.rdf.GraphSpec.{predicate, Item}
 import ch.epfl.bluebrain.nexus.rdf.Node.{IriNode, IriOrBNode, Literal}
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
-import ch.epfl.bluebrain.nexus.rdf.encoder.GraphEncoder
-import ch.epfl.bluebrain.nexus.rdf.syntax.node._
-import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
+import ch.epfl.bluebrain.nexus.rdf.encoder.{GraphEncoder, PrimaryNode}
+import ch.epfl.bluebrain.nexus.rdf.syntax._
+import ch.epfl.bluebrain.nexus.rdf.instances._
 import org.scalatest.EitherValues._
 import org.scalatest.{Matchers, OptionValues, WordSpecLike}
 
@@ -43,9 +43,11 @@ class GraphSpec extends WordSpecLike with Matchers with OptionValues {
 
     val g = Graph(triples)
 
-    implicit val enc: GraphEncoder[Item] = GraphEncoder { e =>
-      e.bNode -> Graph((e.bNode, predicate.description, e.description), (e.bNode, predicate.step, e.step))
+    implicit val enc: GraphEncoder[Item] = GraphEncoder[Item] { (id, e) =>
+      Graph((id, predicate.description, e.description), (id, predicate.step, e.step))
     }
+
+    implicit val primaryNode: PrimaryNode[Item] = _.bNode
 
     "return the same collection of triples" in {
       g.triples shouldEqual triples
@@ -250,9 +252,9 @@ class GraphSpec extends WordSpecLike with Matchers with OptionValues {
 
     "add an object to the graph" in {
       val item     = Item(1, "description elem 1")
-      val expected = Set[(IriOrBNode, IriNode, Node)]((b"1", p.string, "asd"), (a, hasa, item.bNode)) ++ enc(item).graph.triples
+      val expected = Set[(IriOrBNode, IriNode, Node)]((b"1", p.string, "asd"), (a, hasa, item.bNode)) ++ enc(item).right.value.graph.triples
 
-      Graph((b"1", p.string, "asd"): Triple).addObject(a, hasa, item).triples shouldEqual expected
+      Graph((b"1", p.string, "asd"): Triple).addObject(a, hasa, item).right.value.triples shouldEqual expected
     }
 
     "add an ordered list to the graph" in {
@@ -267,13 +269,13 @@ class GraphSpec extends WordSpecLike with Matchers with OptionValues {
       val item3 = Item(3, "description elem 3")
       val list  = List(item1, item2, item3)
 
-      val graph = Graph((b"1", p.string, "asd"): Triple).add(a, hasa, list)
+      val graph = Graph((b"1", p.string, "asd"): Triple).add(a, hasa, list).right.value
 
       // Fetch the linked list subjects from each of the item bNodes
       val bnodeIds = list.map(item => item.bNode -> subjectOf(item.bNode, graph)).toMap
 
       // Generating graph from item data
-      val itemsGraph = list.foldLeft(Graph())((acc, c) => acc ++ enc(c).graph)
+      val itemsGraph = list.foldLeft(Graph())((acc, c) => acc ++ enc(c).right.value.graph)
 
       val expected = itemsGraph.triples ++ Set[(IriOrBNode, IriNode, Node)](
         (b"1", p.string, "asd"),

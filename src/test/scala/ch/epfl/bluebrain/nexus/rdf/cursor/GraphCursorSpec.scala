@@ -2,20 +2,19 @@ package ch.epfl.bluebrain.nexus.rdf.cursor
 
 import java.util.UUID
 
-import ch.epfl.bluebrain.nexus.rdf.Graph._
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.Node.{literal, IriNode, IriOrBNode}
 import ch.epfl.bluebrain.nexus.rdf.cursor.CursorOp._
 import ch.epfl.bluebrain.nexus.rdf.cursor.GraphCursor.{FailedCursor, TopCursor}
 import ch.epfl.bluebrain.nexus.rdf.cursor.GraphCursorSpec._
 import ch.epfl.bluebrain.nexus.rdf.encoder.NodeEncoderError.{IllegalConversion, IllegalType, NoElementToEncode}
-import ch.epfl.bluebrain.nexus.rdf.syntax.node._
-import ch.epfl.bluebrain.nexus.rdf.syntax.node.encoder._
-import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
+import ch.epfl.bluebrain.nexus.rdf.instances._
+import ch.epfl.bluebrain.nexus.rdf.syntax._
 import ch.epfl.bluebrain.nexus.rdf.{Graph, Node}
 import org.scalatest.{EitherValues, Matchers, OptionValues, WordSpecLike}
 
 class GraphCursorSpec extends WordSpecLike with Matchers with OptionValues with EitherValues {
+
   "A GraphCursor" should {
 
     /**

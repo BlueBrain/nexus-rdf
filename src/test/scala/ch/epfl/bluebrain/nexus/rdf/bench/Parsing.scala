@@ -1,8 +1,8 @@
 package ch.epfl.bluebrain.nexus.rdf.bench
 
 import akka.http.scaladsl.model.Uri
-import ch.epfl.bluebrain.nexus.rdf.IriParser
-import ch.epfl.bluebrain.nexus.rdf.circe.JenaModel
+import ch.epfl.bluebrain.nexus.rdf.{IriParser, Resources}
+import ch.epfl.bluebrain.nexus.rdf.jena.JenaModel
 import org.apache.jena.iri.IRIFactory
 import org.openjdk.jmh.annotations.{Benchmark, Scope, State}
 
@@ -19,7 +19,7 @@ import org.openjdk.jmh.annotations.{Benchmark, Scope, State}
   */
 //noinspection TypeAnnotation
 @State(Scope.Thread)
-class Parsing {
+class Parsing extends Resources {
 
   val iris = {
     import scala.collection.JavaConverters._

@@ -1,9 +1,9 @@
 package ch.epfl.bluebrain.nexus.rdf.cursor
 
-import ch.epfl.bluebrain.nexus.rdf.Graph._
 import ch.epfl.bluebrain.nexus.rdf.Node.{IriNode, IriOrBNode}
 import ch.epfl.bluebrain.nexus.rdf.cursor.CursorOp._
 import ch.epfl.bluebrain.nexus.rdf.cursor.GraphCursor.SCursor
+import ch.epfl.bluebrain.nexus.rdf.instances._
 import ch.epfl.bluebrain.nexus.rdf.{Graph, Node}
 
 import scala.annotation.tailrec

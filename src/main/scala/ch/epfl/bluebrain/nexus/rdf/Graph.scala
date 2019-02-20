@@ -5,7 +5,7 @@ import ch.epfl.bluebrain.nexus.rdf.Graph._
 import ch.epfl.bluebrain.nexus.rdf.Node.{blank, IriNode, IriOrBNode}
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
 import ch.epfl.bluebrain.nexus.rdf.cursor.GraphCursor
-import ch.epfl.bluebrain.nexus.rdf.encoder.GraphEncoder
+import ch.epfl.bluebrain.nexus.rdf.encoder.{GraphEncoder, GraphEncoderError, PrimaryNode}
 import scalax.collection.edge.LkDiEdge
 import scalax.collection.immutable.{Graph => G}
 
@@ -15,7 +15,7 @@ import scala.annotation.tailrec
   * An RDF Graph representation.
   */
 @SuppressWarnings(Array("IsInstanceOf"))
-final class Graph private[rdf] (private[rdf] val underlying: G[Node, LkDiEdge]) {
+final class Graph private[rdf] (private[rdf] val underlying: G[Node, LkDiEdge]) { self =>
 
   /**
     * @return the triples of this graph
@@ -105,10 +105,9 @@ final class Graph private[rdf] (private[rdf] val underlying: G[Node, LkDiEdge]) 
     * @param value the value to add
     * @return a new graph made up of all of the triples of this graph and the triple created from the arguments
     */
-  def addObject[A](s: IriOrBNode, p: IriNode, value: A)(implicit enc: GraphEncoder[A]): Graph = {
-    val elem = enc(value)
-    this + ((s, p, elem.subject)) ++ elem.graph
-  }
+  def addObject[A: PrimaryNode](s: IriOrBNode, p: IriNode, value: A)(
+      implicit enc: GraphEncoder[A]): Either[GraphEncoderError, Graph] =
+    enc(value).map(elem => self + ((s, p, elem.subject)) ++ elem.graph)
 
   /**
     * Adds the provided collection (sorted) to the subject ''s'' and predicate ''p'' to this graph.
@@ -119,24 +118,28 @@ final class Graph private[rdf] (private[rdf] val underlying: G[Node, LkDiEdge]) 
     * @param list the collection to add
     * @return a new graph made up of all of the triples of this graph and the triple created from the arguments
     */
-  def add[A](s: IriOrBNode, p: IriNode, list: List[A])(implicit enc: GraphEncoder[A]): Graph = {
+  def add[A: PrimaryNode](s: IriOrBNode, p: IriNode, list: List[A])(
+      implicit enc: GraphEncoder[A]): Either[GraphEncoderError, Graph] = {
 
     @tailrec
-    def inner(ss: IriOrBNode, rest: List[A], triples: Set[Triple]): Set[Triple] =
+    def inner(ss: IriOrBNode, rest: List[A], triples: Set[Triple]): Either[GraphEncoderError, Set[Triple]] =
       rest match {
-        case Nil => triples
+        case Nil => Right(triples)
         case h :: Nil =>
-          val elem = enc(h)
-          triples ++ Set[Triple]((ss, rdf.first, elem.subject), (ss, rdf.rest, rdf.nil)) ++ elem.graph.triples
+          enc(h).map(elem =>
+            triples ++ Set[Triple]((ss, rdf.first, elem.subject), (ss, rdf.rest, rdf.nil)) ++ elem.graph.triples)
         case h :: t =>
-          val elem        = enc(h)
-          val nextSubject = blank
-          val graph       = triples ++ Set[Triple]((ss, rdf.first, elem.subject), (ss, rdf.rest, nextSubject)) ++ elem.graph.triples
-          inner(nextSubject, t, graph)
+          enc(h) match {
+            case Left(err) => Left(err)
+            case Right(elem) =>
+              val nextSubject = blank
+              val graph       = triples ++ Set[Triple]((ss, rdf.first, elem.subject), (ss, rdf.rest, nextSubject)) ++ elem.graph.triples
+              inner(nextSubject, t, graph)
+          }
       }
 
     val listBNode = blank
-    this ++ Graph(inner(listBNode, list, Set[Triple]((s, p, listBNode))))
+    inner(listBNode, list, Set[Triple]((s, p, listBNode))).map(triples => self ++ Graph(triples))
   }
 
   /**
@@ -248,7 +251,7 @@ final class Graph private[rdf] (private[rdf] val underlying: G[Node, LkDiEdge]) 
     * @return an initial cursor from the provided ''node''
     */
   def cursor(node: IriOrBNode): GraphCursor =
-    GraphCursor(node, this)
+    GraphCursor(node, self)
 
   private def foldLeft[Z](z: Z)(f: (Z, (IriOrBNode, IriNode, Node)) => Z): Z =
     underlying.edges.foldLeft(z) {
@@ -301,8 +304,4 @@ object Graph {
         .mkString("\n"))
 
   final implicit val graphEq: Eq[Graph] = Eq.fromUniversalEquals
-
-  final implicit def sToEq(s: IriOrBNode): IriOrBNode => Boolean = _ == s
-  final implicit def oToEq(o: Node): Node => Boolean             = _ == o
-  final implicit def pToEq(p: IriNode): IriNode => Boolean       = _ == p
 }

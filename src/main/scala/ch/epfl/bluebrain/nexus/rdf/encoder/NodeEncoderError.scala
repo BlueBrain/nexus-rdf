@@ -3,7 +3,7 @@ package ch.epfl.bluebrain.nexus.rdf.encoder
 import ch.epfl.bluebrain.nexus.rdf.Node
 
 /**
-  * Enumeration type for encoding errors
+  * Enumeration type for node encoding errors
   */
 sealed abstract class NodeEncoderError(val message: String) extends Product with Serializable
 

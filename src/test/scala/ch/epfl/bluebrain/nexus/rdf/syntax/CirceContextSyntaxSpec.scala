@@ -1,14 +1,13 @@
 package ch.epfl.bluebrain.nexus.rdf.syntax
 
 import cats.syntax.show._
-import ch.epfl.bluebrain.nexus.rdf.Iri
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
-import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
+import ch.epfl.bluebrain.nexus.rdf.{Iri, Resources}
 import io.circe.Json
 import io.circe.parser.parse
 import org.scalatest.{EitherValues, Inspectors, Matchers, WordSpecLike}
 
-class CirceContextSyntaxSpec extends WordSpecLike with Matchers with Inspectors with EitherValues {
+class CirceContextSyntaxSpec extends WordSpecLike with Matchers with Inspectors with EitherValues with Resources {
 
   private val context: AbsoluteIri =
     Iri.absolute("https://bbp-nexus.epfl.ch/dev/v0/contexts/bbp/core/context/v0.1.0").right.value
