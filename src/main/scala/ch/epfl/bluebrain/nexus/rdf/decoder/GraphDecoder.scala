@@ -3,13 +3,14 @@ package ch.epfl.bluebrain.nexus.rdf.decoder
 import java.io.ByteArrayOutputStream
 import java.util.UUID
 
-import ch.epfl.bluebrain.nexus.rdf.{Dot, Node, RootedGraph}
+import cats.syntax.show._
 import ch.epfl.bluebrain.nexus.rdf.Node.{BNode, IriNode, IriOrBNode}
 import ch.epfl.bluebrain.nexus.rdf.decoder.GraphDecoder.GraphDecoderResult
 import ch.epfl.bluebrain.nexus.rdf.decoder.GraphDecoderError.{ConversionError, Unexpected}
 import ch.epfl.bluebrain.nexus.rdf.jena.JenaModel
 import ch.epfl.bluebrain.nexus.rdf.syntax.JsonLdSyntax
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
+import ch.epfl.bluebrain.nexus.rdf.{Dot, NTriples, Node, RootedGraph}
 import com.github.jsonldjava.core.JsonLdOptions
 import io.circe.parser.parse
 import io.circe.syntax._
@@ -133,4 +134,11 @@ object GraphDecoder extends JsonLdSyntax {
       Right(Dot(dot))
     }
   }
+
+  final implicit val ntriplesGraphDecoder: GraphDecoder[NTriples] = (graph, _) =>
+    Right(
+      NTriples(
+        graph.triples
+          .map { case (s, p, o) => s"${s.show} ${p.show} ${o.show} ." }
+          .mkString("\n")))
 }
