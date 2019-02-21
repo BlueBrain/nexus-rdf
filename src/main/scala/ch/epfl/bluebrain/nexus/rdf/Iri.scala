@@ -121,7 +121,7 @@ object Iri {
     absolute(string) orElse relative(string)
 
   @SuppressWarnings(Array("EitherGet"))
-  private[rdf] final def unsafe(string: String): Iri =
+  final def unsafe(string: String): Iri =
     apply(string).right.get
 
   /**

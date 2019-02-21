@@ -4,46 +4,45 @@ import ch.epfl.bluebrain.nexus.rdf.Node.{IriNode, IriOrBNode}
 import ch.epfl.bluebrain.nexus.rdf.decoder.GraphDecoder
 import ch.epfl.bluebrain.nexus.rdf.decoder.GraphDecoder.GraphDecoderResult
 import ch.epfl.bluebrain.nexus.rdf.encoder.{GraphEncoder, PrimaryNode}
-import ch.epfl.bluebrain.nexus.rdf.encoder.GraphEncoder.SubjectGraph
-import ch.epfl.bluebrain.nexus.rdf.{Graph, MarshallingError}
+import ch.epfl.bluebrain.nexus.rdf.{Graph, MarshallingError, RootedGraph}
 import io.circe.Json
 
-trait GraphDecodingSyntax {
+trait GraphDecoderSyntax {
 
-  implicit final def graphDecodingSyntax(value: Graph): GraphOpsDecoding =
-    new GraphOpsDecoding(value)
+  implicit final def graphDecoderSyntax(graph: Graph): GraphOpsDecoder =
+    new GraphOpsDecoder(graph)
 
-  implicit final def subjectGraphDecodingSyntax(value: SubjectGraph): SubjectGraphOpsDecoding =
-    new SubjectGraphOpsDecoding(value)
+  implicit final def subjectGraphDecoderSyntax(graph: RootedGraph): SubjectGraphOpsDecoder =
+    new SubjectGraphOpsDecoder(graph)
 
-  implicit final def subjectGraphDecodingSyntax(value: (IriNode, Graph)): SubjectGraphOpsDecoding = {
-    val (primaryNode, graph) = value
-    new SubjectGraphOpsDecoding(SubjectGraph(primaryNode, graph))
+  implicit final def subjectGraphDecoderSyntax(value: (IriNode, Graph)): SubjectGraphOpsDecoder = {
+    val (rootNode, graph) = value
+    new SubjectGraphOpsDecoder(RootedGraph(rootNode, graph))
   }
 
-  implicit final def valueDecodingThroughGraph[A: GraphEncoder](value: A): GraphOpsDecodingThoughGraph[A] =
-    new GraphOpsDecodingThoughGraph(value)
+  implicit final def valueDecoderThroughGraph[A: GraphEncoder](value: A): GraphOpsDecoderThoughGraph[A] =
+    new GraphOpsDecoderThoughGraph(value)
 }
 
-final class SubjectGraphOpsDecoding(private val value: SubjectGraph) extends AnyVal {
+final class SubjectGraphOpsDecoder(private val graph: RootedGraph) extends AnyVal {
 
   def as[A](context: Json)(implicit dec: GraphDecoder[A]): GraphDecoderResult[A] =
-    dec(value, context)
+    dec(graph, context)
 
   def as[A: GraphDecoder]: GraphDecoderResult[A] =
     as(Json.obj())
 }
 
-final class GraphOpsDecoding(private val value: Graph) extends AnyVal {
+final class GraphOpsDecoder(private val value: Graph) extends AnyVal {
 
   def as[A](id: IriOrBNode, context: Json)(implicit dec: GraphDecoder[A]): GraphDecoderResult[A] =
-    dec(SubjectGraph(id, value), context)
+    dec(RootedGraph(id, value), context)
 
   def as[A: GraphDecoder](id: IriOrBNode): GraphDecoderResult[A] =
     as(id, Json.obj())
 }
 
-final class GraphOpsDecodingThoughGraph[A](value: A)(implicit enc: GraphEncoder[A]) {
+final class GraphOpsDecoderThoughGraph[A](value: A)(implicit enc: GraphEncoder[A]) {
 
   def as[B](context: Json)(implicit dec: GraphDecoder[B], P: PrimaryNode[A]): Either[MarshallingError, B] =
     enc(value).flatMap(subjectGraph => dec(subjectGraph, context))

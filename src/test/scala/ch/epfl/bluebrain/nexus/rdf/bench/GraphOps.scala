@@ -23,7 +23,7 @@ class GraphOps extends Resources {
 
   val json       = jsonContentOf("/schema.json")
   val s: IriNode = url"http://example.com/id"
-  val graph      = json.asGraph(s).right.get.graph
+  val graph      = json.asGraph(s).right.get
 
   @Benchmark
   def parseRemoveOriginal(): Unit = {

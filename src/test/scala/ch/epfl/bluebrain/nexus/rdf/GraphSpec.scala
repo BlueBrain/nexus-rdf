@@ -47,7 +47,7 @@ class GraphSpec extends WordSpecLike with Matchers with OptionValues {
       Graph((id, predicate.description, e.description), (id, predicate.step, e.step))
     }
 
-    implicit val primaryNode: PrimaryNode[Item] = _.bNode
+    implicit val rootNode: PrimaryNode[Item] = _.bNode
 
     "return the same collection of triples" in {
       g.triples shouldEqual triples
@@ -252,7 +252,7 @@ class GraphSpec extends WordSpecLike with Matchers with OptionValues {
 
     "add an object to the graph" in {
       val item     = Item(1, "description elem 1")
-      val expected = Set[(IriOrBNode, IriNode, Node)]((b"1", p.string, "asd"), (a, hasa, item.bNode)) ++ enc(item).right.value.graph.triples
+      val expected = Set[(IriOrBNode, IriNode, Node)]((b"1", p.string, "asd"), (a, hasa, item.bNode)) ++ enc(item).right.value.triples
 
       Graph((b"1", p.string, "asd"): Triple).addObject(a, hasa, item).right.value.triples shouldEqual expected
     }
@@ -275,7 +275,7 @@ class GraphSpec extends WordSpecLike with Matchers with OptionValues {
       val bnodeIds = list.map(item => item.bNode -> subjectOf(item.bNode, graph)).toMap
 
       // Generating graph from item data
-      val itemsGraph = list.foldLeft(Graph())((acc, c) => acc ++ enc(c).right.value.graph)
+      val itemsGraph = list.foldLeft(Graph())((acc, c) => acc ++ enc(c).right.value)
 
       val expected = itemsGraph.triples ++ Set[(IriOrBNode, IriNode, Node)](
         (b"1", p.string, "asd"),

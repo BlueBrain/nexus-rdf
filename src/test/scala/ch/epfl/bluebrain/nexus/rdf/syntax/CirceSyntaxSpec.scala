@@ -4,13 +4,12 @@ import ch.epfl.bluebrain.nexus.rdf.GraphSpec.Item
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.Node.{blank, IriOrBNode, Literal}
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
-import ch.epfl.bluebrain.nexus.rdf.encoder.GraphEncoder.SubjectGraph
 import ch.epfl.bluebrain.nexus.rdf.encoder.{GraphEncoder, PrimaryNode}
 import ch.epfl.bluebrain.nexus.rdf.instances._
 import ch.epfl.bluebrain.nexus.rdf.jena.JenaModel
 import ch.epfl.bluebrain.nexus.rdf.jena.JenaModel.JenaModelErr.InvalidJsonLD
 import ch.epfl.bluebrain.nexus.rdf.syntax.CirceSyntaxSpec._
-import ch.epfl.bluebrain.nexus.rdf.{Graph, Iri, Node, Resources}
+import ch.epfl.bluebrain.nexus.rdf._
 import io.circe.Json
 import io.circe.parser._
 import org.apache.jena.graph.NodeFactory
@@ -34,7 +33,7 @@ class CirceSyntaxSpec
       Graph((id, predicate.description, e.description), (id, predicate.step, e.step))
     }
 
-    implicit val primaryNodeItem: PrimaryNode[Item] = _.bNode
+    implicit val rootNodeItem: PrimaryNode[Item] = _.bNode
     implicit val encExample = GraphEncoder[Example] { (id, example) =>
       Graph(
         Set[Graph.Triple](
@@ -44,7 +43,7 @@ class CirceSyntaxSpec
         ))
     }
 
-    implicit val primaryNodeExample: PrimaryNode[Example] = _.id
+    implicit val rootNodeExample: PrimaryNode[Example] = _.id
 
     // format: off
     val triples = Set[Graph.Triple](
@@ -55,13 +54,13 @@ class CirceSyntaxSpec
     // format: on
 
     "convert valid JSON-LD into Graph" in {
-      jsonContentOf("/simple.json").asGraph(blank).right.value.graph.triples shouldEqual triples
+      jsonContentOf("/simple.json").asGraph(blank).right.value.triples shouldEqual triples
     }
 
     "convert Graph to Json-LD with context" in {
 
       // format: off
-      val graph = SubjectGraph(url"http://nexus.example.com/john-doe", Graph(triples))
+      val graph = RootedGraph(url"http://nexus.example.com/john-doe", triples)
       // format: on
       val json = graph.as[Json].right.value.asObject.value
       json("@id").value.asString.value shouldEqual "http://nexus.example.com/john-doe"
@@ -70,7 +69,7 @@ class CirceSyntaxSpec
     }
 
     "convert Graph to Json-LD ignoring the IRI context" in {
-      val graph   = SubjectGraph(url"http://nexus.example.com/john-doe", Graph(triples))
+      val graph   = RootedGraph(url"http://nexus.example.com/john-doe", triples)
       val context = parse("{\"@context\": \"http://schema.org/\"}").right.value
 
       graph.as[Json](context).right.value shouldEqual Json.obj(
@@ -85,7 +84,7 @@ class CirceSyntaxSpec
     "convert Graph to Json-LD ignoring the IRI context in an array" in {
       val json  = jsonContentOf("/context/simple-iri-context.json")
       val ctx   = context(json)
-      val graph = SubjectGraph(url"http://nexus.example.com/john-doe", Graph(triples))
+      val graph = RootedGraph(url"http://nexus.example.com/john-doe", triples)
       graph.as[Json](ctx).right.value deepMerge ctx shouldEqual json
     }
 
@@ -97,9 +96,8 @@ class CirceSyntaxSpec
 
     "convert Graph to Json-LD from a root node that is a blank node" in {
       val json = jsonContentOf("/embed-no-id.json")
-      val g    = json.asGraph(blank).right.value
-      val id   = g.graph.subjects(rdf.tpe, url"http://schema.org/Person").headOption.value
-      g.graph.as[Json](id, context(json)).right.value shouldEqual json
+      val g    = json.asGraph(_.subjects(rdf.tpe, url"http://schema.org/Person").headOption).right.value
+      g.as[Json](context(json)).right.value shouldEqual json
     }
 
     "convert Graph with sorted list" in {
@@ -108,7 +106,7 @@ class CirceSyntaxSpec
 
       val id: IriOrBNode = url"http://example.com/id"
       val graph          = Graph().add(id, url"http://example.com/items", list).right.value
-      SubjectGraph(id, graph).as[Json](context(json)).right.value shouldEqual json
+      RootedGraph(id, graph).as[Json](context(json)).right.value shouldEqual json
     }
 
     "convert to compacted Json from entity with GraphEncoder" in {

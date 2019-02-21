@@ -1,9 +1,9 @@
 package ch.epfl.bluebrain.nexus.rdf.encoder
 
-import ch.epfl.bluebrain.nexus.rdf.Graph
+import ch.epfl.bluebrain.nexus.rdf.{Graph, RootedGraph}
 import ch.epfl.bluebrain.nexus.rdf.Graph.Triple
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
-import ch.epfl.bluebrain.nexus.rdf.Node.{IriNode, IriOrBNode}
+import ch.epfl.bluebrain.nexus.rdf.Node.{blank, IriNode, IriOrBNode}
 import ch.epfl.bluebrain.nexus.rdf.encoder.GraphEncoder.GraphEncoderResult
 import ch.epfl.bluebrain.nexus.rdf.encoder.GraphEncoderError._
 import ch.epfl.bluebrain.nexus.rdf.jena.JenaModel.JenaModelErr
@@ -19,20 +19,31 @@ import scala.collection.JavaConverters._
 trait GraphEncoder[A] {
 
   /**
-    * Attempts to transform a value of type ''A'' to a [[ch.epfl.bluebrain.nexus.rdf.encoder.GraphEncoder.SubjectGraph]].
+    * Attempts to transform a value of type ''A'' to a [[ch.epfl.bluebrain.nexus.rdf.RootedGraph]].
     *
-    * @param primaryNode the primary node of the graph
-    * @param value       the value to convert into a [[ch.epfl.bluebrain.nexus.rdf.encoder.GraphEncoder.SubjectGraph]]
+    * @param rootNode the primary node of the graph
+    * @param value       the value to convert into a [[ch.epfl.bluebrain.nexus.rdf.RootedGraph]]
     */
-  def apply(primaryNode: IriOrBNode, value: A): GraphEncoderResult
+  def apply(rootNode: IriOrBNode, value: A): GraphEncoderResult
 
   /**
-    * Attempts to transform a value of type ''A'' to a [[ch.epfl.bluebrain.nexus.rdf.encoder.GraphEncoder.SubjectGraph]].
+    * Attempts to transform a value of type ''A'' to a [[ch.epfl.bluebrain.nexus.rdf.RootedGraph]].
     *
-    * @param primaryNode the id which is the primary node of the graph
-    * @param value       the value to convert into a [[ch.epfl.bluebrain.nexus.rdf.encoder.GraphEncoder.SubjectGraph]]
+    * @param rootNode the id which is the primary node of the graph
+    * @param value       the value to convert into a [[ch.epfl.bluebrain.nexus.rdf.RootedGraph]]
     */
-  def apply(primaryNode: AbsoluteIri, value: A): GraphEncoderResult = apply(IriNode(primaryNode), value)
+  def apply(rootNode: AbsoluteIri, value: A): GraphEncoderResult = apply(IriNode(rootNode), value)
+
+  /**
+    * Attempts to transform a value of type ''A'' to a [[ch.epfl.bluebrain.nexus.rdf.RootedGraph]].
+    *
+    * @param fRootNode the id which might be extracted from the graph
+    * @param value        the value to convert into a [[ch.epfl.bluebrain.nexus.rdf.RootedGraph]]
+    */
+  def apply(fRootNode: Graph => Option[IriOrBNode], value: A): GraphEncoderResult =
+    apply(blank, value).flatMap { rGraph =>
+      fRootNode(rGraph).map(rootNode => rGraph.copy(rootNode)).toRight(ConversionError("Could not find the primary id"))
+    }
 
   /**
     * Attempts to transform a value of type ''A'' to a [[Graph]] with the primary node being extracted from [[PrimaryNode]]
@@ -46,10 +57,10 @@ trait GraphEncoder[A] {
 
 object GraphEncoder {
 
-  type GraphEncoderResult = Either[GraphEncoderError, SubjectGraph]
+  type GraphEncoderResult = Either[GraphEncoderError, RootedGraph]
 
   def apply[A](f: (IriOrBNode, A) => Graph): GraphEncoder[A] =
-    (primaryNode, v) => Right(SubjectGraph(primaryNode, f(primaryNode, v)))
+    (rootNode, v) => Right(RootedGraph(rootNode, f(rootNode, v)))
 
   implicit val jenaModelGraphEncoder: GraphEncoder[Model] =
     (id, model) =>
@@ -66,7 +77,7 @@ object GraphEncoder {
             results.map(acc + _).left.map(msg => ConversionError(msg, Some(JenaModelErr.InvalidJsonLD(msg))))
           case (l @ Left(_), _) => l
         }
-        .map(triples => SubjectGraph(id, Graph(triples)))
+        .map(triples => RootedGraph(id, triples))
 
   implicit val jsonGraphEncoder: GraphEncoder[Json] =
     (id, json) =>
@@ -75,12 +86,4 @@ object GraphEncoder {
         case Left(err @ JenaModelErr.InvalidJsonLD(message)) => Left(ConversionError(message, Some(err)))
         case Left(JenaModelErr.Unexpected(message))          => Left(Unexpected(message))
     }
-
-  /**
-    * A graph with its primary node
-    *
-    * @param subject the primary node
-    * @param graph   the graph
-    */
-  final case class SubjectGraph(subject: IriOrBNode, graph: Graph)
 }

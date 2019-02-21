@@ -3,11 +3,10 @@ package ch.epfl.bluebrain.nexus.rdf.decoder
 import java.io.ByteArrayOutputStream
 import java.util.UUID
 
-import ch.epfl.bluebrain.nexus.rdf.{Dot, Node}
+import ch.epfl.bluebrain.nexus.rdf.{Dot, Node, RootedGraph}
 import ch.epfl.bluebrain.nexus.rdf.Node.{BNode, IriNode, IriOrBNode}
 import ch.epfl.bluebrain.nexus.rdf.decoder.GraphDecoder.GraphDecoderResult
 import ch.epfl.bluebrain.nexus.rdf.decoder.GraphDecoderError.{ConversionError, Unexpected}
-import ch.epfl.bluebrain.nexus.rdf.encoder.GraphEncoder.SubjectGraph
 import ch.epfl.bluebrain.nexus.rdf.jena.JenaModel
 import ch.epfl.bluebrain.nexus.rdf.syntax.JsonLdSyntax
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
@@ -27,24 +26,24 @@ import scalax.collection.{Graph => G}
 import scala.util.Try
 
 /**
-  * Defines an decoder from [[SubjectGraph]] to ''A''
+  * Defines an decoder from [[RootedGraph]] to ''A''
   */
 trait GraphDecoder[A] {
 
   /**
-    * Attempts to transform SubjectGraph to a value of type ''A'' using the provided ''context'' to shorten the keys with its prefix mappings.
+    * Attempts to transform [[RootedGraph]] to a value of type ''A'' using the provided ''context'' to shorten the keys with its prefix mappings.
     *
-    * @param value the graph to convert into a value of type ''A''
+    * @param graph the rooted graph to convert into a value of type ''A''
     * @param context the context with it's prefix mappings
     */
-  def apply(value: SubjectGraph, context: Json): GraphDecoderResult[A]
+  def apply(graph: RootedGraph, context: Json): GraphDecoderResult[A]
 
   /**
-    * Attempts to transform SubjectGraph to a value of type ''A''.
+    * Attempts to transform [[RootedGraph]] to a value of type ''A''.
     *
-    * @param value the graph to convert into a value of type ''A''
+    * @param graph the roted graph to convert into a value of type ''A''
     */
-  def apply(value: SubjectGraph): GraphDecoderResult[A] = apply(value, Json.obj())
+  def apply(graph: RootedGraph): GraphDecoderResult[A] = apply(graph, Json.obj())
 
 }
 
@@ -53,17 +52,16 @@ object GraphDecoder extends JsonLdSyntax {
   type GraphDecoderResult[A] = Either[GraphDecoderError, A]
 
   final implicit val jenaModelGraphDecoder: GraphDecoder[Model] =
-    (value, _) => Right(JenaModel(value.graph))
+    (graph, _) => Right(JenaModel(graph))
 
   final implicit val jsonGraphDecoder: GraphDecoder[Json] = new GraphDecoder[Json] {
 
     private final val reservedId = url"http://dummy.com/${UUID.randomUUID()}"
 
-    override def apply(value: SubjectGraph, context: Json): GraphDecoderResult[Json] = {
+    override def apply(graph: RootedGraph, context: Json): GraphDecoderResult[Json] = {
 
-      val SubjectGraph(primaryNode, graph) = value
-      val filteredCtx                      = context.removeContextIris
-      val jenaCleanup: JenaWriterCleanup   = new JenaWriterCleanup(filteredCtx)
+      val filteredCtx                    = context.removeContextIris
+      val jenaCleanup: JenaWriterCleanup = new JenaWriterCleanup(filteredCtx)
 
       def writeFramed: GraphDecoderResult[Json] = {
         val opts = new JsonLdOptions()
@@ -71,11 +69,12 @@ object GraphDecoder extends JsonLdSyntax {
         opts.setProcessingMode(JsonLdOptions.JSON_LD_1_1)
         opts.setCompactArrays(true)
         opts.setPruneBlankNodeIdentifiers(true)
-        val frame = Json.obj("@id" -> Json.fromString(primaryNode.toString)).appendContextOf(jenaCleanup.cleanFromCtx)
-        val ctx   = new JsonLDWriteContext
+        val frame =
+          Json.obj("@id" -> Json.fromString(graph.rootNode.toString)).appendContextOf(jenaCleanup.cleanFromCtx)
+        val ctx = new JsonLDWriteContext
         ctx.setFrame(frame.noSpaces)
         ctx.setOptions(opts)
-        jenaModelGraphDecoder(value).flatMap { jenamModel =>
+        jenaModelGraphDecoder(graph).flatMap { jenamModel =>
           val g   = DatasetFactory.wrap(jenamModel).asDatasetGraph
           val out = new ByteArrayOutputStream()
           val w   = RDFDataMgr.createDatasetWriter(RDFFormat.JSONLD_FRAME_FLAT)
@@ -96,10 +95,10 @@ object GraphDecoder extends JsonLdSyntax {
         }
       }
 
-      primaryNode match {
+      graph.rootNode match {
         case `reservedId` => writeFramed.map(removeKey(_, "@id"))
         case _: IriNode   => writeFramed
-        case blank: BNode => apply(SubjectGraph(reservedId, graph.replaceNode(blank, reservedId)), context)
+        case blank: BNode => apply(RootedGraph(reservedId, graph.replaceNode(blank, reservedId)), context)
       }
     }
 
@@ -121,16 +120,16 @@ object GraphDecoder extends JsonLdSyntax {
 
     private val spacing = Spacing(indent = TwoSpaces, graphAttrSeparator = new AttrSeparator("\n|".stripMargin) {})
 
-    override def apply(value: SubjectGraph, context: Json): GraphDecoderResult[Dot] = {
+    override def apply(graph: RootedGraph, context: Json): GraphDecoderResult[Dot] = {
       def transformer(innerEdge: G[Node, LkDiEdge]#EdgeT): Option[(DotGraph, DotEdgeStmt)] = {
         val edge: LkDiEdge[G[Node, LkDiEdge]#NodeT] = innerEdge.edge
         val (from, label, to)                       = (edge.s.toString, edge.p.toString, edge.to.toString)
         Some(root -> DotEdgeStmt(NodeId(from), NodeId(to), List(DotAttr(Id("label"), Id(label)))))
       }
-      val dot = value.graph.underlying.toDot(dotRoot = root,
-                                             edgeTransformer = transformer,
-                                             cNodeTransformer = None,
-                                             spacing = spacing)
+      val dot = graph.underlying.toDot(dotRoot = root,
+                                       edgeTransformer = transformer,
+                                       cNodeTransformer = None,
+                                       spacing = spacing)
       Right(Dot(dot))
     }
   }

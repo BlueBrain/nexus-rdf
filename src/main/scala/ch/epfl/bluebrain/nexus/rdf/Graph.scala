@@ -15,7 +15,7 @@ import scala.annotation.tailrec
   * An RDF Graph representation.
   */
 @SuppressWarnings(Array("IsInstanceOf"))
-final class Graph private[rdf] (private[rdf] val underlying: G[Node, LkDiEdge]) { self =>
+class Graph private[rdf] (private[rdf] val underlying: G[Node, LkDiEdge]) { self =>
 
   /**
     * @return the triples of this graph
@@ -107,7 +107,7 @@ final class Graph private[rdf] (private[rdf] val underlying: G[Node, LkDiEdge]) 
     */
   def addObject[A: PrimaryNode](s: IriOrBNode, p: IriNode, value: A)(
       implicit enc: GraphEncoder[A]): Either[GraphEncoderError, Graph] =
-    enc(value).map(elem => self + ((s, p, elem.subject)) ++ elem.graph)
+    enc(value).map(elem => self + ((s, p, elem.rootNode)) ++ elem)
 
   /**
     * Adds the provided collection (sorted) to the subject ''s'' and predicate ''p'' to this graph.
@@ -127,13 +127,13 @@ final class Graph private[rdf] (private[rdf] val underlying: G[Node, LkDiEdge]) 
         case Nil => Right(triples)
         case h :: Nil =>
           enc(h).map(elem =>
-            triples ++ Set[Triple]((ss, rdf.first, elem.subject), (ss, rdf.rest, rdf.nil)) ++ elem.graph.triples)
+            triples ++ Set[Triple]((ss, rdf.first, elem.rootNode), (ss, rdf.rest, rdf.nil)) ++ elem.triples)
         case h :: t =>
           enc(h) match {
             case Left(err) => Left(err)
             case Right(elem) =>
               val nextSubject = blank
-              val graph       = triples ++ Set[Triple]((ss, rdf.first, elem.subject), (ss, rdf.rest, nextSubject)) ++ elem.graph.triples
+              val graph       = triples ++ Set[Triple]((ss, rdf.first, elem.rootNode), (ss, rdf.rest, nextSubject)) ++ elem.triples
               inner(nextSubject, t, graph)
           }
       }
