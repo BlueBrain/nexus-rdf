@@ -1,15 +1,14 @@
 package ch.epfl.bluebrain.nexus.rdf
 
-import cats.{Eq, Show}
+import cats.implicits._
+import cats.{Eq, Functor, Monad, Show}
 import ch.epfl.bluebrain.nexus.rdf.Graph._
 import ch.epfl.bluebrain.nexus.rdf.Node.{blank, IriNode, IriOrBNode}
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
 import ch.epfl.bluebrain.nexus.rdf.cursor.GraphCursor
-import ch.epfl.bluebrain.nexus.rdf.encoder.{GraphEncoder, GraphEncoderError, PrimaryNode}
+import ch.epfl.bluebrain.nexus.rdf.encoder.{GraphEncoder, RootNode}
 import scalax.collection.edge.LkDiEdge
 import scalax.collection.immutable.{Graph => G}
-
-import scala.annotation.tailrec
 
 /**
   * An RDF Graph representation.
@@ -105,8 +104,8 @@ class Graph private[rdf] (private[rdf] val underlying: G[Node, LkDiEdge]) { self
     * @param value the value to add
     * @return a new graph made up of all of the triples of this graph and the triple created from the arguments
     */
-  def addObject[A: PrimaryNode](s: IriOrBNode, p: IriNode, value: A)(
-      implicit enc: GraphEncoder[A]): Either[GraphEncoderError, Graph] =
+  def addObject[F[_]: Functor, A: RootNode](s: IriOrBNode, p: IriNode, value: A)(
+      implicit enc: GraphEncoder[F, A]): F[Graph] =
     enc(value).map(elem => self + ((s, p, elem.rootNode)) ++ elem)
 
   /**
@@ -118,23 +117,20 @@ class Graph private[rdf] (private[rdf] val underlying: G[Node, LkDiEdge]) { self
     * @param list the collection to add
     * @return a new graph made up of all of the triples of this graph and the triple created from the arguments
     */
-  def add[A: PrimaryNode](s: IriOrBNode, p: IriNode, list: List[A])(
-      implicit enc: GraphEncoder[A]): Either[GraphEncoderError, Graph] = {
+  def add[F[_], A: RootNode](s: IriOrBNode, p: IriNode, list: List[A])(implicit enc: GraphEncoder[F, A],
+                                                                       F: Monad[F]): F[Graph] = {
 
-    @tailrec
-    def inner(ss: IriOrBNode, rest: List[A], triples: Set[Triple]): Either[GraphEncoderError, Set[Triple]] =
+    def inner(ss: IriOrBNode, rest: List[A], triples: Set[Triple]): F[Set[Triple]] =
       rest match {
-        case Nil => Right(triples)
+        case Nil => F.pure(triples)
         case h :: Nil =>
           enc(h).map(elem =>
             triples ++ Set[Triple]((ss, rdf.first, elem.rootNode), (ss, rdf.rest, rdf.nil)) ++ elem.triples)
         case h :: t =>
-          enc(h) match {
-            case Left(err) => Left(err)
-            case Right(elem) =>
-              val nextSubject = blank
-              val graph       = triples ++ Set[Triple]((ss, rdf.first, elem.rootNode), (ss, rdf.rest, nextSubject)) ++ elem.triples
-              inner(nextSubject, t, graph)
+          enc(h).flatMap { elem =>
+            val nextSubject = blank
+            val graph       = triples ++ Set[Triple]((ss, rdf.first, elem.rootNode), (ss, rdf.rest, nextSubject)) ++ elem.triples
+            inner(nextSubject, t, graph)
           }
       }
 

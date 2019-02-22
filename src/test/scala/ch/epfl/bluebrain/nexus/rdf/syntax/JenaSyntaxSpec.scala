@@ -2,12 +2,13 @@ package ch.epfl.bluebrain.nexus.rdf.syntax
 
 import java.util.UUID
 
-import ch.epfl.bluebrain.nexus.rdf.{Graph, RootedGraph}
-import ch.epfl.bluebrain.nexus.rdf.Node.{blank, Literal}
+import cats.Id
 import ch.epfl.bluebrain.nexus.rdf.Node.Literal.LanguageTag
+import ch.epfl.bluebrain.nexus.rdf.Node.{blank, Literal}
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary.xsd
 import ch.epfl.bluebrain.nexus.rdf.instances._
 import ch.epfl.bluebrain.nexus.rdf.jena.JenaConversions._
+import ch.epfl.bluebrain.nexus.rdf.{Graph, RootedGraph}
 import org.apache.jena.rdf.model.{Model, ModelFactory, ResourceFactory}
 import org.scalatest.{EitherValues, Inspectors, Matchers, WordSpecLike}
 
@@ -48,12 +49,12 @@ class JenaSyntaxSpec extends WordSpecLike with Matchers with Inspectors with Eit
 
     // format: off
     "convert Graph to Jena Model" in {
-      val graph: Model = RootedGraph(url"http://nexus.example.com/john-doe",
+      val graph: Id[Model] = RootedGraph(url"http://nexus.example.com/john-doe",
         (url"http://nexus.example.com/john-doe", url"http://schema.org/name",                           "John Doe"),
         (url"http://nexus.example.com/john-doe", url"http://schema.org/birthDate",                      Literal("1999-04-09T20:00Z", url"http://schema.org/Date".value)),
         (url"http://nexus.example.com/john-doe", url"http://schema.org/birth",                          Literal("2002-05-30T09:00:00", xsd.string.value)),
         (url"http://nexus.example.com/john-doe", url"http://www.w3.org/1999/02/22-rdf-syntax-ns#type",  url"http://schema.org/Person")
-      ).as[Model].right.value
+      ).as[Model]()
       val model = ModelFactory.createDefaultModel()
       model.read(getClass.getResourceAsStream("/simple-model.json"), "http://nexus.example.com/", "JSONLD")
 

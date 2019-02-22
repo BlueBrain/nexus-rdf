@@ -23,7 +23,7 @@ class GraphTriplesSyntaxSpec extends WordSpecLike with Matchers with EitherValue
           |<http://nexus.example.com/john-doe> <http://schema.org/name> "John Doe" .
           |<http://nexus.example.com/other> <http://schema.org/height> "9.223E0"^^<http://www.w3.org/2001/XMLSchema#double> .
           |""".stripMargin
-      graph.as[NTriples].right.value.value.split("\n").sorted shouldEqual expected.split("\n").sorted
+      graph.as[NTriples]().value.split("\n").sorted shouldEqual expected.split("\n").sorted
     }
   }
 

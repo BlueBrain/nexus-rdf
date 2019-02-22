@@ -38,11 +38,11 @@ object RootedGraph {
   /**
     * Constructs a new rooted graph where the root node is a blank node.
     *
-    * @param triples the triples to be added to the graph
+    * @param graph the existing graph
     * @return a new rooted graph from the argument triples
     */
-  final def anon(triples: Triple*): RootedGraph =
-    apply(blank, triples.toSet)
+  final def anon(graph: Graph): RootedGraph =
+    apply(blank, graph)
 
   /**
     * Constructs a new rooted graph from the argument triples.
@@ -58,7 +58,7 @@ object RootedGraph {
     * Constructs a new rooted graph from an existing graph.
     *
     * @param rootNode the root node
-    * @param graph  the existing graph
+    * @param graph    the existing graph
     */
   final def apply(rootNode: IriOrBNode, graph: Graph): RootedGraph =
     new RootedGraph(rootNode, graph.underlying)

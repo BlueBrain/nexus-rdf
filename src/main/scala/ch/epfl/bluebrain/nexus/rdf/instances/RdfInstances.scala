@@ -48,6 +48,7 @@ trait RdfInstances {
   final implicit def sToEq(s: IriOrBNode): IriOrBNode => Boolean = _ == s
   final implicit def oToEq(o: Node): Node => Boolean             = _ == o
   final implicit def pToEq(p: IriNode): IriNode => Boolean       = _ == p
+
 }
 
 object RdfInstances extends RdfInstances

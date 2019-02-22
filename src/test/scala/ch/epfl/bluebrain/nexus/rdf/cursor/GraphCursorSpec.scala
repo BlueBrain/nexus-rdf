@@ -92,7 +92,7 @@ class GraphCursorSpec extends WordSpecLike with Matchers with OptionValues with 
 
     val c = GraphCursor(id, graph)
 
-    "obtain the cursor from the graph primary node" in {
+    "obtain the cursor from the graph root node" in {
       c.focus.value shouldEqual graph.cursor(id).focus.value
       c.history shouldEqual graph.cursor(id).history
       c.values shouldEqual graph.cursor(id).values

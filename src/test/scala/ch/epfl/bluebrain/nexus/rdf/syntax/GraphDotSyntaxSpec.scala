@@ -24,7 +24,7 @@ class GraphDotSyntaxSpec extends WordSpecLike with Matchers with EitherValues wi
           |  "http://nexus.example.com/other" -> 9 [label = "http://schema.org/birthHour"]
           |  "http://nexus.example.com/john-doe" -> "http://nexus.example.com/other" [label = "http://example.com/sibling"]
           |}""".stripMargin
-      graph.as[Dot].right.value.value.split("\n").sorted shouldEqual expected.split("\n").sorted
+      graph.as[Dot]().value.split("\n").sorted shouldEqual expected.split("\n").sorted
     }
   }
 
