@@ -97,11 +97,14 @@ object GraphDecoder extends JsonLdSyntax {
           }
         }
 
-        graph.rootNode match {
-          case `reservedId` => writeFramed.map(removeKey(_, "@id"))
-          case _: IriNode   => writeFramed
-          case blank: BNode => apply(RootedGraph(reservedId, graph.replaceNode(blank, reservedId)), context)
-        }
+        if (graph.triples.isEmpty)
+          Right(Json.obj())
+        else
+          graph.rootNode match {
+            case `reservedId` => writeFramed.map(removeKey(_, "@id"))
+            case _: IriNode   => writeFramed
+            case blank: BNode => apply(RootedGraph(reservedId, graph.replaceNode(blank, reservedId)), context)
+          }
       }
 
       private def removeKey(json: Json, key: String): Json = {

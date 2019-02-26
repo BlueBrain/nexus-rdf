@@ -87,6 +87,10 @@ class CirceSyntaxSpec
       )
     }
 
+    "convert an empty graph back to json" in {
+      RootedGraph(url"http://nexus.example.com/john-doe", Graph()).as[Json]().right.value shouldEqual Json.obj()
+    }
+
     "convert Graph to Json-LD ignoring the IRI context in an array" in {
       val json  = jsonContentOf("/context/simple-iri-context.json")
       val ctx   = context(json)
