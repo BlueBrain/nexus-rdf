@@ -33,7 +33,7 @@ val parboiledVersion     = "2.1.5"
 val jenaVersion          = "3.10.0"
 val scalaGraphVersion    = "1.12.5"
 val scalaGraphDotVersion = "1.12.1"
-val scalaTestVersion     = "3.0.5"
+val scalaTestVersion     = "3.0.6"
 
 // Dependency modules
 lazy val akkaHttpCore  = "com.typesafe.akka" %% "akka-http-core" % akkaHttpVersion
