@@ -16,6 +16,9 @@ trait NodeSyntax {
 
   implicit final def optNodesEncoder(nodes: Option[Iterable[Node]]): OptionNodesSyntaxEncoder =
     new OptionNodesSyntaxEncoder(nodes)
+
+  implicit final def nodeEncoderResult[A](result: EncoderResult[A]): NodeSyntaxEncoderResult[A] =
+    new NodeSyntaxEncoderResult(result)
 }
 
 trait NodeUnsafeSyntax {
@@ -30,6 +33,14 @@ final class NodeContext(val sc: StringContext) extends AnyVal {
   }
   def url(args: Any*): IriNode =
     IriNode(Url.unsafe(sc.s(args: _*)))
+}
+
+final class NodeSyntaxEncoderResult[A](private val result: EncoderResult[A]) extends AnyVal {
+
+  def orElse(default: => A): EncoderResult[A] = result match {
+    case Left(NoElementToEncode) => Right(default)
+    case other                   => other
+  }
 }
 
 final class NodeSyntaxEncoder(private val node: Node) extends AnyVal {

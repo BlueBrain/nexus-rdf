@@ -165,11 +165,15 @@ class GraphCursorSpec extends WordSpecLike with Matchers with OptionValues with 
         .left
         .value shouldBe a[IllegalConversion]
 
-      c.downField(schema.geo).downField(schema.coord).focus.as[String].left.value shouldEqual NoElementToEncode
       c.downField(schema.other).values.asListOf[String].left.value shouldBe a[IllegalConversion]
       c.downField(schema.other).values.asListOf[AbsoluteIri].left.value shouldBe a[IllegalType]
       c.downField(schema.desc).focus.as[UUID].left.value shouldBe a[IllegalConversion]
 
+    }
+
+    "set a default value when a node does not exists" in {
+      c.downField(schema.geo).downField(schema.coord).focus.as[String].left.value shouldEqual NoElementToEncode
+      c.downField(schema.geo).downField(schema.coord).focus.as[String].orElse("v").right.value shouldEqual "v"
     }
 
     "fail to navigate to a down property when the array element hasn't been selected" in {
