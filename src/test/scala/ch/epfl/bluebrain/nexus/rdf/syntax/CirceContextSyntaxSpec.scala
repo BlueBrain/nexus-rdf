@@ -106,6 +106,24 @@ class CirceContextSyntaxSpec extends WordSpecLike with Matchers with Inspectors 
         "two" -> Json.fromInt(2)))
     }
 
+    "replace context" in {
+      val context1 = jsonContentOf("/context/context1.json")
+      val json     = context1 deepMerge Json.obj("one" -> Json.fromInt(1), "two" -> Json.fromInt(2))
+      val context2 = Json.obj("@context" -> Json.obj("some" -> Json.fromString("context")))
+      val json2    = context2 deepMerge Json.obj("three" -> Json.fromInt(3), "four" -> Json.fromInt(4))
+
+      json replaceContext json2 shouldEqual
+        (Json.obj("one" -> Json.fromInt(1), "two" -> Json.fromInt(2)) deepMerge context2)
+    }
+
+    "replace context with iri" in {
+      val context1 = jsonContentOf("/context/context1.json")
+      val json     = context1 deepMerge Json.obj("one" -> Json.fromInt(1), "two" -> Json.fromInt(2))
+
+      json replaceContext context shouldEqual
+        Json.obj("@context" -> Json.fromString(context.asString), "one" -> Json.fromInt(1), "two" -> Json.fromInt(2))
+    }
+
     "extract the context IRI" in {
       val context = parse("{\"@context\": \"http://schema.org/\"}").right.value
       context.removeContextIris shouldEqual Json.obj("@context" -> Json.obj())
@@ -115,6 +133,22 @@ class CirceContextSyntaxSpec extends WordSpecLike with Matchers with Inspectors 
       val json     = jsonContentOf("/context/simple-iri-context.json")
       val expected = jsonContentOf("/context/simple-iri-context-without-iri.json")
       json.removeContextIris shouldEqual expected
+    }
+
+    "manipulating json" should {
+      "remove keys object" in {
+        val obj = Json.obj("one" -> Json.obj("two" -> Json.fromString("something")), "two" -> Json.fromString("abc"))
+        obj.removeKeys("two") shouldEqual Json.obj("one" -> Json.obj("two" -> Json.fromString("something")))
+        obj.removeKeys("three") shouldEqual obj
+      }
+      "remove keys array" in {
+        val obj      = Json.obj("one" -> Json.obj("two" -> Json.fromString("something")), "two" -> Json.fromString("abc"))
+        val objNoKey = Json.obj("one" -> Json.obj("two" -> Json.fromString("something")))
+        val arrObj   = Json.arr(obj, obj, Json.obj("three" -> Json.fromString("something")))
+        arrObj.removeKeys("two") shouldEqual Json.arr(objNoKey,
+                                                      objNoKey,
+                                                      Json.obj("three" -> Json.fromString("something")))
+      }
     }
   }
 }

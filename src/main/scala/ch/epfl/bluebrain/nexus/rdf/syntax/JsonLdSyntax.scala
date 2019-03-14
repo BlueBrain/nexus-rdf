@@ -21,4 +21,10 @@ final class JsonLdOps(private val json: Json) extends AnyVal {
   def removeContextIris: Json = JsonLd.removeContextIris(json)
 
   def id: Option[AbsoluteIri] = JsonLd.id(json)
+
+  def replaceContext(that: Json): Json = JsonLd.replaceContext(json, that)
+
+  def replaceContext(iri: AbsoluteIri): Json = JsonLd.replaceContext(json, iri)
+
+  def removeKeys(keys: String*): Json = JsonLd.removeKeys(json, keys: _*)
 }
