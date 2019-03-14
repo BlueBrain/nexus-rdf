@@ -3,7 +3,8 @@ package ch.epfl.bluebrain.nexus.rdf.circe
 import ch.epfl.bluebrain.nexus.rdf.Iri
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.jena.JenaModel
-import io.circe.Json
+import io.circe.{Json, JsonObject}
+import io.circe.syntax._
 
 object JsonLd {
 
@@ -104,6 +105,38 @@ object JsonLd {
     * @return a new Json with the original context plus the provided context
     */
   def appendContextOf(json: Json, that: Json): Json = json deepMerge mergeContext(json, that)
+
+  /**
+    * Replaces the @context value from the provided json to the one in ''that'' json
+    *
+    * @param json the primary json
+    * @param that the json with a @context to override the @context in the provided ''json''
+    */
+  def replaceContext(json: Json, that: Json): Json =
+    removeKeys(json, "@context") deepMerge Json.obj("@context" -> contextValue(that))
+
+  /**
+    * Replaces the @context value from the provided json to the provided ''iri''
+    *
+    * @param json the primary json
+    * @param iri  the iri which overrides the existing json
+    */
+  def replaceContext(json: Json, iri: AbsoluteIri): Json =
+    removeKeys(json, "@context") deepMerge Json.obj("@context" -> Json.fromString(iri.asString))
+
+  /**
+    * Removes the provided keys from the json.
+    *
+    * @param json the json
+    * @param keys list of ''keys'' to be removed from the top level of the ''json''
+    * @return the original json without the provided ''keys'' on the top level of the structure
+    */
+  def removeKeys(json: Json, keys: String*): Json = {
+    def inner(obj: JsonObject): Json =
+      keys.foldLeft(obj)((accObj, key) => accObj.remove(key)).asJson
+
+    json.arrayOrObject[Json](json, arr => arr.map(j => removeKeys(j, keys: _*)).asJson, obj => inner(obj))
+  }
 
   /**
     * Filter out context which are strings/iris as Jena doesn't  handle them. Other invalid contexts(booleans, numbers) etc.

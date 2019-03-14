@@ -5,16 +5,14 @@ import java.util.UUID
 
 import cats.Id
 import cats.implicits._
-import ch.epfl.bluebrain.nexus.rdf.Node.{BNode, IriNode, IriOrBNode}
 import ch.epfl.bluebrain.nexus.rdf.MarshallingError.{ConversionError, Unexpected}
-import ch.epfl.bluebrain.nexus.rdf.jena.JenaModel
-import ch.epfl.bluebrain.nexus.rdf.syntax.JsonLdSyntax
-import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
+import ch.epfl.bluebrain.nexus.rdf.Node.{BNode, IriNode, IriOrBNode}
 import ch.epfl.bluebrain.nexus.rdf._
+import ch.epfl.bluebrain.nexus.rdf.jena.JenaModel
+import ch.epfl.bluebrain.nexus.rdf.syntax.{JsonLdSyntax, _}
 import com.github.jsonldjava.core.JsonLdOptions
+import io.circe.Json
 import io.circe.parser.parse
-import io.circe.syntax._
-import io.circe.{Json, JsonObject}
 import org.apache.jena.query.DatasetFactory
 import org.apache.jena.rdf.model.Model
 import org.apache.jena.riot.system.RiotLib
@@ -101,15 +99,10 @@ object GraphDecoder extends JsonLdSyntax {
           Right(Json.obj())
         else
           graph.rootNode match {
-            case `reservedId` => writeFramed.map(removeKey(_, "@id"))
+            case `reservedId` => writeFramed.map(_.removeKeys("@id"))
             case _: IriNode   => writeFramed
             case blank: BNode => apply(RootedGraph(reservedId, graph.replaceNode(blank, reservedId)), context)
           }
-      }
-
-      private def removeKey(json: Json, key: String): Json = {
-        def inner(obj: JsonObject): Json = obj.remove(key).asJson
-        json.arrayOrObject[Json](json, _.map(removeKey(_, key)).asJson, inner)
       }
     }
 
