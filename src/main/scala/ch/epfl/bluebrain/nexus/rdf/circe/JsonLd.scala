@@ -90,6 +90,13 @@ object JsonLd {
     */
   def contextValue(json: Json): Json = json.hcursor.get[Json]("@context").getOrElse(Json.obj())
 
+  private def merge(json: Json, that: Json): Json = (json.asArray, that.asArray) match {
+    case (Some(arr), Some(thatArr)) => Json.arr((arr ++ thatArr): _*)
+    case (_, Some(thatArr))         => Json.arr((json +: thatArr): _*)
+    case (Some(arr), _)             => Json.arr((arr :+ that): _*)
+    case _                          => json deepMerge that
+  }
+
   /**
     * @param json the primary context. E.g.: {"@context": {...}}
     * @param that the other context from where to merge this context with. E.g.: {"@context": {...}}
@@ -97,7 +104,7 @@ object JsonLd {
     *         If two keys inside both contexts collide, the one in the ''other'' context will override the one in this context
     */
   def mergeContext(json: Json, that: Json): Json =
-    Json.obj("@context" -> (contextValue(json) deepMerge contextValue(that)))
+    Json.obj("@context" -> merge(contextValue(json), contextValue(that)))
 
   /**
     * @param json the primary context
@@ -143,16 +150,21 @@ object JsonLd {
     * will by handled by Jena and cause an error.
     *
     * @param json the json
-    * @return the context in the form {"@context": {...}}
+    * @return the context in the form {"@context": {...}}. The values that are not inside the key @context are dropped
     */
   def removeContextIris(json: Json): Json = {
     if (json == Json.obj()) json
     else {
       val ctx = contextValue(json)
       (ctx.asString, ctx.asArray) match {
-        case (Some(_), _)   => Json.obj("@context" -> Json.obj())
-        case (_, Some(arr)) => Json.obj("@context" -> Json.arr(arr.filterNot(_.isString): _*))
-        case _              => Json.obj("@context" -> ctx)
+        case (Some(_), _) => Json.obj("@context" -> Json.obj())
+        case (_, Some(arr)) =>
+          arr.filterNot(_.isString) match {
+            case jsonObj +: IndexedSeq() => Json.obj("@context" -> jsonObj)
+            case IndexedSeq()            => Json.obj("@context" -> Json.obj())
+            case jsonArray               => Json.obj("@context" -> Json.arr(jsonArray: _*))
+          }
+        case _ => Json.obj("@context" -> ctx)
       }
     }
   }

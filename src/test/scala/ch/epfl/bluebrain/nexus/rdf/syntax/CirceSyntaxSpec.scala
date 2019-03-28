@@ -128,12 +128,11 @@ class CirceSyntaxSpec
     "convert to compacted Json from entity with GraphEncoder" in {
       val json     = jsonContentOf("/context/simple-iri-context.json")
       val ctx      = context(json)
-      val emptyCtx = Json.obj("@context" -> Json.obj())
       val example = Example(url"http://nexus.example.com/john-doe".value,
                             url"http://schema.org/Person".value,
                             "John Doe",
                             "1999-04-09T20:00Z")
-      example.as[Json](ctx).right.value.deepMerge(emptyCtx) shouldEqual json.deepMerge(emptyCtx)
+      example.as[Json](ctx).right.value shouldEqual json.replaceContext(json.removeContextIris)
     }
 
     "convert to expanded Json from entity with GraphEncoder" in {

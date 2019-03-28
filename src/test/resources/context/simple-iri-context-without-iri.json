@@ -1,27 +1,25 @@
 {
-  "@context": [
-    {
-      "xsd": "http://www.w3.org/2001/XMLSchema#",
-      "Person": {
-        "@id": "http://schema.org/Person"
-      },
-      "birthDate": {
-        "@id": "http://schema.org/birthDate",
-        "@type": "xsd:dateTime"
-      },
-      "birthYear": {
-        "@id": "http://schema.org/birthYear"
-      },
-      "name": {
-        "@id": "http://schema.org/name"
-      },
-      "sp": {
-        "@id": "http://example.com/stringProperty"
-      },
-      "knows": {
-        "@id": "http://schema.org/knows",
-        "@type": "@id"
-      }
+  "@context": {
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
+    "Person": {
+      "@id": "http://schema.org/Person"
+    },
+    "birthDate": {
+      "@id": "http://schema.org/birthDate",
+      "@type": "xsd:dateTime"
+    },
+    "birthYear": {
+      "@id": "http://schema.org/birthYear"
+    },
+    "name": {
+      "@id": "http://schema.org/name"
+    },
+    "sp": {
+      "@id": "http://example.com/stringProperty"
+    },
+    "knows": {
+      "@id": "http://schema.org/knows",
+      "@type": "@id"
     }
-  ]
+  }
 }

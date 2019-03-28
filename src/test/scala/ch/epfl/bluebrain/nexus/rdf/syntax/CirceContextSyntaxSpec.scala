@@ -106,6 +106,16 @@ class CirceContextSyntaxSpec extends WordSpecLike with Matchers with Inspectors 
         "two" -> Json.fromInt(2)))
     }
 
+    "append context when array" in {
+      val context1 = jsonContentOf("/context/context1-array.json")
+      val json     = context1 deepMerge Json.obj("one" -> Json.fromInt(1), "two" -> Json.fromInt(2))
+      val context2 = jsonContentOf("/context/context2.json")
+      val json2    = context2 deepMerge Json.obj("three" -> Json.fromInt(3), "four" -> Json.fromInt(4))
+      json appendContextOf json2 shouldEqual (jsonContentOf("/context/context_merged-array.json") deepMerge Json.obj(
+        "one" -> Json.fromInt(1),
+        "two" -> Json.fromInt(2)))
+    }
+
     "replace context" in {
       val context1 = jsonContentOf("/context/context1.json")
       val json     = context1 deepMerge Json.obj("one" -> Json.fromInt(1), "two" -> Json.fromInt(2))
