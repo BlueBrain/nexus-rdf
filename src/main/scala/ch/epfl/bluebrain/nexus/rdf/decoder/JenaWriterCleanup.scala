@@ -100,15 +100,19 @@ private[decoder] final class JenaWriterCleanup(ctx: Json) extends JsonLdSyntax {
     def recursiveFollow(jObj: JsonObject): Json =
       JsonObject
         .fromIterable(jObj.toVector.map {
-          case (k, v) =>
-            k -> (v.asString match {
-              case Some(s) if s.startsWith("../") && !stringValues.contains(s) =>
-                expandWithBase(s).map(Json.fromString).getOrElse(inner(v))
-              case _ =>
-                inner(v)
-            })
+          case (k, v) if v.isString => k -> jsonAsStringAttemptExpand(v)
+          case (k, v) if v.isArray  => k -> v.asArray.map(_.map(jsonAsStringAttemptExpand)).asJson
+          case (k, v)               => k -> inner(v)
         })
         .asJson
+
+    def jsonAsStringAttemptExpand(v: Json): Json =
+      v.asString
+        .flatMap {
+          case s if s.startsWith("../") && !stringValues.contains(s) => expandWithBase(s).toOption.map(Json.fromString)
+          case _                                                     => None
+        }
+        .getOrElse(inner(v))
 
     def expandWithBase(s: String) =
       (maybeBase -> Iri.relative(s.substring(3))).mapN { (base, relative) =>

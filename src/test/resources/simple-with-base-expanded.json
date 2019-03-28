@@ -1,17 +1,22 @@
 {
-  "@id" : "https://example.nexus.com/nexus/v1/resources/org/project/_/Movie_Test",
-  "@type" : "https://example.nexus.com/nexus/v1/vocabs/org/project/Movie",
-  "https://example.com/some-other" : {
-    "@id" : "https://example.nexus.com/nexus/v1/resources/org/project/_/other"
+  "@id": "https://example.nexus.com/nexus/v1/resources/org/project/_/Movie_Test",
+  "@type": "https://example.nexus.com/nexus/v1/vocabs/org/project/Movie",
+  "https://example.com/some-other": [
+    {
+      "@id": "https://example.nexus.com/nexus/v1/resources/org/project/_/other"
+    },
+    {
+      "@id": "https://example.nexus.com/nexus/v1/resources/project2"
+    }
+  ],
+  "https://example.nexus.com/nexus/v1/vocabs/org/project/some": {
+    "@id": "https://example.nexus.com/nexus/v1/resources/org/project/_/a"
   },
-  "https://example.nexus.com/nexus/v1/vocabs/org/project/some" : {
-    "@id" : "https://example.nexus.com/nexus/v1/resources/org/project/_/a"
+  "https://example.nexus.com/nexus/v1/vocabs/org/project/test": {
+    "@id": "https://example.nexus.com/nexus/v1/projects/org/project"
   },
-  "https://example.nexus.com/nexus/v1/vocabs/org/project/test" : {
-    "@id" : "https://example.nexus.com/nexus/v1/projects/org/project"
-  },
-  "https://example.nexus.com/nexus/v1/vocabs/org/project/test-2" : "../../../project",
-  "https://example.nexus.com/nexus/v1/vocabs/org/project/test-id" : {
-    "@id" : "https://example.nexus.com/nexus/v1/resources/project"
+  "https://example.nexus.com/nexus/v1/vocabs/org/project/test-2": "../../../project",
+  "https://example.nexus.com/nexus/v1/vocabs/org/project/test-id": {
+    "@id": "https://example.nexus.com/nexus/v1/resources/project"
   }
 }
