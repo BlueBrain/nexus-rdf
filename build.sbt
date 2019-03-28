@@ -25,7 +25,7 @@ scalafmt: {
  */
 
 // Dependency versions
-val akkaHttpVersion      = "10.1.7"
+val akkaHttpVersion      = "10.1.8"
 val akkaStreamVersion    = "2.5.21"
 val catsVersion          = "1.6.0"
 val circeVersion         = "0.11.1"
@@ -33,7 +33,7 @@ val parboiledVersion     = "2.1.5"
 val jenaVersion          = "3.10.0"
 val scalaGraphVersion    = "1.12.5"
 val scalaGraphDotVersion = "1.12.1"
-val scalaTestVersion     = "3.0.6"
+val scalaTestVersion     = "3.0.7"
 
 // Dependency modules
 lazy val akkaHttpCore  = "com.typesafe.akka" %% "akka-http-core" % akkaHttpVersion
