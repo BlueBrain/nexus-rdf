@@ -126,8 +126,8 @@ class CirceSyntaxSpec
     }
 
     "convert to compacted Json from entity with GraphEncoder" in {
-      val json     = jsonContentOf("/context/simple-iri-context.json")
-      val ctx      = context(json)
+      val json = jsonContentOf("/context/simple-iri-context.json")
+      val ctx  = context(json)
       val example = Example(url"http://nexus.example.com/john-doe".value,
                             url"http://schema.org/Person".value,
                             "John Doe",
