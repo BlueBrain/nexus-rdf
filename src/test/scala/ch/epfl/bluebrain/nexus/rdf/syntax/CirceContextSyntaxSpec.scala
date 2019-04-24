@@ -151,6 +151,7 @@ class CirceContextSyntaxSpec extends WordSpecLike with Matchers with Inspectors 
         obj.removeKeys("two") shouldEqual Json.obj("one" -> Json.obj("two" -> Json.fromString("something")))
         obj.removeKeys("three") shouldEqual obj
       }
+
       "remove keys array" in {
         val obj      = Json.obj("one" -> Json.obj("two" -> Json.fromString("something")), "two" -> Json.fromString("abc"))
         val objNoKey = Json.obj("one" -> Json.obj("two" -> Json.fromString("something")))
@@ -158,6 +159,24 @@ class CirceContextSyntaxSpec extends WordSpecLike with Matchers with Inspectors 
         arrObj.removeKeys("two") shouldEqual Json.arr(objNoKey,
                                                       objNoKey,
                                                       Json.obj("three" -> Json.fromString("something")))
+      }
+
+      "fetch @id aliases" in {
+        val json = jsonContentOf("/context/context-aliases.json")
+        json.contextAliases("@id") shouldEqual Set("id1", "id2")
+        json.contextAliases("@type") shouldEqual Set.empty[String]
+      }
+
+      "add @id" in {
+        val json = Json.obj("key" -> Json.fromString("value"))
+        val id   = url"http://example.com/id".value
+        json.id(id) shouldEqual
+          Json.obj("key" -> Json.fromString("value"), "@id" -> Json.fromString(id.asString))
+
+        val jsonArr = Json.arr(json)
+        jsonArr.id(id) shouldEqual
+          Json.arr(Json.obj("key" -> Json.fromString("value"), "@id" -> Json.fromString(id.asString)))
+
       }
     }
   }

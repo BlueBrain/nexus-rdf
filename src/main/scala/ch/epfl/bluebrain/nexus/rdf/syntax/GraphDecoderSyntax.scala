@@ -21,6 +21,11 @@ final class RootedGraphOpsDecoder(private val graph: RootedGraph) extends AnyVal
   def as[A]: DecoderApply[A] = new DecoderApply[A](graph)
 }
 
+final class GraphOpsDecoder(private val graph: RootedGraph) extends AnyVal {
+
+  def as[A]: DecoderApply[A] = new DecoderApply[A](graph)
+}
+
 final class GraphOpsDecoderThoughGraph[A: RootNode](value: A) {
 
   def as[B]: DecoderThroughGraphApply[A, B] = new DecoderThroughGraphApply[A, B](value)

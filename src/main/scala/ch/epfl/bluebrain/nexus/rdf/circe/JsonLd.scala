@@ -3,10 +3,24 @@ package ch.epfl.bluebrain.nexus.rdf.circe
 import ch.epfl.bluebrain.nexus.rdf.Iri
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.jena.JenaModel
-import io.circe.{Json, JsonObject}
 import io.circe.syntax._
+import io.circe.{Json, JsonObject}
 
+@SuppressWarnings(Array("TraversableHead"))
 object JsonLd {
+
+  /**
+    * Adds @id value to the provided Json
+    *
+    * @param json  the json
+    * @param value the @id value
+    */
+  def id(json: Json, value: AbsoluteIri): Json =
+    (json.asObject, json.asArray) match {
+      case (Some(_), _)                      => json deepMerge Json.obj("@id" -> Json.fromString(value.asString))
+      case (_, Some(jArr)) if jArr.size == 1 => Json.arr(id(jArr.head, value))
+      case _                                 => json
+    }
 
   /**
     * Attempts to find the top `@id` value on the provided json.
@@ -16,36 +30,29 @@ object JsonLd {
     */
   def id(json: Json): Option[AbsoluteIri] =
     JenaModel(json).toOption.flatMap { m =>
-      def singleGraph(value: Json) =
-        value.hcursor.downField("@graph").focus.flatMap(_.asArray).flatMap(singleElem)
+      val aliases = contextAliases(json, "@id") + "@id"
 
-      def singleElem(array: Vector[Json]) = array match {
-        case head +: IndexedSeq() => Some(head)
-        case _                    => None
-      }
+      def singleGraph(value: JsonObject): Option[JsonObject] =
+        value("@graph").flatMap { json =>
+          (json.asObject, json.asArray) match {
+            case (Some(jObj), _)                   => Some(jObj)
+            case (_, Some(jArr)) if jArr.size == 1 => jArr.head.asObject
+            case _                                 => None
+          }
+        }
 
-      def inner(value: Json, ctx: Json): Option[AbsoluteIri] = {
-
-        def asExpandedIri(key: String) =
-          value.hcursor.get[String](key).flatMap(s => Iri.absolute(m.expandPrefix(s))).toOption
-
-        def tryOthers: Option[AbsoluteIri] =
-          ctx.asObject.flatMap(_.toMap.foldLeft[Option[AbsoluteIri]](None) {
-            case (acc @ Some(_), _) => acc
-            case (_, (k, v))        => v.asString.withFilter(_ == "@id").flatMap(_ => asExpandedIri(k))
-          })
-
-        asExpandedIri("@id") orElse tryOthers
-      }
+      def inner(value: JsonObject): Option[AbsoluteIri] =
+        aliases.foldLeft(None: Option[AbsoluteIri]) {
+          case (None, alias) => value(alias).flatMap(_.asString).flatMap(s => Iri.absolute(m.expandPrefix(s)).toOption)
+          case (iri, _)      => iri
+        }
 
       (json.asObject, json.asArray) match {
-        case (Some(_), _) =>
-          inner(json, contextValue(json)) orElse singleGraph(json).flatMap(value => inner(value, contextValue(json)))
-        case (_, Some(arr)) =>
-          singleElem(arr).flatMap { head =>
-            inner(head, contextValue(head)) orElse singleGraph(head).flatMap(value => inner(value, contextValue(head)))
-          }
-        case (_, _) => None
+        case (Some(jObj), _) =>
+          inner(jObj) orElse singleGraph(jObj).flatMap(inner)
+        case (_, Some(arr)) if arr.size == 1 =>
+          arr.head.asObject.flatMap(jObj => inner(jObj) orElse singleGraph(jObj).flatMap(inner))
+        case _ => None
       }
     }
 
@@ -86,14 +93,40 @@ object JsonLd {
   }
 
   /**
+    * Retrieves the aliases on the provided ''json'' @context for the provided ''keyword''
+    *
+    * @param json    the Json-LD
+    * @param keyword the Json-LD keyword. E.g.: @id, @type, @container, @set
+    * @return a set of aliases found for the given keyword
+    */
+  def contextAliases(json: Json, keyword: String): Set[String] = {
+    val jsonKeyword = Json.fromString(keyword)
+    def inner(ctx: Json): Set[String] =
+      (ctx.asObject, ctx.asArray) match {
+        case (Some(jObj), _) =>
+          jObj.toMap.collect { case (k, `jsonKeyword`) => k }.toSet
+        case (_, Some(jArr)) =>
+          jArr.foldLeft(Set.empty[String])(_ ++ inner(_))
+        case _ => Set.empty
+      }
+
+    inner(contextValue(json))
+  }
+
+  /**
     * @return a new Json with the values of the top ''@context'' key
     */
-  def contextValue(json: Json): Json = json.hcursor.get[Json]("@context").getOrElse(Json.obj())
+  def contextValue(json: Json): Json =
+    (json.asObject, json.asArray) match {
+      case (Some(jObj), _)                   => jObj("@context").getOrElse(Json.obj())
+      case (_, Some(jArr)) if jArr.size == 1 => contextValue(jArr.head)
+      case _                                 => Json.obj()
+    }
 
   private def merge(json: Json, that: Json): Json = (json.asArray, that.asArray) match {
-    case (Some(arr), Some(thatArr)) => Json.arr((arr ++ thatArr): _*)
-    case (_, Some(thatArr))         => Json.arr((json +: thatArr): _*)
-    case (Some(arr), _)             => Json.arr((arr :+ that): _*)
+    case (Some(arr), Some(thatArr)) => Json.arr(arr ++ thatArr: _*)
+    case (_, Some(thatArr))         => Json.arr(json +: thatArr: _*)
+    case (Some(arr), _)             => Json.arr(arr :+ that: _*)
     case _                          => json deepMerge that
   }
 
@@ -168,5 +201,4 @@ object JsonLd {
       }
     }
   }
-
 }
