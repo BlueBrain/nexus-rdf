@@ -9,6 +9,7 @@ import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.Node.Literal._
 import ch.epfl.bluebrain.nexus.rdf.Node.{BNode, IriNode, Literal}
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
+import org.apache.jena.atlas.lib.EscapeStr
 import org.parboiled2.CharPredicate._
 import org.parboiled2._
 
@@ -377,9 +378,9 @@ object Node {
       new Literal(value.toString, xsd.double)
 
     final implicit def literalShow(implicit is: Show[AbsoluteIri], ls: Show[LanguageTag]): Show[Literal] = Show.show {
-      case Literal(f, _, Some(tag))           => s""""$f"@${ls.show(tag)}"""
-      case l @ Literal(f, _, _) if l.isString => s""""$f""""
-      case Literal(f, dt, None)               => s""""$f"^^<${is.show(dt)}>"""
+      case Literal(f, _, Some(tag))           => s""""${EscapeStr.stringEsc(f)}"@${ls.show(tag)}"""
+      case l @ Literal(f, _, _) if l.isString => s""""${EscapeStr.stringEsc(f)}""""
+      case Literal(f, dt, None)               => s""""${EscapeStr.stringEsc(f)}"^^<${is.show(dt)}>"""
     }
 
     final implicit val literalEq: Eq[Literal] = Eq.fromUniversalEquals

@@ -100,6 +100,7 @@ class NodeSpec extends WordSpecLike with Matchers with EitherValues with Inspect
         (Node.literal(2.toShort), """"2"^^<http://www.w3.org/2001/XMLSchema#short>"""),
         (Node.literal(2.toByte), """"2"^^<http://www.w3.org/2001/XMLSchema#byte>"""),
         (Node.literal("a"), """"a""""),
+        (Node.literal("""a "name" escaped"""), """"a \"name\" escaped""""),
         (Node.literal("a", LanguageTag("en").right.value), """"a"@en""")
       )
       forAll(cases) {
