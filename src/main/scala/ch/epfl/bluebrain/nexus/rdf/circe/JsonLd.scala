@@ -6,6 +6,7 @@ import ch.epfl.bluebrain.nexus.rdf.jena.JenaModel
 import io.circe.syntax._
 import io.circe.{Json, JsonObject}
 
+@SuppressWarnings(Array("TraversableHead"))
 object JsonLd {
 
   /**
