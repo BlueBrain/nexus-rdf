@@ -15,9 +15,10 @@ object JsonLd {
     * @param value the @id value
     */
   def id(json: Json, value: AbsoluteIri): Json =
-    json.asObject -> json.asArray match {
+    (json.asObject, json.asArray) match {
       case (Some(_), _)                      => json deepMerge Json.obj("@id" -> Json.fromString(value.asString))
       case (_, Some(jArr)) if jArr.size == 1 => Json.arr(id(jArr.head, value))
+      case _                                 => json
     }
 
   /**
@@ -32,7 +33,7 @@ object JsonLd {
 
       def singleGraph(value: JsonObject): Option[JsonObject] =
         value("@graph").flatMap { json =>
-          json.asObject -> json.asArray match {
+          (json.asObject, json.asArray) match {
             case (Some(jObj), _)                   => Some(jObj)
             case (_, Some(jArr)) if jArr.size == 1 => jArr.head.asObject
             case _                                 => None
@@ -100,7 +101,7 @@ object JsonLd {
   def contextAliases(json: Json, keyword: String): Set[String] = {
     val jsonKeyword = Json.fromString(keyword)
     def inner(ctx: Json): Set[String] =
-      ctx.asObject -> ctx.asArray match {
+      (ctx.asObject, ctx.asArray) match {
         case (Some(jObj), _) =>
           jObj.toMap.collect { case (k, `jsonKeyword`) => k }.toSet
         case (_, Some(jArr)) =>
@@ -115,7 +116,7 @@ object JsonLd {
     * @return a new Json with the values of the top ''@context'' key
     */
   def contextValue(json: Json): Json =
-    json.asObject -> json.asArray match {
+    (json.asObject, json.asArray) match {
       case (Some(jObj), _)                   => jObj("@context").getOrElse(Json.obj())
       case (_, Some(jArr)) if jArr.size == 1 => contextValue(jArr.head)
       case _                                 => Json.obj()
