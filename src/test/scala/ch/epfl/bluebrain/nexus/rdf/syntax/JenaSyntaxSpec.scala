@@ -3,8 +3,8 @@ package ch.epfl.bluebrain.nexus.rdf.syntax
 import java.util.UUID
 
 import cats.Id
+import ch.epfl.bluebrain.nexus.rdf.Node.Literal
 import ch.epfl.bluebrain.nexus.rdf.Node.Literal.LanguageTag
-import ch.epfl.bluebrain.nexus.rdf.Node.{blank, Literal}
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary.xsd
 import ch.epfl.bluebrain.nexus.rdf.instances._
 import ch.epfl.bluebrain.nexus.rdf.jena.JenaConversions._
@@ -57,8 +57,8 @@ class JenaSyntaxSpec extends WordSpecLike with Matchers with Inspectors with Eit
       ).as[Model]()
       val model = ModelFactory.createDefaultModel()
       model.read(getClass.getResourceAsStream("/simple-model.json"), "http://nexus.example.com/", "JSONLD")
-
-      graph.asGraph(blank).right.value.triples shouldEqual model.asGraph(blank).right.value.triples
+      val id = url"http://nexus.example.com/john-doe"
+      graph.asGraph(id).right.value.triples shouldEqual model.asGraph(id).right.value.triples
     }
     // format: on
 
@@ -99,7 +99,7 @@ class JenaSyntaxSpec extends WordSpecLike with Matchers with Inspectors with Eit
       model.read(getClass.getResourceAsStream("/simple-model.json"), "http://nexus.example.com/", "JSONLD")
 
       // format: off
-      model.asGraph(blank).right.value.triples shouldEqual Set[Graph.Triple](
+      model.asGraph(url"http://nexus.example.com/john-doe").right.value.triples shouldEqual Set[Graph.Triple](
         (url"http://nexus.example.com/john-doe", url"http://schema.org/name",                           "John Doe"),
         (url"http://nexus.example.com/john-doe", url"http://schema.org/birthDate",                      Literal("1999-04-09T20:00Z", url"http://schema.org/Date".value)),
         (url"http://nexus.example.com/john-doe", url"http://schema.org/birth",                          Literal("2002-05-30T09:00:00", xsd.string.value)),

@@ -1,15 +1,14 @@
 package ch.epfl.bluebrain.nexus.rdf.syntax
 
-import ch.epfl.bluebrain.nexus.rdf.Node.blank
 import ch.epfl.bluebrain.nexus.rdf.{Dot, Resources}
 import org.scalatest.{EitherValues, Matchers, WordSpecLike}
 
 class GraphDotSyntaxSpec extends WordSpecLike with Matchers with EitherValues with Resources {
   "A dot syntax" should {
-    val json  = jsonContentOf("/embed.json")
-    val graph = json.asGraph(blank).right.value
+    val json = jsonContentOf("/embed.json")
 
     "generate a dot output" in {
+      val graph = json.asGraph(url"http://nexus.example.com/john-doe").right.value
       val expected =
         """digraph {
           |  "http://nexus.example.com/john-doe" -> "John Doe" [label = "http://schema.org/name"]

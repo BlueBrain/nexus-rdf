@@ -1,5 +1,7 @@
 package ch.epfl.bluebrain.nexus.rdf
 
+import ch.epfl.bluebrain.nexus.rdf.Node.IriOrBNode
+
 /**
   * Enumeration type for graph marshalling errors
   */
@@ -20,9 +22,10 @@ object MarshallingError {
   /**
     * Signals the impossibility to retrieve or generate the root node.
     *
-    * @param message the human readable error details
+    * @param rootNode the optional root node
+    * @param message  the human readable error details
     */
-  final case class RootNodeNotFound(message: String) extends MarshallingError
+  final case class RootNodeNotFound(rootNode: Option[IriOrBNode], message: String) extends MarshallingError
 
   /**
     * Signals an unexpected error.
@@ -35,6 +38,7 @@ object MarshallingError {
     * @param message the human readable error details
     * @return returns the  [[RootNodeNotFound]] error
     */
-  def rootNotFound(message: String = "The root node could not be found"): MarshallingError = RootNodeNotFound(message)
+  def rootNotFound(message: String = "The root node could not be found"): MarshallingError =
+    RootNodeNotFound(None, message)
 
 }

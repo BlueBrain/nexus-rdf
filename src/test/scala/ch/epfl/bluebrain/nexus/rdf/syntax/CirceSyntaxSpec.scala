@@ -4,11 +4,11 @@ import cats.Id
 import cats.implicits._
 import ch.epfl.bluebrain.nexus.rdf.GraphSpec.Item
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
+import ch.epfl.bluebrain.nexus.rdf.MarshallingError._
 import ch.epfl.bluebrain.nexus.rdf.Node.{blank, IriOrBNode, Literal}
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
 import ch.epfl.bluebrain.nexus.rdf._
 import ch.epfl.bluebrain.nexus.rdf.encoder.GraphEncoder.EncoderResult
-import ch.epfl.bluebrain.nexus.rdf.MarshallingError._
 import ch.epfl.bluebrain.nexus.rdf.encoder.{GraphEncoder, RootNode}
 import ch.epfl.bluebrain.nexus.rdf.instances._
 import ch.epfl.bluebrain.nexus.rdf.jena.JenaModel
@@ -60,7 +60,17 @@ class CirceSyntaxSpec
     // format: on
 
     "convert valid JSON-LD into Graph" in {
-      jsonContentOf("/simple.json").asGraph(blank).right.value.triples shouldEqual triples
+      jsonContentOf("/simple.json")
+        .asGraph(url"http://nexus.example.com/john-doe")
+        .right
+        .value
+        .triples shouldEqual triples
+    }
+
+    "failed convert into Graph when the rootNode provided is not found on the graph" in {
+      val id: IriOrBNode = blank
+      jsonContentOf("/simple.json").asGraph(id).left.value shouldEqual
+        RootNodeNotFound(Some(id), s"The provided id '$id' is not part of the graph")
     }
 
     "convert Graph to Json-LD with context" in {
@@ -103,17 +113,6 @@ class CirceSyntaxSpec
       val id                                = url"http://nexus.example.com/john-doe"
       val graph: EncoderResult[RootedGraph] = json.asGraph(id)
       graph.right.value.as[Json](context(json)).right.value shouldEqual json
-    }
-
-    "convert Graph to Json-LD from a root node that is a blank node" in {
-      val json = jsonContentOf("/embed-no-id.json")
-      val g = json
-        .asGraph(
-          _.subjects(rdf.tpe, url"http://schema.org/Person").headOption
-            .toRight(rootNotFound()))
-        .right
-        .value
-      g.as[Json](context(json)).right.value shouldEqual json
     }
 
     "convert Graph with sorted list" in {
@@ -191,7 +190,8 @@ class CirceSyntaxSpec
 
     "convert model to graph and reverse" in {
       val json              = jsonContentOf("/simple-model2.json")
-      val result: Id[Model] = JenaModel(json).right.value.asGraph(blank).right.value.as[Model]()
+      val graph             = JenaModel(json).right.value.asGraph(url"http://nexus.example.com/john-doe").right.value
+      val result: Id[Model] = RootedGraph(blank, graph).as[Model]()
       val expected: Model   = JenaModel(json).right.value
       result.listStatements().asScala.toList should contain theSameElementsAs expected.listStatements().asScala.toList
     }
