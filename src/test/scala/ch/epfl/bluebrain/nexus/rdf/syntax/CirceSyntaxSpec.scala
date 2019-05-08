@@ -150,6 +150,7 @@ class CirceSyntaxSpec
     "fetch the @id from the Json" in {
       val list = List(
         Iri.absolute("http://nexus.example.com/john-doe").right.value     -> jsonContentOf("/embed.json"),
+        Iri.absolute("http://nexus.example.com/john-doe").right.value     -> jsonContentOf("/with-base.json"),
         Iri.absolute("http://example.com/id").right.value                 -> jsonContentOf("/list.json"),
         Iri.absolute("http://schema.org/john-doe").right.value            -> jsonContentOf("/aliased.json"),
         Iri.absolute("http://nexus.example.com/graph").right.value        -> jsonContentOf("/graph-simple.json"),

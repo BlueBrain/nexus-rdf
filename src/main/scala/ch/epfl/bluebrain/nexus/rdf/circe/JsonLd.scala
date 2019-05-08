@@ -31,6 +31,7 @@ object JsonLd {
   def id(json: Json): Option[AbsoluteIri] =
     JenaModel(json).toOption.flatMap { m =>
       val aliases = contextAliases(json, "@id") + "@id"
+      val baseOpt = contextValue(json).hcursor.get[String]("@base").flatMap(Iri.absolute).toOption
 
       def singleGraph(value: JsonObject): Option[JsonObject] =
         value("@graph").flatMap { json =>
@@ -41,17 +42,29 @@ object JsonLd {
           }
         }
 
-      def inner(value: JsonObject): Option[AbsoluteIri] =
+      def innerPM(value: JsonObject): Option[AbsoluteIri] =
+        inner(value, s => Iri.absolute(m.expandPrefix(s)).toOption)
+
+      def innerBase(value: JsonObject): Option[AbsoluteIri] =
+        baseOpt.flatMap { base =>
+          inner(value, s => Iri.absolute(s"${base.asString}$s").toOption)
+        }
+
+      def inner(value: JsonObject, f: String => Option[AbsoluteIri]): Option[AbsoluteIri] =
         aliases.foldLeft(None: Option[AbsoluteIri]) {
-          case (None, alias) => value(alias).flatMap(_.asString).flatMap(s => Iri.absolute(m.expandPrefix(s)).toOption)
+          case (None, alias) => value(alias).flatMap(_.asString).flatMap(f)
           case (iri, _)      => iri
         }
 
       (json.asObject, json.asArray) match {
         case (Some(jObj), _) =>
-          inner(jObj) orElse singleGraph(jObj).flatMap(inner)
+          innerPM(jObj) orElse singleGraph(jObj).flatMap(innerPM) orElse innerBase(jObj) orElse singleGraph(jObj)
+            .flatMap(innerBase)
         case (_, Some(arr)) if arr.size == 1 =>
-          arr.head.asObject.flatMap(jObj => inner(jObj) orElse singleGraph(jObj).flatMap(inner))
+          arr.head.asObject.flatMap(
+            jObj =>
+              innerPM(jObj) orElse singleGraph(jObj).flatMap(innerPM) orElse innerBase(jObj) orElse singleGraph(jObj)
+                .flatMap(innerBase))
         case _ => None
       }
     }
