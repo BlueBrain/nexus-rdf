@@ -1,6 +1,5 @@
 package ch.epfl.bluebrain.nexus.rdf.decoder
 
-import java.io.ByteArrayOutputStream
 import java.util.UUID
 
 import cats.Id
@@ -15,8 +14,7 @@ import io.circe.Json
 import io.circe.parser.parse
 import org.apache.jena.query.DatasetFactory
 import org.apache.jena.rdf.model.Model
-import org.apache.jena.riot.system.RiotLib
-import org.apache.jena.riot.{JsonLDWriteContext, RDFDataMgr, RDFFormat}
+import org.apache.jena.riot.{JsonLDWriteContext, RDFFormat, RDFWriter}
 import scalax.collection.edge.LkDiEdge
 import scalax.collection.io.dot.Indent.TwoSpaces
 import scalax.collection.io.dot._
@@ -75,13 +73,9 @@ object GraphDecoder extends JsonLdSyntax {
           ctx.setFrame(frame.noSpaces)
           ctx.setOptions(opts)
           jenaModelGraphDecoder(graph).flatMap { jenamModel =>
-            val g   = DatasetFactory.wrap(jenamModel).asDatasetGraph
-            val out = new ByteArrayOutputStream()
-            val w   = RDFDataMgr.createDatasetWriter(RDFFormat.JSONLD_FRAME_FLAT)
-            val pm  = RiotLib.prefixMap(g)
             Try {
-              w.write(out, g, pm, null, ctx)
-              out.toString
+              val g = DatasetFactory.wrap(jenamModel).asDatasetGraph
+              RDFWriter.create().format(RDFFormat.JSONLD_FRAME_FLAT).source(g).context(ctx).build().asString()
             }.toEither match {
               case Right(jsonString) =>
                 val parsedOrErr =
