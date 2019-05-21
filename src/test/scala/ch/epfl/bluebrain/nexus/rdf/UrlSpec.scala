@@ -40,12 +40,14 @@ class UrlSpec extends WordSpecLike with Matchers with Inspectors with EitherValu
       withHash.value.isUrl shouldEqual true
     }
 
+    "as uri" in {
+      val iri = Iri.absolute("hTtp://1.2.3.4:80/a%C2%A3/b%C3%86c/£/#hash").right.value
+      iri.asUri shouldEqual "http://1.2.3.4/a%C2%A3/b%C3%86c/%C2%A3/#hash"
+    }
+
     "show" in {
-      Iri
-        .absolute("hTtp://1.2.3.4:80/a%C2%A3/b%C3%86c/£/#hash")
-        .right
-        .value
-        .show shouldEqual "http://1.2.3.4/a%C2%A3/b%C3%86c/%C2%A3/#hash"
+      val iri = Iri.absolute("hTtp://1.2.3.4:80/a%C2%A3/b%C3%86c/£/#hash").right.value
+      iri.show shouldEqual "http://1.2.3.4/a£/bÆc/£/#hash"
     }
 
     "return an optional self" in {

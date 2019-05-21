@@ -87,7 +87,7 @@ class NodeSpec extends WordSpecLike with Matchers with EitherValues with Inspect
         (Node.blank("123").right.value, "_:123"),
         (Node.iri("https://a.b").right.value, "<https://a.b>"),
         (Node.iri("urn:ab:$").right.value, "<urn:ab:$>"),
-        (Node.iri("urn:ab:£").right.value, "<urn:ab:%C2%A3>"),
+        (Node.iri("urn:ab:£").right.value, "<urn:ab:£>"),
         (Node.literal(2), """"2"^^<http://www.w3.org/2001/XMLSchema#integer>"""),
         (2, """"2"^^<http://www.w3.org/2001/XMLSchema#integer>"""),
         (2L, """"2"^^<http://www.w3.org/2001/XMLSchema#long>"""),

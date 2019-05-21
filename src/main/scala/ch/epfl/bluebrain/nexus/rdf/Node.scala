@@ -3,6 +3,7 @@ package ch.epfl.bluebrain.nexus.rdf
 import java.util.UUID
 
 import cats.syntax.either._
+import cats.syntax.show._
 import cats.{Eq, Show}
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.Node.Literal._
@@ -241,7 +242,7 @@ object Node {
     override def isIri: Boolean         = true
     override def asBlank: Option[BNode] = None
     override def asIri: Option[IriNode] = Some(this)
-    override def toString: String = value.asString
+    override def toString: String = value.show
   }
 
   object IriNode {
