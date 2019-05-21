@@ -47,12 +47,14 @@ class UrnSpec extends WordSpecLike with Matchers with Inspectors with EitherValu
       withHash.value.isUrn shouldEqual true
     }
 
+    "as uri" in {
+      val iri = Iri.absolute("urn:example:a£/bÆc//:://?=a=b#").right.value
+      iri.asUri shouldEqual "urn:example:a%C2%A3/b%C3%86c//:://?=a=b#"
+    }
+
     "show" in {
-      Iri
-        .absolute("urn:example:a£/bÆc//:://?=a=b#")
-        .right
-        .value
-        .show shouldEqual "urn:example:a%C2%A3/b%C3%86c//:://?=a=b#"
+      val iri = Iri.absolute("urn:example:a£/bÆc//:://?=a=b#").right.value
+      iri.show shouldEqual "urn:example:a£/bÆc//:://?=a=b#"
     }
 
     "return an optional self" in {

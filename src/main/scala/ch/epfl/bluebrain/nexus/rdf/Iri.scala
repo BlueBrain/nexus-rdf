@@ -294,7 +294,7 @@ object Iri {
   }
 
   object AbsoluteIri {
-    final implicit val absoluteIriShow: Show[AbsoluteIri] = Show.show(_.asUri)
+    final implicit val absoluteIriShow: Show[AbsoluteIri] = Show.show(_.asString)
     final implicit val absoluteIriEq: Eq[AbsoluteIri]     = Eq.fromUniversalEquals
   }
 
