@@ -53,18 +53,18 @@ class CirceSyntaxSpec
 
     // format: off
     val triples = Set[Graph.Triple](
-      (url"http://nexus.example.com/john-doe", url"http://schema.org/name", "John Doe"),
-      (url"http://nexus.example.com/john-doe", url"http://schema.org/birthDate", Literal("1999-04-09T20:00Z", url"http://www.w3.org/2001/XMLSchema#dateTime".value)),
-      (url"http://nexus.example.com/john-doe", url"http://www.w3.org/1999/02/22-rdf-syntax-ns#type", url"http://schema.org/Person")
+      (url"http://nexus.example.com/john-doé", url"http://schema.org/name", "John Doe"),
+      (url"http://nexus.example.com/john-doé", url"http://schema.org/birthDate", Literal("1999-04-09T20:00Z", url"http://www.w3.org/2001/XMLSchema#dateTime".value)),
+      (url"http://nexus.example.com/john-doé", url"http://www.w3.org/1999/02/22-rdf-syntax-ns#type", url"http://schema.org/Person")
     )
     // format: on
 
-    "convert valid JSON-LD into Graph" in {
-      jsonContentOf("/simple.json")
-        .asGraph(url"http://nexus.example.com/john-doe")
-        .right
-        .value
-        .triples shouldEqual triples
+    "convert valid JSON-LD into Graph and back" in {
+      val json  = jsonContentOf("/simple.json")
+      val graph = json.asGraph(url"http://nexus.example.com/john-doé").right.value
+      graph.triples shouldEqual triples
+
+      graph.as[Json](Json.obj("@context" -> json.contextValue)).right.value shouldEqual json
     }
 
     "failed convert into Graph when the rootNode provided is not found on the graph" in {
@@ -76,21 +76,21 @@ class CirceSyntaxSpec
     "convert Graph to Json-LD with context" in {
 
       // format: off
-      val graph = RootedGraph(url"http://nexus.example.com/john-doe", triples)
+      val graph = RootedGraph(url"http://nexus.example.com/john-doé", triples)
       // format: on
       val json = graph.as[Json]().right.value.asObject.value
-      json("@id").value.asString.value shouldEqual "http://nexus.example.com/john-doe"
+      json("@id").value.asString.value shouldEqual "http://nexus.example.com/john-doé"
       json("http://schema.org/birthDate").value.asString.value shouldEqual "1999-04-09T20:00Z"
       json("http://schema.org/name").value.asString.value shouldEqual "John Doe"
     }
 
     "convert Graph to Json-LD ignoring the IRI context" in {
-      val graph   = RootedGraph(url"http://nexus.example.com/john-doe", triples)
+      val graph   = RootedGraph(url"http://nexus.example.com/john-doé", triples)
       val context = parse("{\"@context\": \"http://schema.org/\"}").right.value
 
       graph.as[Json](context).right.value shouldEqual Json.obj(
         "@context"                    -> Json.obj(),
-        "@id"                         -> Json.fromString("http://nexus.example.com/john-doe"),
+        "@id"                         -> Json.fromString("http://nexus.example.com/john-doé"),
         "@type"                       -> Json.fromString("http://schema.org/Person"),
         "http://schema.org/birthDate" -> Json.fromString("1999-04-09T20:00Z"),
         "http://schema.org/name"      -> Json.fromString("John Doe")
@@ -98,13 +98,13 @@ class CirceSyntaxSpec
     }
 
     "convert an empty graph back to json" in {
-      RootedGraph(url"http://nexus.example.com/john-doe", Graph()).as[Json]().right.value shouldEqual Json.obj()
+      RootedGraph(url"http://nexus.example.com/john-doé", Graph()).as[Json]().right.value shouldEqual Json.obj()
     }
 
     "convert Graph to Json-LD ignoring the IRI context in an array" in {
       val json  = jsonContentOf("/context/simple-iri-context.json")
       val ctx   = context(json)
-      val graph = RootedGraph(url"http://nexus.example.com/john-doe", triples)
+      val graph = RootedGraph(url"http://nexus.example.com/john-doé", triples)
       graph.as[Json](ctx).right.value deepMerge ctx shouldEqual json
     }
 
@@ -127,7 +127,7 @@ class CirceSyntaxSpec
     "convert to compacted Json from entity with GraphEncoder" in {
       val json = jsonContentOf("/context/simple-iri-context.json")
       val ctx  = context(json)
-      val example = Example(url"http://nexus.example.com/john-doe".value,
+      val example = Example(url"http://nexus.example.com/john-doé".value,
                             url"http://schema.org/Person".value,
                             "John Doe",
                             "1999-04-09T20:00Z")
