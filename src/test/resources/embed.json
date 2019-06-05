@@ -35,6 +35,9 @@
     "sp": {
       "@id": "http://example.com/stringProperty"
     },
+    "sp2": {
+      "@id": "http://example.com/stringProperty2"
+    },
     "knows": {
       "@id": "http://schema.org/knows",
       "@type": "@id"
@@ -45,6 +48,7 @@
   "name": "John Doe",
   "birthDate": "1999-04-09T20:00Z",
   "sp": "Some property",
+  "sp2": "",
   "deprecated": false,
   "sibling": {
     "@id": "http://nexus.example.com/other",

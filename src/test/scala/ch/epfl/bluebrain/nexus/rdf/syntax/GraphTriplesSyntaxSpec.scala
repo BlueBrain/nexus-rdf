@@ -12,6 +12,7 @@ class GraphTriplesSyntaxSpec extends WordSpecLike with Matchers with EitherValue
       val expected =
         """<http://nexus.example.com/other> <http://schema.org/birthDate> "2000-04-12T20:00Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
           |<http://nexus.example.com/john-doe> <http://example.com/stringProperty> "Some property" .
+          |<http://nexus.example.com/john-doe> <http://example.com/stringProperty2> "" .
           |<http://nexus.example.com/other> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://schema.org/Other> .
           |<http://nexus.example.com/other> <http://schema.org/birthYear> "1999"^^<http://www.w3.org/2001/XMLSchema#long> .
           |<http://nexus.example.com/john-doe> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://schema.org/Person> .

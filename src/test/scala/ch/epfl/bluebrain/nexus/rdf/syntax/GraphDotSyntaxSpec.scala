@@ -13,6 +13,7 @@ class GraphDotSyntaxSpec extends WordSpecLike with Matchers with EitherValues wi
         """digraph {
           |  "http://nexus.example.com/john-doe" -> "John Doe" [label = "http://schema.org/name"]
           |  "http://nexus.example.com/john-doe" -> "Some property" [label = "http://example.com/stringProperty"]
+          |  "http://nexus.example.com/john-doe" -> " " [label = "http://example.com/stringProperty2"]
           |  "http://nexus.example.com/john-doe" -> "http://schema.org/Person" [label = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"]
           |  "http://nexus.example.com/john-doe" -> "1999-04-09T20:00Z" [label = "http://schema.org/birthDate"]
           |  "http://nexus.example.com/john-doe" -> false [label = "http://schema.org/deprecated"]

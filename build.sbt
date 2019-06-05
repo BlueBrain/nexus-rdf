@@ -27,10 +27,10 @@ scalafmt: {
 // Dependency versions
 val akkaHttpVersion      = "10.1.8"
 val akkaStreamVersion    = "2.5.21"
-val catsVersion          = "1.6.0"
+val catsVersion          = "1.6.1"
 val circeVersion         = "0.11.1"
 val parboiledVersion     = "2.1.6"
-val jenaVersion          = "3.11.0"
+val jenaVersion          = "3.12.0"
 val scalaGraphVersion    = "1.12.5"
 val scalaGraphDotVersion = "1.12.1"
 val scalaTestVersion     = "3.0.7"
