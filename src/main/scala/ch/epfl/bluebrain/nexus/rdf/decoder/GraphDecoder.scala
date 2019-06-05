@@ -116,7 +116,8 @@ object GraphDecoder extends JsonLdSyntax {
       def transformer(innerEdge: G[Node, LkDiEdge]#EdgeT): Option[(DotGraph, DotEdgeStmt)] = {
         val edge: LkDiEdge[G[Node, LkDiEdge]#NodeT] = innerEdge.edge
         val (from, label, to)                       = (edge.s.toString, edge.p.toString, edge.to.toString)
-        Some(root -> DotEdgeStmt(NodeId(from), NodeId(to), List(DotAttr(Id("label"), Id(label)))))
+        val nonEmptyTo                              = if (to.isEmpty) " " else to
+        Some(root -> DotEdgeStmt(NodeId(from), NodeId(nonEmptyTo), List(DotAttr(Id("label"), Id(label)))))
       }
       val dot = graph.underlying.toDot(dotRoot = root,
                                        edgeTransformer = transformer,
