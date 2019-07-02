@@ -2,6 +2,7 @@ package ch.epfl.bluebrain.nexus.rdf.syntax
 
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.circe.JsonLd
+import ch.epfl.bluebrain.nexus.rdf.circe.JsonLd.IdRetrievalError
 import io.circe.Json
 
 trait JsonLdSyntax {
@@ -20,7 +21,7 @@ final class JsonLdOps(private val json: Json) extends AnyVal {
 
   def removeContextIris: Json = JsonLd.removeContextIris(json)
 
-  def id: Option[AbsoluteIri] = JsonLd.id(json)
+  def id: Either[IdRetrievalError, AbsoluteIri] = JsonLd.id(json)
 
   def id(value: AbsoluteIri): Json = JsonLd.id(json, value)
 

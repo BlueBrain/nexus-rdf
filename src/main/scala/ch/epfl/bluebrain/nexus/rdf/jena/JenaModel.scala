@@ -91,7 +91,13 @@ object JenaModel extends JsonLdSyntax {
   /**
     * Enumeration type for JenaModel error operations
     */
-  sealed trait JenaModelErr extends Product with Serializable
+  sealed trait JenaModelErr extends Product with Serializable {
+
+    /**
+      * @return the human readable error details
+      */
+    def message: String
+  }
   object JenaModelErr {
 
     /**
