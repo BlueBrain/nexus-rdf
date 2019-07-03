@@ -8,6 +8,7 @@ import ch.epfl.bluebrain.nexus.rdf.MarshallingError._
 import ch.epfl.bluebrain.nexus.rdf.Node.{blank, IriOrBNode, Literal}
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
 import ch.epfl.bluebrain.nexus.rdf._
+import ch.epfl.bluebrain.nexus.rdf.circe.JsonLd.IdRetrievalError.{IdNotFound, InvalidId}
 import ch.epfl.bluebrain.nexus.rdf.encoder.GraphEncoder.EncoderResult
 import ch.epfl.bluebrain.nexus.rdf.encoder.{GraphEncoder, RootNode}
 import ch.epfl.bluebrain.nexus.rdf.instances._
@@ -160,16 +161,21 @@ class CirceSyntaxSpec
       )
       forAll(list) {
         case (iri, json) =>
-          json.id.value shouldEqual iri
+          json.id.right.value shouldEqual iri
       }
     }
     "fail to fetch the @id when not present" in {
-      Json.obj("type" -> Json.fromString("Person")).id shouldEqual None
-      Json.fromString("something").id shouldEqual None
+      Json.obj("type" -> Json.fromString("Person")).id.left.value shouldEqual IdNotFound
+      Json.fromString("something").id.left.value shouldEqual IdNotFound
     }
 
     "fail to fetch the @id when there is a @graph with several objects" in {
-      jsonContentOf("/graph.json").id shouldEqual None
+      jsonContentOf("/graph.json").id.left.value shouldEqual IdNotFound
+    }
+
+    "fail when the @id is not an AbsoluteIri" in {
+      val id = "wrong-id"
+      Json.obj("@id" -> Json.fromString(id)).id.left.value shouldEqual InvalidId(id)
     }
 
     "deal with invalid ID's" in {

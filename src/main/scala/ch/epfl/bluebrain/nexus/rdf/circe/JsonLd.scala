@@ -2,12 +2,41 @@ package ch.epfl.bluebrain.nexus.rdf.circe
 
 import ch.epfl.bluebrain.nexus.rdf.Iri
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
+import ch.epfl.bluebrain.nexus.rdf.circe.JsonLd.IdRetrievalError._
 import ch.epfl.bluebrain.nexus.rdf.jena.JenaModel
 import io.circe.syntax._
 import io.circe.{Json, JsonObject}
 
 @SuppressWarnings(Array("TraversableHead"))
 object JsonLd {
+
+  /**
+    * Enumeration types for errors when fetching Ids
+    */
+  sealed trait IdRetrievalError extends Product with Serializable
+  object IdRetrievalError {
+
+    /**
+      * The id is invalid
+      *
+      * @param id the id value
+      */
+    final case class InvalidId(id: String) extends IdRetrievalError
+
+    /**
+      * Unexpected error
+      *
+      * @param cause human readable cause
+      */
+    final case class Unexpected(cause: String) extends IdRetrievalError
+
+    /**
+      * There is no Id to be extracted
+      */
+    final case object IdNotFound extends IdRetrievalError
+  }
+
+  private type IdOrError = Either[IdRetrievalError, AbsoluteIri]
 
   /**
     * Adds @id value to the provided Json
@@ -26,10 +55,10 @@ object JsonLd {
     * Attempts to find the top `@id` value on the provided json.
     *
     * @param json the json
-    * @return Some(iri) of found, None otherwise
+    * @return Right(iri) of found, Left(error) otherwise
     */
-  def id(json: Json): Option[AbsoluteIri] =
-    JenaModel(json).toOption.flatMap { m =>
+  def id(json: Json): IdOrError =
+    JenaModel(json).left.map(err => Unexpected(err.message)).flatMap { m =>
       val aliases = contextAliases(json, "@id") + "@id"
       val baseOpt = contextValue(json).hcursor.get[String]("@base").flatMap(Iri.absolute).toOption
 
@@ -42,30 +71,33 @@ object JsonLd {
           }
         }
 
-      def innerPM(value: JsonObject): Option[AbsoluteIri] =
-        inner(value, s => Iri.absolute(m.expandPrefix(s)).toOption)
+      def buildWithPrefix(id: String): IdOrError =
+        Iri.absolute(m.expandPrefix(id)).left.map(_ => InvalidId(id))
 
-      def innerBase(value: JsonObject): Option[AbsoluteIri] =
-        baseOpt.flatMap { base =>
-          inner(value, s => Iri.absolute(s"${base.asString}$s").toOption)
+      def buildWithBase(id: String): IdOrError =
+        baseOpt.flatMap(base => Iri.absolute(s"${base.asString}$id").toOption).toRight(InvalidId(id))
+
+      def idCandidates(value: JsonObject): Set[String] =
+        aliases.foldLeft(Set.empty[String]) {
+          case (ids, alias) => ids ++ value(alias).flatMap(_.asString)
         }
 
-      def inner(value: JsonObject, f: String => Option[AbsoluteIri]): Option[AbsoluteIri] =
-        aliases.foldLeft(None: Option[AbsoluteIri]) {
-          case (None, alias) => value(alias).flatMap(_.asString).flatMap(f)
-          case (iri, _)      => iri
+      def collectOne(ids: Set[String], f: String => IdOrError): IdOrError =
+        ids.foldLeft[Either[IdRetrievalError, AbsoluteIri]](Left(IdNotFound)) {
+          case (Right(id), _) => Right(id)
+          case (_, id)        => f(id)
+        }
+
+      def inner(value: JsonObject): IdOrError =
+        (idCandidates(value) ++ singleGraph(value).map(idCandidates).getOrElse(Set.empty)) match {
+          case ids if ids.isEmpty => Left(IdRetrievalError.IdNotFound)
+          case ids                => collectOne(ids, buildWithPrefix).left.flatMap(_ => collectOne(ids, buildWithBase))
         }
 
       (json.asObject, json.asArray) match {
-        case (Some(jObj), _) =>
-          innerPM(jObj) orElse singleGraph(jObj).flatMap(innerPM) orElse innerBase(jObj) orElse singleGraph(jObj)
-            .flatMap(innerBase)
-        case (_, Some(arr)) if arr.size == 1 =>
-          arr.head.asObject.flatMap(
-            jObj =>
-              innerPM(jObj) orElse singleGraph(jObj).flatMap(innerPM) orElse innerBase(jObj) orElse singleGraph(jObj)
-                .flatMap(innerBase))
-        case _ => None
+        case (Some(jObj), _)                 => inner(jObj)
+        case (_, Some(arr)) if arr.size == 1 => arr.head.asObject.toRight(IdNotFound).flatMap(inner)
+        case _                               => Left(IdNotFound)
       }
     }
 

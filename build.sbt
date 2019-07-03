@@ -29,11 +29,11 @@ val akkaHttpVersion      = "10.1.8"
 val akkaStreamVersion    = "2.5.21"
 val catsVersion          = "1.6.1"
 val circeVersion         = "0.11.1"
-val parboiledVersion     = "2.1.6"
+val parboiledVersion     = "2.1.7"
 val jenaVersion          = "3.12.0"
 val scalaGraphVersion    = "1.12.5"
 val scalaGraphDotVersion = "1.12.1"
-val scalaTestVersion     = "3.0.7"
+val scalaTestVersion     = "3.0.8"
 
 // Dependency modules
 lazy val akkaHttpCore  = "com.typesafe.akka" %% "akka-http-core" % akkaHttpVersion
