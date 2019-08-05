@@ -6,3 +6,4 @@ package object syntax
     with GraphDecoderSyntax
     with NodeSyntax
     with NodeUnsafeSyntax
+    with StringEncodingSyntax

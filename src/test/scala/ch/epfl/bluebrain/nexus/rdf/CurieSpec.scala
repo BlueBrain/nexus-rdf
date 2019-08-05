@@ -65,7 +65,7 @@ class CurieSpec extends WordSpecLike with Matchers with Inspectors with EitherVa
           val curie = Curie(in).right.value
           curie.prefix.value shouldEqual p
           curie.reference.asString shouldEqual r
-          curie.show shouldEqual s"$p:${curie.reference.asUri}"
+          curie.show shouldEqual s"$p:${curie.reference.asString}"
       }
     }
 
