@@ -52,7 +52,7 @@ private[rdf] class IriParser(val input: ParserInput)
       .leftMap(_.format(input, formatter))
 
   def parsePathSegment: Either[String, Path] =
-    rule(`isegment-nz` ~ EOI ~ push(getDecodedSB(pCharDelims))).run()
+    rule(`isegment-nz` ~ EOI ~ push(getDecodedSB)).run()
       .map(str => Segment(str, Path.Empty))
       .leftMap(_.format(input, formatter))
 
@@ -144,7 +144,7 @@ private[rdf] class IriParser(val input: ParserInput)
       .leftMap(_.format(input, formatter))
 
   private def appendSBAsLower(): Rule0 = rule { run(sb.append(CharUtils.toLowerCase(lastChar))) }
-  private def getDecodedSB(exclude: Set[Char]): String = IriParser.decode(sb.toString, UTF8, exclude)
+  private def getDecodedSB: String = IriParser.decode(sb.toString, UTF8)
 
   private[this] var _scheme: Scheme = _
   private[this] var _host: Host = _
@@ -194,11 +194,6 @@ private[rdf] class IriParser(val input: ParserInput)
     0xD0000 to 0xDFFFD, 0xE1000 to 0xEFFFD
   ).map(r => CharPredicate.from(c => r contains c.toInt)).reduce(_ ++ _)
 
-  // Delimiters from https://tools.ietf.org/html/rfc3986#section-2.2
-  private val genDelims = Set(':', '/', '?', '#', '[', ']', '@')
-  // Delimiters computed from https://tools.ietf.org/html/rfc3986#section-3.3
-  private val pCharDelims = genDelims -- Set(':', '@')
-
   private val `sub-delims` = CharPredicate("!$&'()*+,;=")
 
   private val `iunreserved` = AlphaNum ++ CharPredicate("-._~") ++ `ucschar`
@@ -220,7 +215,7 @@ private[rdf] class IriParser(val input: ParserInput)
 
   private def `ireg-name`: Rule0 = rule {
     clearSB() ~ oneOrMore((`iunreserved` ++ `sub-delims`) ~ appendSBAsLower() | `pct-encoded`) ~ run {
-      _host = new NamedHost(getDecodedSB(genDelims).toLowerCase)
+      _host = new NamedHost(getDecodedSB.toLowerCase)
     }
   }
 
@@ -236,7 +231,7 @@ private[rdf] class IriParser(val input: ParserInput)
 
   private def `iuserinfo`: Rule0 = rule {
     clearSB() ~ oneOrMore((`iunreserved` ++ `sub-delims` ++ ':') ~ appendSB() | `pct-encoded`) ~ run {
-      _userInfo = new UserInfo(getDecodedSB(genDelims - ':'))
+      _userInfo = new UserInfo(getDecodedSB)
     }
   }
 
@@ -260,13 +255,13 @@ private[rdf] class IriParser(val input: ParserInput)
     }
 
     rule {
-      zeroOrMore(clearSB() ~ '/' ~ `isegment` ~ run { setPath(getDecodedSB(pCharDelims)) })
+      zeroOrMore(clearSB() ~ '/' ~ `isegment` ~ run { setPath(getDecodedSB) })
     }
   }
 
   private def `ipath-absolute`: Rule0 = rule {
     clearSB() ~ '/' ~ optional(`isegment` ~ run {
-      _path = if (sb.length() == 0) Slash(Path.Empty) else Segment(getDecodedSB(pCharDelims), Slash(Path.Empty))
+      _path = if (sb.length() == 0) Slash(Path.Empty) else Segment(getDecodedSB, Slash(Path.Empty))
     } ~ `ipath-abempty`)
   }
 
@@ -286,14 +281,14 @@ private[rdf] class IriParser(val input: ParserInput)
 
     rule {
       clearSB() ~ `isegment-nz-nc` ~ run {
-        _path = Segment(getDecodedSB(genDelims - '@'), Path.Empty)
-      } ~ zeroOrMore(clearSB() ~ '/' ~ `isegment` ~ run { setPath(getDecodedSB(pCharDelims)) })
+        _path = Segment(getDecodedSB, Path.Empty)
+      } ~ zeroOrMore(clearSB() ~ '/' ~ `isegment` ~ run { setPath(getDecodedSB) })
     }
   }
 
   private def `ipath-rootless`: Rule0 = rule {
     clearSB() ~ `isegment-nz` ~ run {
-      _path = Segment(getDecodedSB(pCharDelims), Path.Empty)
+      _path = Segment(getDecodedSB, Path.Empty)
     } ~ `ipath-abempty`
   }
 
@@ -310,7 +305,7 @@ private[rdf] class IriParser(val input: ParserInput)
   private val queryPartPred = `sub-delims` ++ `iunreserved` ++ `iprivate` ++ CharPredicate(":@/?") -- CharPredicate("=&")
   private def `iquery`: Rule0 = {
     def part: Rule1[String] = rule {
-      clearSB() ~ oneOrMore(!"?+" ~ ('+' ~ appendSB(' ') | queryPartPred ~ appendSB() | `pct-encoded`)) ~ push(getDecodedSB(pCharDelims - '/' - '?'))
+      clearSB() ~ oneOrMore(!"?+" ~ ('+' ~ appendSB(' ') | queryPartPred ~ appendSB() | `pct-encoded`)) ~ push(getDecodedSB)
     }
 
     /*_*/
@@ -333,7 +328,7 @@ private[rdf] class IriParser(val input: ParserInput)
 
   private def `ifragment`: Rule0 = rule {
     clearSB() ~ zeroOrMore(`ipchar` | (CharPredicate("/?") ~ appendSB())) ~ run {
-      _fragment = new Fragment(getDecodedSB(pCharDelims - '/' - '?'))
+      _fragment = new Fragment(getDecodedSB)
     }
   }
 
@@ -368,7 +363,7 @@ private[rdf] class IriParser(val input: ParserInput)
 
   private val componentPred = `sub-delims` ++ `iunreserved` ++ ":@/?"
   private def `component`: Rule1[Component] = rule {
-    clearSB() ~ oneOrMore(!"?+" ~ !"?=" ~ componentPred ~ appendSB() | `pct-encoded`) ~ push(new Component(getDecodedSB(pCharDelims - '/' - '?')))
+    clearSB() ~ oneOrMore(!"?+" ~ !"?=" ~ componentPred ~ appendSB() | `pct-encoded`) ~ push(new Component(getDecodedSB))
   }
 
   private def `rq-components`: Rule0 = {
@@ -413,17 +408,16 @@ private[rdf] class IriParser(val input: ParserInput)
 object IriParser {
 
   /**
-    * A direct port of the JDKs [[java.net.URLDecoder#decode(String, Charset)]] implementation that doesn't attempt to decode all characters.
-    * Decodes a percent encoded string using the specified charset.
+    * A direct port of the JDKs [[java.net.URLDecoder#decode(String, Charset)]] implementation that doesn't attempt to convert
+    * ''+'' into a space character '' ''. Decodes a percent encoded string using the specified charset.
     *
     * @param string  the string to decode
     * @param charset the given charset
-    * @param exclude the set of chars that are excluded from decoding
     * @throws IllegalArgumentException if it encounters illegal characters
     * @see [[java.net.URLDecoder#decode(String, Charset)]]
     */
   @SuppressWarnings(Array("NullAssignment", "NullParameter"))
-  private[rdf] def decode(string: String, charset: Charset, exclude: Set[Char]): String = {
+  private[rdf] def decode(string: String, charset: Charset): String = {
     var needToChange = false
     val numChars = string.length
     val sb = new JStringBuilder(if (numChars > 500) numChars / 2 else numChars)
@@ -431,32 +425,22 @@ object IriParser {
 
     var c: Char = 0
     var bytes: Array[Byte] = null
-    var hex: Array[String] = null
     while (i < numChars) {
       c = string.charAt(i)
       c match {
         case '%' =>
           try {
             if (bytes == null) bytes = new Array[Byte]((numChars - i) / 3)
-            if (hex == null) hex = new Array[String]((numChars - i) / 3)
             var pos = 0
             while ({ ((i + 2) < numChars) && (c == '%') }) {
-              val encodedStr = string.substring(i + 1, i + 3)
-              val v = Integer.parseInt(encodedStr, 16)
+              val v = Integer.parseInt(string.substring(i + 1, i + 3), 16)
               if (v < 0) throw new IllegalArgumentException("URLDecoder: Illegal hex characters in escape " + "(%) pattern - negative value")
-              val arrPos = pos
-              hex(arrPos) = encodedStr
-              bytes(arrPos) = v.toByte
-              pos += 1
+              bytes({ pos += 1; pos - 1 }) = v.toByte
               i += 3
               if (i < numChars) c = string.charAt(i)
             }
             if ((i < numChars) && (c == '%')) throw new IllegalArgumentException("URLDecoder: Incomplete trailing escape (%) pattern")
-            val decodedStr = new String(bytes, 0, pos, charset)
-            decodedStr.zipWithIndex.map {
-              case (char, idx) if exclude.contains(char) => sb.append(s"%${hex(idx)}")
-              case (char, _) => sb.append(char)
-            }
+            sb.append(new String(bytes, 0, pos, charset))
           } catch {
             case e: NumberFormatException =>
               throw new IllegalArgumentException("URLDecoder: Illegal hex characters in escape (%) pattern - " + e.getMessage)

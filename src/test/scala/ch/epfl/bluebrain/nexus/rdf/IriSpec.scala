@@ -1,7 +1,6 @@
 package ch.epfl.bluebrain.nexus.rdf
 
 import cats.kernel.Eq
-import cats.syntax.show._
 import ch.epfl.bluebrain.nexus.rdf.Iri._
 import org.scalatest.{EitherValues, Inspectors, Matchers, WordSpecLike}
 
@@ -28,7 +27,8 @@ class IriSpec extends WordSpecLike with Matchers with Inspectors with EitherValu
       "hTtps://me:me@hOst:443/a/b?a&e=f&b=c#frag"                                                  -> "https://me:me@host/a/b?a&b=c&e=f#frag",
       "hTtps://me:me@hOst#frag"                                                                    -> "https://me:me@host#frag",
       "hTtp://hOst%C2%A3:80/a%C2%A3/b%C3%86c//:://"                                                -> "http://host£/a£/bÆc//:://",
-      "https://my%40user:my%3Apassword%24@myhost.com/a/path/http%3A%2F%2Fexample.com%2Fnxv%3Asome" -> "https://my%40user:my:password$@myhost.com/a/path/http:%2F%2Fexample.com%2Fnxv:some"
+      "https://my%40user:my%3Apassword%24@myhost.com/a/path/http%3A%2F%2Fexample.com%2Fnxv%3Asome" -> "https://my%40user:my:password$@myhost.com/a/path/http:%2F%2Fexample.com%2Fnxv:some",
+      "http://abc%40:def@example.com/a/http%3A%2F%2Fother.com"                                     -> "http://abc%40:def@example.com/a/http:%2F%2Fother.com"
     )
 
     val casesUrlEncoded = List(
@@ -62,24 +62,24 @@ class IriSpec extends WordSpecLike with Matchers with Inspectors with EitherValu
       }
     }
 
-    "show url" in {
+    "show as url" in {
       forAll(casesUrlEncoded) {
         case (in, expected) =>
-          Iri(in).right.value.show shouldEqual expected
+          Iri(in).right.value.asUri shouldEqual expected
       }
     }
 
-    "show urn" in {
+    "show as uri" in {
       forAll(casesUrnEncoded) {
         case (in, expected) =>
-          Iri(in).right.value.show shouldEqual expected
+          Iri(in).right.value.asUri shouldEqual expected
       }
     }
 
-    "show relative url" in {
+    "show as relative uri" in {
       forAll(casesRelativeEncoded) {
         case (in, expected) =>
-          Iri(in).right.value.show shouldEqual expected
+          Iri(in).right.value.asUri shouldEqual expected
       }
     }
 

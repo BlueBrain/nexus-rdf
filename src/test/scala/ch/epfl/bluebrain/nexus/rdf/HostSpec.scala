@@ -118,6 +118,8 @@ class HostSpec extends WordSpecLike with Matchers with Inspectors with EitherVal
   "A NamedHost" should {
     val pct =
       "%C2%A3%C2%A4%C2%A5%C2%A6%C2%A7%C2%A8%C2%A9%C2%AA%C2%AB%C2%AC%C2%AD%C2%AE%C2%AF%C2%B0%C2%B1%C2%B2%C2%B3%C2%B4%C2%B5%C2%B6%C2%B7%C2%B8%C2%B9%C2%BA%C2%BB%C2%BC%C2%BD%C2%BE%C2%BF%C3%80%C3%81%C3%82%C3%83%C3%84%C3%85%C3%86"
+    val pctLow =
+      "%C2%A3%C2%A4%C2%A5%C2%A6%C2%A7%C2%A8%C2%A9%C2%AA%C2%AB%C2%AC%C2%AD%C2%AE%C2%AF%C2%B0%C2%B1%C2%B2%C2%B3%C2%B4%C2%B5%C2%B6%C2%B7%C2%B8%C2%B9%C2%BA%C2%BB%C2%BC%C2%BD%C2%BE%C2%BF%C3%A0%C3%A1%C3%A2%C3%A3%C3%A4%C3%A5%C3%A6"
     val ucsUp  = "£¤¥¦§¨©ª«¬\u00AD®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆ"
     val ucsLow = "£¤¥¦§¨©ª«¬\u00AD®¯°±²³´µ¶·¸¹º»¼½¾¿àáâãäåæ"
     val delims = "!$&'()*+,;="
@@ -145,7 +147,13 @@ class HostSpec extends WordSpecLike with Matchers with Inspectors with EitherVal
     }
 
     "show" in {
-      Host.named(up).right.value.show shouldEqual low
+      val encodedDelim = urlEncode("[]#")
+      Host.named(up + encodedDelim).right.value.show shouldEqual (low + encodedDelim)
+    }
+
+    "pct encoded representation" in {
+      val encodedDelim = urlEncode("[]#")
+      Host.named(ucsUp + pct + ucsLow + delims + up + encodedDelim).right.value.pctEncoded shouldEqual (pctLow + pctLow + pctLow + delims + low+ encodedDelim)
     }
 
     "be named" in {

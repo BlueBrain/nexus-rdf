@@ -7,7 +7,7 @@ import ch.epfl.bluebrain.nexus.rdf.Iri.Host.{IPv4Host, IPv6Host, NamedHost}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
 import ch.epfl.bluebrain.nexus.rdf.Iri._
 import ch.epfl.bluebrain.nexus.rdf.PctString._
-
+import ch.epfl.bluebrain.nexus.rdf.syntax._
 import scala.annotation.tailrec
 import scala.collection.immutable.SortedSet
 import scala.collection.{immutable, SeqView, SortedMap}
@@ -58,7 +58,8 @@ sealed abstract class Iri extends Product with Serializable {
   def asUrn: Option[Urn]
 
   /**
-    * @return the UTF-8 string representation of this Iri
+    * @return the string representation as a valid Iri
+    *         (using percent-encoding only for delimiters)
     */
   def asString: String
 
@@ -258,7 +259,7 @@ object Iri {
     final def apply(string: String): Either[String, RelativeIri] =
       new IriParser(string).parseRelative
 
-    final implicit val relativeIriShow: Show[RelativeIri] = Show.show(_.asUri)
+    final implicit val relativeIriShow: Show[RelativeIri] = Show.show(_.asString)
 
     final implicit val relativeIriEq: Eq[RelativeIri] = Eq.fromUniversalEquals
   }
@@ -407,7 +408,7 @@ object Iri {
     private[rdf] def unsafe(string: String): Url =
       apply(string).right.get
 
-    final implicit def urlShow: Show[Url] = Show.show(_.asUri)
+    final implicit def urlShow: Show[Url] = Show.show(_.asString)
 
     final implicit val urlEq: Eq[Url] = Eq.fromUniversalEquals
   }
@@ -464,7 +465,8 @@ object Iri {
   final case class Authority(userInfo: Option[UserInfo], host: Host, port: Option[Port]) {
 
     /**
-      * @return the UTF-8 representation
+      * @return the string representation for the Authority segment compatible with the rfc3987
+      *         (using percent-encoding only for delimiters)
       */
     lazy val asString: String = {
       val ui = userInfo.map(_.asString + "@").getOrElse("")
@@ -473,8 +475,8 @@ object Iri {
     }
 
     /**
-      * @return the string representation using percent-encoding for any character that
-      *         is not contained in the Set ''pchar''
+      * @return the string representation using percent-encoding for the Authority segment
+      *         when necessary according to rfc3986
       */
     lazy val pctEncoded: String = {
       {
@@ -498,6 +500,7 @@ object Iri {
     * @param value the underlying string representation
     */
   final case class UserInfo private[rdf] (value: String) {
+    private val allowedCharacters = unreserved ++ `sub-delims` + ':'
 
     /**
       * As per the specification the user info is case sensitive.  This method allows comparing two user info values
@@ -510,17 +513,16 @@ object Iri {
       this.value equalsIgnoreCase that.value
 
     /**
-      * @return the UTF-8 representation
+      * @return the string representation for the Userinfo segment compatible with the rfc3987
+      *         (using percent-encoding only for delimiters)
       */
-    lazy val asString: String =
-      value
+    lazy val asString: String = value.pctEncodeInclude(`gen-delims` -- allowedCharacters)
 
     /**
-      * @return the string representation using percent-encoding for any character that
-      *         is not contained in the Set ''pchar''
+      * @return the string representation using percent-encoding for the Userinfo segment
+      *         when necessary according to rfc3986
       */
-    lazy val pctEncoded: String =
-      pctEncode(value)
+    lazy val pctEncoded: String = value.pctEncodeIgnore(allowedCharacters)
   }
 
   object UserInfo {
@@ -541,7 +543,7 @@ object Iri {
   /**
     * Host part of an Iri as defined in RFC 3987.
     */
-  sealed abstract class Host extends Product with Serializable with PctString {
+  sealed abstract class Host extends Product with Serializable {
 
     /**
       * @return true if the host is an IPv4 address, false otherwise
@@ -572,6 +574,20 @@ object Iri {
       * @return Some(this) if this is a NamedHost, None otherwise
       */
     def asNamed: Option[NamedHost] = None
+
+    def value: String
+
+    /**
+      * @return the string representation using percent-encoding for the Host segment
+      *         when necessary according to rfc3986
+      */
+    def pctEncoded: String
+
+    /**
+      * @return the string representation for the Host segment compatible with the rfc3987
+      *         (using percent-encoding only for delimiters)
+      */
+    def asString: String
   }
 
   object Host {
@@ -633,6 +649,8 @@ object Iri {
       override def isIPv4: Boolean          = true
       override def asIPv4: Option[IPv4Host] = Some(this)
       override lazy val value: String       = bytes.map(_ & 0xFF).mkString(".")
+      override lazy val pctEncoded          = value
+      override lazy val asString            = value
     }
 
     object IPv4Host {
@@ -689,6 +707,8 @@ object Iri {
     final case class IPv6Host private[rdf] (bytes: immutable.Seq[Byte]) extends Host {
       override def isIPv6: Boolean          = true
       override def asIPv6: Option[IPv6Host] = Some(this)
+      override lazy val pctEncoded          = value
+      override lazy val asString            = value
 
       override lazy val value: String =
         asString(bytes.view)
@@ -731,8 +751,11 @@ object Iri {
       * @param value the underlying string representation
       */
     final case class NamedHost private[rdf] (value: String) extends Host {
+      private val allowedCharacters           = unreserved ++ `sub-delims`
       override def isNamed: Boolean           = true
       override def asNamed: Option[NamedHost] = Some(this)
+      override lazy val pctEncoded            = value.pctEncodeIgnore(allowedCharacters)
+      override lazy val asString              = value.pctEncodeInclude(`gen-delims` -- allowedCharacters)
     }
 
     object NamedHost {
@@ -870,13 +893,14 @@ object Iri {
     }
 
     /**
-      * @return the UTF-8 representation of this Path
+      * @return the string representation for the Path segment compatible with the rfc3987
+      *         (using percent-encoding only for delimiters)
       */
     def asString: String
 
     /**
-      * @return the string representation using percent-encoding for any character that
-      *         is not contained in the Set ''pchar''
+      * @return the string representation using percent-encoding for the Path segment
+      *         when necessary according to rfc3986
       */
     def pctEncoded: String
 
@@ -1046,7 +1070,6 @@ object Iri {
       */
     final case class Segment private[rdf] (segment: String, rest: Path) extends Path {
       type Head = String
-
       def isEmpty: Boolean                                   = false
       def head: String                                       = segment
       def tail(dropSlash: Boolean): Path                     = if (dropSlash && rest.endsWithSlash) rest.tail(dropSlash) else rest
@@ -1055,8 +1078,8 @@ object Iri {
       def asEmpty: Option[Empty]                             = None
       def asSlash: Option[Slash]                             = None
       def asSegment: Option[Segment]                         = Some(this)
-      def asString: String                                   = rest.asString + segment
-      def pctEncoded: String                                 = rest.pctEncoded + pctEncode(segment)
+      def asString: String                                   = rest.asString + segment.pctEncodeInclude(`gen-delims` -- pchar)
+      def pctEncoded: String                                 = rest.pctEncoded + segment.pctEncodeIgnore(pchar)
       def startWithSlash: Boolean                            = rest.startWithSlash
       def prepend(other: Path, allowSlashDup: Boolean): Path = rest.prepend(other, allowSlashDup) + segment
       def +(s: String): Path                                 = if (segment.isEmpty) this else Segment(segment + s, rest)
@@ -1085,33 +1108,36 @@ object Iri {
     * @param value a sorted multi map that represents all key -> value pairs
     */
   final case class Query private[rdf] (value: SortedMap[String, SortedSet[String]]) {
+    private val allowedCharacters   = pchar + '/' + '?'
+    private val delimiterCharacters = `gen-delims` -- allowedCharacters
 
     /**
-      * @return the UTF-8 representation of this Query
+      * @return the string representation for the Query segment compatible with the rfc3987
+      *         (using percent-encoding only for delimiters)
       */
-    def asString: String =
+    lazy val asString: String =
       value
         .map {
           case (k, s) =>
             s.map {
-                case v if v.isEmpty => k
-                case v              => s"$k=$v"
+                case v if v.isEmpty => k.pctEncodeInclude(delimiterCharacters)
+                case v              => s"${k.pctEncodeInclude(delimiterCharacters)}=${v.pctEncodeInclude(delimiterCharacters)}"
               }
               .mkString("&")
         }
         .mkString("&")
 
     /**
-      * @return the string representation using percent-encoding for any character that
-      *         is not contained in the Set ''pchar''
+      * @return the string representation using percent-encoding for the Query segment
+      *         when necessary according to rfc3986
       */
-    def pctEncoded: String =
+    lazy val pctEncoded: String =
       value
         .map {
           case (k, s) =>
             s.map {
-                case v if v.isEmpty => pctEncode(k)
-                case v              => s"${pctEncode(k)}=${pctEncode(v)}"
+                case v if v.isEmpty => k.pctEncodeIgnore(allowedCharacters)
+                case v              => s"${k.pctEncodeIgnore(allowedCharacters)}=${v.pctEncodeIgnore(allowedCharacters)}"
               }
               .mkString("&")
         }
@@ -1140,7 +1166,22 @@ object Iri {
     *
     * @param value the string value of the fragment
     */
-  final case class Fragment private[rdf] (value: String) extends PctString
+  final case class Fragment private[rdf] (value: String) {
+    private val allowedCharacters = pchar + '/' + '?'
+
+    /**
+      * @return the string representation for the Path segment compatible with the rfc3987
+      *         (using percent-encoding only for delimiters)
+      */
+    lazy val asString: String = value.pctEncodeInclude(`gen-delims` -- allowedCharacters)
+
+    /**
+      * @return the string representation using percent-encoding for the Fragment segment
+      *         when necessary according to rfc3986
+      */
+    lazy val pctEncoded: String = value.pctEncodeIgnore(allowedCharacters)
+
+  }
 
   object Fragment {
 
@@ -1162,7 +1203,21 @@ object Iri {
     *
     * @param value the string value of the fragment
     */
-  final case class Nid private[rdf] (value: String) extends PctString
+  final case class Nid private[rdf] (value: String) {
+    private val allowedCharacters = alpha ++ numeric + '/'
+
+    /**
+      * @return the string representation for the Nid segment compatible with the rfc3987
+      *         (using percent-encoding only for delimiters)
+      */
+    lazy val asString: String = value.pctEncodeInclude(`gen-delims` -- allowedCharacters)
+
+    /**
+      * @return the string representation using percent-encoding for the Nid segment
+      *         when necessary according to rfc3986
+      */
+    lazy val pctEncoded: String = value.pctEncodeIgnore(allowedCharacters)
+  }
 
   object Nid {
 
@@ -1182,7 +1237,21 @@ object Iri {
   /**
     * Urn R or Q component as defined by RFC 8141.
     */
-  final case class Component private[rdf] (value: String) extends PctString
+  final case class Component private[rdf] (value: String) {
+    private val allowedCharacters = pchar + '/' + '?'
+
+    /**
+      * @return the string representation for the Component segment compatible with the rfc3987
+      *         (using percent-encoding only for delimiters)
+      */
+    lazy val asString: String = value.pctEncodeInclude(`gen-delims` -- allowedCharacters)
+
+    /**
+      * @return the string representation using percent-encoding for the Component segment
+      *         when necessary according to rfc3986
+      */
+    lazy val pctEncoded: String = value.pctEncodeIgnore(allowedCharacters)
+  }
 
   object Component {
 
@@ -1249,7 +1318,7 @@ object Iri {
     final def apply(string: String): Either[String, Urn] =
       new IriParser(string).parseUrn
 
-    final implicit val urnShow: Show[Urn] = Show.show(_.asUri)
+    final implicit val urnShow: Show[Urn] = Show.show(_.asString)
 
     final implicit val urnEq: Eq[Urn] = Eq.fromUniversalEquals
   }
