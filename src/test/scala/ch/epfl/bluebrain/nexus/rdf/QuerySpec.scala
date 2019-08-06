@@ -38,7 +38,15 @@ class QuerySpec extends WordSpecLike with Matchers with Inspectors with EitherVa
       }
     }
     "show" in {
-      Query("a=b&a=b&a=c&a&b&b&b=c&d&e").right.value.show shouldEqual "a&a=b&a=c&b&b=c&d&e"
+      val encodedDelim = urlEncode("[]#")
+      Query("a=b&a=b&a=c&a&b&b&b=c&d&e" + encodedDelim).right.value.show shouldEqual "a&a=b&a=c&b&b=c&d&e" + encodedDelim
+    }
+    "pct encoded representation" in {
+      val utf8         = "£Æ"
+      val encodedUtf8  = urlEncode(utf8)
+      val allowedDelim = "!:@!$()+*,"
+      val encodedDelim = urlEncode("[]#")
+      Query(utf8 + encodedUtf8 + allowedDelim + encodedDelim).right.value.pctEncoded shouldEqual (encodedUtf8 + encodedUtf8 + allowedDelim + encodedDelim)
     }
     "eq" in {
       val lhs = Query("a=b&a=b&a=c&a&b&b&b=c&d&e").right.value

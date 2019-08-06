@@ -12,8 +12,10 @@ object PctString {
 
   private[rdf] def pctEncodedIgnore(s: String, toIgnore: Set[Char]) =
     s.foldLeft(new StringBuilder()) {
-        case (sb, b) if toIgnore.contains(b) => sb.append(b)
-        case (sb, b)                         => pctEncode(sb, b)
+        case (sb, b) if toIgnore.contains(b) =>
+          sb.append(b)
+        case (sb, b)                         =>
+          pctEncode(sb, b)
       }
       .toString()
 

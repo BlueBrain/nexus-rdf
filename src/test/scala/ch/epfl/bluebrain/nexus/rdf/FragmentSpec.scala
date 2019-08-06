@@ -23,7 +23,13 @@ class FragmentSpec extends WordSpecLike with Matchers with Inspectors with Eithe
     }
 
     "show" in {
-      Fragment(pct + ucs + delims + rest).right.value.show shouldEqual ucs + ucs + delims + rest
+      val encodedDelims = urlEncode("#[]")
+      Fragment(pct + ucs + delims + rest + encodedDelims).right.value.show shouldEqual ucs + ucs + delims + rest + encodedDelims
+    }
+
+    "pct encoded representation" in {
+      val encodedDelims = urlEncode("#[]")
+      Fragment(pct + ucs + delims + rest + encodedDelims).right.value.pctEncoded shouldEqual pct + pct + delims + rest + encodedDelims
     }
 
     "eq" in {

@@ -2,7 +2,7 @@ package ch.epfl.bluebrain.nexus.rdf
 
 import cats.kernel.Eq
 import cats.syntax.show._
-import ch.epfl.bluebrain.nexus.rdf.Iri.Path.{segment, _}
+import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
 import ch.epfl.bluebrain.nexus.rdf.Iri._
 import org.scalatest.{EitherValues, Inspectors, Matchers, WordSpecLike}
 
@@ -72,7 +72,15 @@ class PathSpec extends WordSpecLike with Matchers with Inspectors with EitherVal
       }
     }
     "show" in {
-      abcd.right.value.show shouldEqual "/a/b//c/d"
+      val encodedDelims = urlEncode("/#[]?")
+      Path("/" + encodedDelims + "/a/b//c/d/£¤¥").right.value.show shouldEqual "/" + encodedDelims + "/a/b//c/d/£¤¥"
+    }
+    "pct encoded representation" in {
+      val encodedDelims = urlEncode("/#[]?")
+      val utf8          = "£¤¥"
+      val utf8Encoded   = urlEncode(utf8)
+      Path("/" + encodedDelims + "/a/b//c/d/" + utf8 + "/" + utf8Encoded).right.value.pctEncoded shouldEqual
+        "/" + encodedDelims + "/a/b//c/d/" + utf8Encoded + "/" + utf8Encoded
     }
     "be slash" in {
       Path("/").right.value.isSlash shouldEqual true

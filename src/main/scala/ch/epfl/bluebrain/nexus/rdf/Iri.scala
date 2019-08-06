@@ -500,7 +500,7 @@ object Iri {
     * @param value the underlying string representation
     */
   final case class UserInfo private[rdf] (value: String) {
-    private val charactersToIgnore = unreserved ++ `sub-delims` + ':'
+    private val allowedCharacters = unreserved ++ `sub-delims` + ':'
 
     /**
       * As per the specification the user info is case sensitive.  This method allows comparing two user info values
@@ -516,13 +516,13 @@ object Iri {
       * @return the string representation for the Userinfo segment compatible with the rfc3987
       *         (using percent-encoding only for delimiters)
       */
-    lazy val asString: String = value.pctEncodeInclude(`gen-delims` -- charactersToIgnore)
+    lazy val asString: String = value.pctEncodeInclude(`gen-delims` -- allowedCharacters)
 
     /**
       * @return the string representation using percent-encoding for the Userinfo segment
       *         when necessary according to rfc3986
       */
-    lazy val pctEncoded: String = value.pctEncodeIgnore(charactersToIgnore)
+    lazy val pctEncoded: String = value.pctEncodeIgnore(allowedCharacters)
   }
 
   object UserInfo {
@@ -751,11 +751,11 @@ object Iri {
       * @param value the underlying string representation
       */
     final case class NamedHost private[rdf] (value: String) extends Host {
-      private val charactersToIgnore          = unreserved ++ `sub-delims`
+      private val allowedCharacters           = unreserved ++ `sub-delims`
       override def isNamed: Boolean           = true
       override def asNamed: Option[NamedHost] = Some(this)
-      override lazy val pctEncoded            = value.pctEncodeIgnore(charactersToIgnore)
-      override lazy val asString              = value.pctEncodeInclude(`gen-delims` -- charactersToIgnore)
+      override lazy val pctEncoded            = value.pctEncodeIgnore(allowedCharacters)
+      override lazy val asString              = value.pctEncodeInclude(`gen-delims` -- allowedCharacters)
     }
 
     object NamedHost {
@@ -1108,8 +1108,8 @@ object Iri {
     * @param value a sorted multi map that represents all key -> value pairs
     */
   final case class Query private[rdf] (value: SortedMap[String, SortedSet[String]]) {
-    private val charactersToIgnore = pchar + '/' + '?'
-    private val charactersToEncode = `gen-delims` -- charactersToIgnore
+    private val allowedCharacters   = pchar + '/' + '?'
+    private val delimiterCharacters = `gen-delims` -- allowedCharacters
 
     /**
       * @return the string representation for the Query segment compatible with the rfc3987
@@ -1120,8 +1120,8 @@ object Iri {
         .map {
           case (k, s) =>
             s.map {
-                case v if v.isEmpty => k.pctEncodeInclude(charactersToEncode)
-                case v              => s"${k.pctEncodeInclude(charactersToEncode)}=${v.pctEncodeInclude(charactersToEncode)}"
+                case v if v.isEmpty => k.pctEncodeInclude(delimiterCharacters)
+                case v              => s"${k.pctEncodeInclude(delimiterCharacters)}=${v.pctEncodeInclude(delimiterCharacters)}"
               }
               .mkString("&")
         }
@@ -1136,8 +1136,8 @@ object Iri {
         .map {
           case (k, s) =>
             s.map {
-                case v if v.isEmpty => k.pctEncodeIgnore(charactersToIgnore)
-                case v              => s"${k.pctEncodeIgnore(charactersToIgnore)}=${v.pctEncodeIgnore(charactersToIgnore)}"
+                case v if v.isEmpty => k.pctEncodeIgnore(allowedCharacters)
+                case v              => s"${k.pctEncodeIgnore(allowedCharacters)}=${v.pctEncodeIgnore(allowedCharacters)}"
               }
               .mkString("&")
         }
@@ -1167,19 +1167,19 @@ object Iri {
     * @param value the string value of the fragment
     */
   final case class Fragment private[rdf] (value: String) {
-    private val charactersToIgnore = pchar + '/' + '?'
+    private val allowedCharacters = pchar + '/' + '?'
 
     /**
       * @return the string representation for the Path segment compatible with the rfc3987
       *         (using percent-encoding only for delimiters)
       */
-    lazy val asString: String = value.pctEncodeInclude(`gen-delims` -- charactersToIgnore)
+    lazy val asString: String = value.pctEncodeInclude(`gen-delims` -- allowedCharacters)
 
     /**
       * @return the string representation using percent-encoding for the Fragment segment
       *         when necessary according to rfc3986
       */
-    lazy val pctEncoded: String = value.pctEncodeIgnore(charactersToIgnore)
+    lazy val pctEncoded: String = value.pctEncodeIgnore(allowedCharacters)
 
   }
 
@@ -1204,19 +1204,19 @@ object Iri {
     * @param value the string value of the fragment
     */
   final case class Nid private[rdf] (value: String) {
-    private val charactersToIgnore = alpha ++ numeric + '/'
+    private val allowedCharacters = alpha ++ numeric + '/'
 
     /**
       * @return the string representation for the Nid segment compatible with the rfc3987
       *         (using percent-encoding only for delimiters)
       */
-    lazy val asString: String = value.pctEncodeInclude(`gen-delims` -- charactersToIgnore)
+    lazy val asString: String = value.pctEncodeInclude(`gen-delims` -- allowedCharacters)
 
     /**
       * @return the string representation using percent-encoding for the Nid segment
       *         when necessary according to rfc3986
       */
-    lazy val pctEncoded: String = value.pctEncodeIgnore(charactersToIgnore)
+    lazy val pctEncoded: String = value.pctEncodeIgnore(allowedCharacters)
   }
 
   object Nid {
@@ -1238,19 +1238,19 @@ object Iri {
     * Urn R or Q component as defined by RFC 8141.
     */
   final case class Component private[rdf] (value: String) {
-    private val charactersToIgnore = pchar + '/' + '?'
+    private val allowedCharacters = pchar + '/' + '?'
 
     /**
       * @return the string representation for the Component segment compatible with the rfc3987
       *         (using percent-encoding only for delimiters)
       */
-    lazy val asString: String = value.pctEncodeInclude(`gen-delims` -- charactersToIgnore)
+    lazy val asString: String = value.pctEncodeInclude(`gen-delims` -- allowedCharacters)
 
     /**
       * @return the string representation using percent-encoding for the Component segment
       *         when necessary according to rfc3986
       */
-    lazy val pctEncoded: String = value.pctEncodeIgnore(charactersToIgnore)
+    lazy val pctEncoded: String = value.pctEncodeIgnore(allowedCharacters)
   }
 
   object Component {
