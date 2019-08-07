@@ -75,7 +75,8 @@ class JenaSyntaxSpec extends WordSpecLike with Matchers with Inspectors with Eit
 
     "fail to convert wrong IRI from Jena resource" in {
       toIriOrBNode(ResourceFactory.createResource("file:///some/path with space")).left.value should startWith(
-        "'file:///some/path with space' could not be converted to Iri.")
+        "'file:///some/path with space' could not be converted to Iri."
+      )
     }
 
     "convert blank node from Jena model" in {
@@ -91,7 +92,8 @@ class JenaSyntaxSpec extends WordSpecLike with Matchers with Inspectors with Eit
 
     "fail to convert wrong property from Jena model" in {
       propToIriNode(ResourceFactory.createProperty("file:///some/path with space")).left.value should startWith(
-        "'file:///some/path with space' could not be converted to Iri.")
+        "'file:///some/path with space' could not be converted to Iri."
+      )
     }
 
     "convert Jena Model to Graph" in {

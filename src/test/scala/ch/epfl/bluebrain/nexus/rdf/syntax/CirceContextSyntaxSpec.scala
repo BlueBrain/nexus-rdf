@@ -17,38 +17,48 @@ class CirceContextSyntaxSpec extends WordSpecLike with Matchers with Inspectors 
 
     val mapping = List(
       Json.obj("@id"        -> Json.fromString("foo-id"), "nxv:rev" -> Json.fromLong(1)) ->
-        Json.obj("@context" -> contextString, "@id" -> Json.fromString("foo-id"), "nxv:rev" -> Json.fromLong(1)),
-      Json.obj("@context"   -> Json.fromString("http://foo.domain/some/context"),
-               "@id"        -> Json.fromString("foo-id"),
-               "nxv:rev"    -> Json.fromLong(1)) ->
+        Json.obj("@context" -> contextString, "@id"                 -> Json.fromString("foo-id"), "nxv:rev" -> Json.fromLong(1)),
+      Json.obj(
+        "@context" -> Json.fromString("http://foo.domain/some/context"),
+        "@id"      -> Json.fromString("foo-id"),
+        "nxv:rev"  -> Json.fromLong(1)
+      ) ->
         Json.obj(
           "@context" -> Json.arr(Json.fromString("http://foo.domain/some/context"), contextString),
           "@id"      -> Json.fromString("foo-id"),
           "nxv:rev"  -> Json.fromLong(1)
         ),
       Json.obj(
-        "@context" -> Json.arr(Json.fromString("http://foo.domain/some/context"),
-                               Json.fromString("http://bar.domain/another/context")),
+        "@context" -> Json
+          .arr(Json.fromString("http://foo.domain/some/context"), Json.fromString("http://bar.domain/another/context")),
         "@id"     -> Json.fromString("foo-id"),
         "nxv:rev" -> Json.fromLong(1)
       ) ->
         Json.obj(
-          "@context" -> Json.arr(Json.fromString("http://foo.domain/some/context"),
-                                 Json.fromString("http://bar.domain/another/context"),
-                                 contextString),
+          "@context" -> Json.arr(
+            Json.fromString("http://foo.domain/some/context"),
+            Json.fromString("http://bar.domain/another/context"),
+            contextString
+          ),
           "@id"     -> Json.fromString("foo-id"),
           "nxv:rev" -> Json.fromLong(1)
         ),
       Json.obj(
-        "@context" -> Json.obj("foo" -> Json.fromString("http://foo.domain/some/context"),
-                               "bar" -> Json.fromString("http://bar.domain/another/context")),
+        "@context" -> Json.obj(
+          "foo" -> Json.fromString("http://foo.domain/some/context"),
+          "bar" -> Json.fromString("http://bar.domain/another/context")
+        ),
         "@id"     -> Json.fromString("foo-id"),
         "nxv:rev" -> Json.fromLong(1)
       ) ->
         Json.obj(
-          "@context" -> Json.arr(Json.obj("foo" -> Json.fromString("http://foo.domain/some/context"),
-                                          "bar" -> Json.fromString("http://bar.domain/another/context")),
-                                 contextString),
+          "@context" -> Json.arr(
+            Json.obj(
+              "foo" -> Json.fromString("http://foo.domain/some/context"),
+              "bar" -> Json.fromString("http://bar.domain/another/context")
+            ),
+            contextString
+          ),
           "@id"     -> Json.fromString("foo-id"),
           "nxv:rev" -> Json.fromLong(1)
         )
@@ -103,7 +113,8 @@ class CirceContextSyntaxSpec extends WordSpecLike with Matchers with Inspectors 
 
       json appendContextOf json2 shouldEqual (jsonContentOf("/context/context_merged.json") deepMerge Json.obj(
         "one" -> Json.fromInt(1),
-        "two" -> Json.fromInt(2)))
+        "two" -> Json.fromInt(2)
+      ))
     }
 
     "append context when array" in {
@@ -113,7 +124,8 @@ class CirceContextSyntaxSpec extends WordSpecLike with Matchers with Inspectors 
       val json2    = context2 deepMerge Json.obj("three" -> Json.fromInt(3), "four" -> Json.fromInt(4))
       json appendContextOf json2 shouldEqual (jsonContentOf("/context/context_merged-array.json") deepMerge Json.obj(
         "one" -> Json.fromInt(1),
-        "two" -> Json.fromInt(2)))
+        "two" -> Json.fromInt(2)
+      ))
     }
 
     "replace context" in {
@@ -156,9 +168,11 @@ class CirceContextSyntaxSpec extends WordSpecLike with Matchers with Inspectors 
         val obj      = Json.obj("one" -> Json.obj("two" -> Json.fromString("something")), "two" -> Json.fromString("abc"))
         val objNoKey = Json.obj("one" -> Json.obj("two" -> Json.fromString("something")))
         val arrObj   = Json.arr(obj, obj, Json.obj("three" -> Json.fromString("something")))
-        arrObj.removeKeys("two") shouldEqual Json.arr(objNoKey,
-                                                      objNoKey,
-                                                      Json.obj("three" -> Json.fromString("something")))
+        arrObj.removeKeys("two") shouldEqual Json.arr(
+          objNoKey,
+          objNoKey,
+          Json.obj("three" -> Json.fromString("something"))
+        )
       }
 
       "fetch @id aliases" in {

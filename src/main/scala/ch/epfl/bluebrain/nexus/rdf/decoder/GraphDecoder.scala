@@ -119,10 +119,12 @@ object GraphDecoder extends JsonLdSyntax {
         val nonEmptyTo                              = if (to.isEmpty) " " else to
         Some(root -> DotEdgeStmt(NodeId(from), NodeId(nonEmptyTo), List(DotAttr(Id("label"), Id(label)))))
       }
-      val dot = graph.underlying.toDot(dotRoot = root,
-                                       edgeTransformer = transformer,
-                                       cNodeTransformer = None,
-                                       spacing = spacing)
+      val dot = graph.underlying.toDot(
+        dotRoot = root,
+        edgeTransformer = transformer,
+        cNodeTransformer = None,
+        spacing = spacing
+      )
       Dot(dot)
     }
   }

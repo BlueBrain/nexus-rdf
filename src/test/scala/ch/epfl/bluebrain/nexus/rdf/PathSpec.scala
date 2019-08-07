@@ -153,7 +153,8 @@ class PathSpec extends WordSpecLike with Matchers with Inspectors with EitherVal
         case ((left, right), expected) => left :: right shouldEqual expected
       }
       Path("/e/f/").right.value.prepend(Path("/a/b/c/d/").right.value, allowSlashDup = true) shouldEqual Path(
-        "/a/b/c/d//e/f/").right.value
+        "/a/b/c/d//e/f/"
+      ).right.value
     }
 
     "return the head" in {
@@ -203,13 +204,15 @@ class PathSpec extends WordSpecLike with Matchers with Inspectors with EitherVal
     }
 
     "starts with another path" in {
-      val cases = List(Path("/a/b//c/d") -> true,
-                       Path("/a/b//c") -> true,
-                       Path("/a/b//")  -> true,
-                       Path("/a")      -> true,
-                       Path("/")       -> true,
-                       Path("//")      -> false,
-                       Path("/a/c")    -> false)
+      val cases = List(
+        Path("/a/b//c/d") -> true,
+        Path("/a/b//c")   -> true,
+        Path("/a/b//")    -> true,
+        Path("/a")        -> true,
+        Path("/")         -> true,
+        Path("//")        -> false,
+        Path("/a/c")      -> false
+      )
       forAll(cases) {
         case (other, expected) => abcd.right.value startsWith other.right.value shouldEqual expected
       }

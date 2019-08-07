@@ -14,7 +14,7 @@ object PctString {
     s.foldLeft(new StringBuilder()) {
         case (sb, b) if toIgnore.contains(b) =>
           sb.append(b)
-        case (sb, b)                         =>
+        case (sb, b) =>
           pctEncode(sb, b)
       }
       .toString()

@@ -30,7 +30,7 @@ class UrnSpec extends WordSpecLike with Matchers with Inspectors with EitherValu
     "fail to parse" in {
       val fail = List(
         "urn:example:some/path/?+",
-        "urn:example:some/path/?=",
+        "urn:example:some/path/?="
       )
       forAll(fail) { str =>
         Urn(str).left.value

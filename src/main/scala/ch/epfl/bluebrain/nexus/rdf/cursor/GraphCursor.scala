@@ -148,10 +148,11 @@ object GraphCursor {
     def downField(p: IriNode => Boolean): GraphCursor = downField(obj, p)
     override def top: GraphCursor                     = fail(MoveTop)
   }
-  private[cursor] final class NodeCursor(subject: Node, obj: Node, parent: SCursor)(lastCursor: SCursor,
-                                                                                    lastOp: CursorOp,
-                                                                                    graph: Graph)
-      extends FieldCursor(lastCursor, lastOp, graph) {
+  private[cursor] final class NodeCursor(subject: Node, obj: Node, parent: SCursor)(
+      lastCursor: SCursor,
+      lastOp: CursorOp,
+      graph: Graph
+  ) extends FieldCursor(lastCursor, lastOp, graph) {
 
     def field(p: IriNode => Boolean): GraphCursor     = field(subject, p, parent)
     def focus: Option[Node]                           = Some(obj)
@@ -163,10 +164,11 @@ object GraphCursor {
 
   }
 
-  private[cursor] final class ArrayNodeCursorSel(subject: Node, obj: Set[Node], parent: SCursor)(lastCursor: SCursor,
-                                                                                                 lastOp: CursorOp,
-                                                                                                 graph: Graph)
-      extends FieldCursor(lastCursor, lastOp, graph) {
+  private[cursor] final class ArrayNodeCursorSel(subject: Node, obj: Set[Node], parent: SCursor)(
+      lastCursor: SCursor,
+      lastOp: CursorOp,
+      graph: Graph
+  ) extends FieldCursor(lastCursor, lastOp, graph) {
 
     def field(p: IriNode => Boolean): GraphCursor = field(subject, p, parent)
 
@@ -187,10 +189,11 @@ object GraphCursor {
 
   }
 
-  private[cursor] final class ArrayNodeCursor(subject: Node, obj: Node, parent: SCursor)(lastCursor: SCursor,
-                                                                                         lastOp: CursorOp,
-                                                                                         graph: Graph)
-      extends FieldCursor(lastCursor, lastOp, graph) {
+  private[cursor] final class ArrayNodeCursor(subject: Node, obj: Node, parent: SCursor)(
+      lastCursor: SCursor,
+      lastOp: CursorOp,
+      graph: Graph
+  ) extends FieldCursor(lastCursor, lastOp, graph) {
 
     def focus: Option[Node]                           = Some(obj)
     def values: Option[Iterable[Node]]                = focus.map(List(_))

@@ -64,7 +64,7 @@ object GraphEncoder {
           val graph = RootedGraph(id, triples)
           if (graph.subjects().isEmpty || graph.subjects().contains(id)) Right(graph)
           else Left(RootNodeNotFound(Some(id), s"The provided id '$id' is not part of the graph"))
-      }
+        }
 
   implicit val jsonRootedGraphEncoder: GraphEncoder[EncoderResult, Json] =
     (id, json) =>
@@ -72,6 +72,6 @@ object GraphEncoder {
         case Right(model)                                    => jenaModelRootedGraphEncoder(id, model)
         case Left(err @ JenaModelErr.InvalidJsonLD(message)) => Left(ConversionError(message, Some(err)))
         case Left(JenaModelErr.Unexpected(message))          => Left(Unexpected(message))
-    }
+      }
 
 }

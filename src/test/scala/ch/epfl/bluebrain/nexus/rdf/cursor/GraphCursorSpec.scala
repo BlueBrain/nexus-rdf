@@ -152,7 +152,8 @@ class GraphCursorSpec extends WordSpecLike with Matchers with OptionValues with 
       c.downField(schema.desc).focus.as[String].right.value shouldEqual "The Empire State..."
       c.downField(schema.other).values.asListOf[Double].right.value should contain theSameElementsAs List(1.3, 2.4, 3.5)
       c.downField(schema.uuid).focus.as[UUID].right.value shouldEqual UUID.fromString(
-        "b46ff2d0-f9d1-48e4-94eb-65d1a756c607")
+        "b46ff2d0-f9d1-48e4-94eb-65d1a756c607"
+      )
     }
 
     "fail to fetch encoded values" in {
