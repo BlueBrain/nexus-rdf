@@ -33,15 +33,19 @@ final class GraphOpsDecoderThoughGraph[A: RootNode](value: A) {
 }
 
 final class DecoderApply[A](graph: RootedGraph) {
-  def apply[F[_]](context: Json = Json.obj())(implicit
-                                              dec: GraphDecoder[F, A]): F[A] =
+  def apply[F[_]](context: Json = Json.obj())(
+      implicit
+      dec: GraphDecoder[F, A]
+  ): F[A] =
     dec(graph, context)
 }
 
 final class DecoderThroughGraphApply[A: RootNode, B](value: A) {
-  def apply[F[_]](context: Json = Json.obj())(implicit
-                                              dec: GraphDecoder[F, B],
-                                              enc: GraphEncoder[F, A],
-                                              F: Monad[F]): F[B] =
+  def apply[F[_]](context: Json = Json.obj())(
+      implicit
+      dec: GraphDecoder[F, B],
+      enc: GraphEncoder[F, A],
+      F: Monad[F]
+  ): F[B] =
     enc(value).flatMap(rGraph => dec(rGraph, context))
 }

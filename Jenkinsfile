@@ -1,6 +1,8 @@
 pipeline {
-    agent none
-
+    agent { label 'slave-sbt' }
+    tools {
+        jdk 'jdk11'
+    }
     stages {
         stage("Review") {
             when {

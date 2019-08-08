@@ -37,17 +37,18 @@ object NodeEncoder {
   implicit val booleanEncoder: NodeEncoder[Boolean] = (node: Node) =>
     node.asLiteral.toRight(IllegalType("Literal", node)).flatMap { literal =>
       Try(literal.lexicalForm.toBoolean).toEither.left.map(err => IllegalConversion(err.getMessage, Some(err)))
-  }
+    }
 
   implicit val stringEncoder: NodeEncoder[String] = (node: Node) =>
     node.asLiteral.toRight(IllegalType("Literal", node)).flatMap { literal =>
       if (literal.isString) Right(literal.lexicalForm)
       else Left(IllegalConversion("Expected a string literal, but found otherwise"))
-  }
+    }
 
   implicit val uuidEncoder: NodeEncoder[UUID] = (node: Node) =>
-    stringEncoder(node).flatMap(s =>
-      Try(UUID.fromString(s)).toEither.left.map(err => IllegalConversion(err.getMessage, Some(err))))
+    stringEncoder(node).flatMap(
+      s => Try(UUID.fromString(s)).toEither.left.map(err => IllegalConversion(err.getMessage, Some(err)))
+    )
 
   implicit val absoluteIriEncoder: NodeEncoder[AbsoluteIri] = (node: Node) =>
     node.asIri.toRight(IllegalType("Iri", node)).map(_.value)

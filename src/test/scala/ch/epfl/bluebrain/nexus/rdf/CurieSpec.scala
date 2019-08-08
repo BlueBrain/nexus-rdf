@@ -48,16 +48,18 @@ class CurieSpec extends WordSpecLike with Matchers with Inspectors with EitherVa
       ("Àprefix:#frag", "Àprefix", "#frag"),
       ("Öfix://hOst%C2%A3:80/a%C2%A3/b%C3%86c//:://", "Öfix", "//host£:80/a£/bÆc//:://")
     )
-    val invalid = List("-prefix",
-                       "!prefix",
-                       ":prefix",
-                       ".prefix",
-                       "6prefix",
-                       "prefi!x",
-                       "prefix:",
-                       "//hOst%C2%A3:80/a%C2%A3/b%C3%86c//:://",
-                       "?q=v",
-                       "")
+    val invalid = List(
+      "-prefix",
+      "!prefix",
+      ":prefix",
+      ".prefix",
+      "6prefix",
+      "prefi!x",
+      "prefix:",
+      "//hOst%C2%A3:80/a%C2%A3/b%C3%86c//:://",
+      "?q=v",
+      ""
+    )
 
     "be parsed correctly from string" in {
       forAll(valid) {

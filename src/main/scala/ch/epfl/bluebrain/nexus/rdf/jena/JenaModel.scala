@@ -152,7 +152,8 @@ object JenaConversions {
       Right(
         LanguageTag(literal.getLanguage)
           .map(Literal(literal.getLexicalForm, _))
-          .getOrElse(Literal(literal.getLexicalForm)))
+          .getOrElse(Literal(literal.getLexicalForm))
+      )
 
   def toIriOrBNode(resource: Resource): Either[String, IriOrBNode] =
     Option(resource.getURI) match {

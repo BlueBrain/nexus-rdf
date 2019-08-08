@@ -51,7 +51,8 @@ private[decoder] final class JenaWriterCleanup(ctx: Json) extends JsonLdSyntax {
             case ("@type", j) => j.asString.forall(s => !knownTypes.contains(m.expandPrefix(s)))
             case _            => true
           }
-          .map { case (k, v) => k -> inner(v) })
+          .map { case (k, v) => k -> inner(v) }
+      )
 
     inner(ctx)
   }

@@ -40,10 +40,12 @@ class Graph private[rdf] (private[rdf] val underlying: G[Node, LkDiEdge]) { self
   lazy val isConnected: Boolean =
     underlying.isConnected
 
-  private def selectAs[A](s: IriOrBNode => Boolean,
-                          p: IriNode => Boolean,
-                          o: Node => Boolean,
-                          f: ((IriOrBNode, IriNode, Node)) => A): Set[A] =
+  private def selectAs[A](
+      s: IriOrBNode => Boolean,
+      p: IriNode => Boolean,
+      o: Node => Boolean,
+      f: ((IriOrBNode, IriNode, Node)) => A
+  ): Set[A] =
     underlying.edges.foldLeft(Set.empty[A]) {
       case (acc, e) if s(e.s) && p(e.p) && o(e.o) => acc + f((e.s, e.p, e.o))
       case (acc, _)                               => acc
@@ -55,9 +57,11 @@ class Graph private[rdf] (private[rdf] val underlying: G[Node, LkDiEdge]) { self
     * @param o the triple objects used to test matches
     * @return the triples found from the provided subject, predicate and object functions
     */
-  def select(s: IriOrBNode => Boolean = _ => true,
-             p: IriNode => Boolean = _ => true,
-             o: Node => Boolean = _ => true): Set[(IriOrBNode, IriNode, Node)] =
+  def select(
+      s: IriOrBNode => Boolean = _ => true,
+      p: IriNode => Boolean = _ => true,
+      o: Node => Boolean = _ => true
+  ): Set[(IriOrBNode, IriNode, Node)] =
     selectAs(s, p, o, identity)
 
   /**
@@ -105,7 +109,8 @@ class Graph private[rdf] (private[rdf] val underlying: G[Node, LkDiEdge]) { self
     * @return a new graph made up of all of the triples of this graph and the triple created from the arguments
     */
   def addObject[F[_]: Functor, A: RootNode](s: IriOrBNode, p: IriNode, value: A)(
-      implicit enc: GraphEncoder[F, A]): F[Graph] =
+      implicit enc: GraphEncoder[F, A]
+  ): F[Graph] =
     enc(value).map(elem => self + ((s, p, elem.rootNode)) ++ elem)
 
   /**
@@ -117,15 +122,18 @@ class Graph private[rdf] (private[rdf] val underlying: G[Node, LkDiEdge]) { self
     * @param list the collection to add
     * @return a new graph made up of all of the triples of this graph and the triple created from the arguments
     */
-  def add[F[_], A: RootNode](s: IriOrBNode, p: IriNode, list: List[A])(implicit enc: GraphEncoder[F, A],
-                                                                       F: Monad[F]): F[Graph] = {
+  def add[F[_], A: RootNode](s: IriOrBNode, p: IriNode, list: List[A])(
+      implicit enc: GraphEncoder[F, A],
+      F: Monad[F]
+  ): F[Graph] = {
 
     def inner(ss: IriOrBNode, rest: List[A], triples: Set[Triple]): F[Set[Triple]] =
       rest match {
         case Nil => F.pure(triples)
         case h :: Nil =>
-          enc(h).map(elem =>
-            triples ++ Set[Triple]((ss, rdf.first, elem.rootNode), (ss, rdf.rest, rdf.nil)) ++ elem.triples)
+          enc(h).map(
+            elem => triples ++ Set[Triple]((ss, rdf.first, elem.rootNode), (ss, rdf.rest, rdf.nil)) ++ elem.triples
+          )
         case h :: t =>
           enc(h).flatMap { elem =>
             val nextSubject = blank
@@ -170,9 +178,11 @@ class Graph private[rdf] (private[rdf] val underlying: G[Node, LkDiEdge]) { self
     * @param o the triple object
     * @return a new graph made up of all of the triples of this graph except the triples matching s and p and o
     */
-  def remove(s: IriOrBNode => Boolean = _ => true,
-             p: IriNode => Boolean = _ => true,
-             o: Node => Boolean = _ => true): Graph = {
+  def remove(
+      s: IriOrBNode => Boolean = _ => true,
+      p: IriNode => Boolean = _ => true,
+      o: Node => Boolean = _ => true
+  ): Graph = {
     val remaining = underlying.edges.foldLeft(Set.empty[LkDiEdge[Node]]) {
       case (acc, e) if s(e.s) && p(e.p) && o(e.o) => acc
       case (acc, e)                               => acc + LkDiEdge(e.s, e.o)(e.p)
@@ -297,7 +307,8 @@ object Graph {
         .map {
           case (s, p, o) => s"(${N.show(s)} ${N.show(p)} ${N.show(o)})"
         }
-        .mkString("\n"))
+        .mkString("\n")
+    )
 
   final implicit val graphEq: Eq[Graph] = Eq.fromUniversalEquals
 }

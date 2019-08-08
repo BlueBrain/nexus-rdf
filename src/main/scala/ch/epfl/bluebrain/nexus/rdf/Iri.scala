@@ -133,11 +133,12 @@ object Iri {
     * @param query     an optional query part
     * @param fragment  an optional fragment part
     */
-  final case class RelativeIri(authority: Option[Authority],
-                               path: Path,
-                               query: Option[Query],
-                               fragment: Option[Fragment])
-      extends Iri {
+  final case class RelativeIri(
+      authority: Option[Authority],
+      path: Path,
+      query: Option[Query],
+      fragment: Option[Fragment]
+  ) extends Iri {
     override def isAbsolute: Boolean             = false
     override def asAbsolute: Option[AbsoluteIri] = None
     override def isUrl: Boolean                  = false

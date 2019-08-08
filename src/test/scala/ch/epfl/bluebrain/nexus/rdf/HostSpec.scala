@@ -153,7 +153,11 @@ class HostSpec extends WordSpecLike with Matchers with Inspectors with EitherVal
 
     "pct encoded representation" in {
       val encodedDelim = urlEncode("[]#")
-      Host.named(ucsUp + pct + ucsLow + delims + up + encodedDelim).right.value.pctEncoded shouldEqual (pctLow + pctLow + pctLow + delims + low+ encodedDelim)
+      Host
+        .named(ucsUp + pct + ucsLow + delims + up + encodedDelim)
+        .right
+        .value
+        .pctEncoded shouldEqual (pctLow + pctLow + pctLow + delims + low + encodedDelim)
     }
 
     "be named" in {

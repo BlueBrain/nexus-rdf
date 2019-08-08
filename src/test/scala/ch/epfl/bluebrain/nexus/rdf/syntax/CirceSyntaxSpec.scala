@@ -45,7 +45,8 @@ class CirceSyntaxSpec
           (id, rdf.tpe, example.tpe),
           (id, url"http://schema.org/name", example.name),
           (id, url"http://schema.org/birthDate", Literal(example.birthDate, xsd.dateTime.value))
-        ))
+        )
+      )
     }
 
     implicit val encExampleEither: GraphEncoder[EncoderResult, Example] = encExample.toEither
@@ -128,18 +129,22 @@ class CirceSyntaxSpec
     "convert to compacted Json from entity with GraphEncoder" in {
       val json = jsonContentOf("/context/simple-iri-context.json")
       val ctx  = context(json)
-      val example = Example(url"http://nexus.example.com/john-doé".value,
-                            url"http://schema.org/Person".value,
-                            "John Doe",
-                            "1999-04-09T20:00Z")
+      val example = Example(
+        url"http://nexus.example.com/john-doé".value,
+        url"http://schema.org/Person".value,
+        "John Doe",
+        "1999-04-09T20:00Z"
+      )
       example.as[Json](ctx).right.value shouldEqual json.replaceContext(json.removeContextIris)
     }
 
     "convert to expanded Json from entity with GraphEncoder" in {
-      val example = Example(url"http://nexus.example.com/john-doe".value,
-                            url"http://schema.org/Person".value,
-                            "John Doe",
-                            "1999-04-09T20:00Z")
+      val example = Example(
+        url"http://nexus.example.com/john-doe".value,
+        url"http://schema.org/Person".value,
+        "John Doe",
+        "1999-04-09T20:00Z"
+      )
       example.as[Json]().right.value shouldEqual Json.obj(
         "@id"                         -> Json.fromString(example.id.asString),
         "@type"                       -> Json.fromString(example.tpe.asString),
@@ -192,7 +197,8 @@ class CirceSyntaxSpec
           ResourceFactory.createResource("http://nexus.example.com/john-doe"),
           m.createProperty("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
           m.asRDFNode(NodeFactory.createURI("http://example.com/Person"))
-        ))
+        )
+      )
     }
 
     "convert model to graph and reverse" in {
