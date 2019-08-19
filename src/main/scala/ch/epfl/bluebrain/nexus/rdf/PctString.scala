@@ -9,7 +9,7 @@ object PctString {
   private[rdf] val unreserved   = Set('-', '_', '.', '~') ++ alpha ++ numeric
   private[rdf] val pchar        = `sub-delims` ++ unreserved + ':' + '@'
   private[rdf] val `gen-delims` = Set(':', '/', '?', '#', '[', ']', '@')
-
+  private val UTF8              = UTF_8.displayName()
   private[rdf] def pctEncodedIgnore(s: String, toIgnore: Set[Char]) =
     s.foldLeft(new StringBuilder()) {
         case (sb, b) if toIgnore.contains(b) =>
@@ -27,5 +27,6 @@ object PctString {
       .toString()
 
   private def pctEncode(sb: StringBuilder, char: Char): StringBuilder =
-    sb.append(URLEncoder.encode(char.toString, UTF_8.displayName()))
+    if (char == ' ') sb.append("%20")
+    else sb.append(URLEncoder.encode(char.toString, UTF8))
 }
