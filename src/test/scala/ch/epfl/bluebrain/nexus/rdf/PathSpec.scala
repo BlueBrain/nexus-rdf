@@ -73,7 +73,7 @@ class PathSpec extends WordSpecLike with Matchers with Inspectors with EitherVal
     }
     "show" in {
       val encodedDelims = urlEncode("/#[]?")
-      Path("/" + encodedDelims + "/a/b//c/d/£¤¥").right.value.show shouldEqual "/" + encodedDelims + "/a/b//c/d/£¤¥"
+      Path("/" + encodedDelims + "/%20a/b//c/d/£¤¥").right.value.show shouldEqual "/" + encodedDelims + "/%20a/b//c/d/£¤¥"
     }
     "pct encoded representation" in {
       val encodedDelims = urlEncode("/#[]?")

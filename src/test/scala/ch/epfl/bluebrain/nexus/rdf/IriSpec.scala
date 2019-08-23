@@ -24,7 +24,7 @@ class IriSpec extends WordSpecLike with Matchers with Inspectors with EitherValu
       "urn:lex:eu:council:directive:2010-03-09;2010-19-UE" -> "urn:lex:eu:council:directive:2010-03-09;2010-19-UE"
     )
     val casesUrl = List(
-      "hTtps://me:me@hOst:443/a%20path/b?a&e=f&b=c#frag"                                           -> "https://me:me@host/a path/b?a&b=c&e=f#frag",
+      "hTtps://me:me@hOst:443/a%20path/b?a&e=f&b=c#frag"                                           -> "https://me:me@host/a%20path/b?a&b=c&e=f#frag",
       "hTtps://me:me@hOst#frag"                                                                    -> "https://me:me@host#frag",
       "hTtp://hOst%C2%A3:80/a%C2%A3/b%C3%86c//:://"                                                -> "http://host£/a£/bÆc//:://",
       "https://my%40user:my%3Apassword%24@myhost.com/a/path/http%3A%2F%2Fexample.com%2Fnxv%3Asome" -> "https://my%40user:my:password$@myhost.com/a/path/http:%2F%2Fexample.com%2Fnxv:some",

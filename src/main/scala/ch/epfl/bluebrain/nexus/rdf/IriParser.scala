@@ -11,6 +11,7 @@ import org.parboiled2.Parser.DeliveryScheme.{Either => E}
 import org.parboiled2._
 import java.lang.{StringBuilder => JStringBuilder}
 import java.nio.charset.Charset
+import ch.epfl.bluebrain.nexus.rdf.IriParser._
 
 import scala.collection.immutable.{SortedMap, SortedSet}
 
@@ -185,36 +186,18 @@ private[rdf] class IriParser(val input: ParserInput)
     })
   }
 
-  private val `ucschar` = List(
-    0xA0    to 0xD7FF,  0xF900  to 0xFDCF,  0xFDF0  to 0xFFEF,
-    0x10000 to 0x1FFFD, 0x20000 to 0x2FFFD, 0x30000 to 0x3FFFD,
-    0x40000 to 0x4FFFD, 0x50000 to 0x5FFFD, 0x60000 to 0x6FFFD,
-    0x70000 to 0x7FFFD, 0x80000 to 0x8FFFD, 0x90000 to 0x9FFFD,
-    0xA0000 to 0xAFFFD, 0xB0000 to 0xBFFFD, 0xC0000 to 0xCFFFD,
-    0xD0000 to 0xDFFFD, 0xE1000 to 0xEFFFD
-  ).map(r => CharPredicate.from(c => r contains c.toInt)).reduce(_ ++ _)
-
-  private val `sub-delims` = CharPredicate("!$&'()*+,;=")
-
-  private val `iunreserved` = AlphaNum ++ CharPredicate("-._~") ++ `ucschar`
-
-  private val `iprivate` = List(
-    0xE000 to 0xF8FF, 0xF0000 to 0xFFFFD, 0x100000 to 0x10FFFD
-  ).map(r => CharPredicate.from(c => r contains c.toInt)).reduce(_ ++ _)
-
   private def `pct-encoded`: Rule0 = rule {
     '%' ~ HexDigit ~ HexDigit ~ run {
       sb.append('%').append(charAt(-2)).append(lastChar)
     }
   }
 
-  private val pathSegmentCharPred = `iunreserved` ++ `sub-delims` ++ ':' ++ '@'
   private def `ipchar`: Rule0 = rule {
-    pathSegmentCharPred ~ appendSB() | `pct-encoded`
+    `ipchar_preds` ~ appendSB() | `pct-encoded`
   }
 
   private def `ireg-name`: Rule0 = rule {
-    clearSB() ~ oneOrMore((`iunreserved` ++ `sub-delims`) ~ appendSBAsLower() | `pct-encoded`) ~ run {
+    clearSB() ~ oneOrMore(`inamed_host_allowed` ~ appendSBAsLower() | `pct-encoded`) ~ run {
       _host = new NamedHost(getDecodedSB.toLowerCase)
     }
   }
@@ -230,7 +213,7 @@ private[rdf] class IriParser(val input: ParserInput)
   private def `ihost`: Rule0 = rule { IPv4address | `ireg-name` }
 
   private def `iuserinfo`: Rule0 = rule {
-    clearSB() ~ oneOrMore((`iunreserved` ++ `sub-delims` ++ ':') ~ appendSB() | `pct-encoded`) ~ run {
+    clearSB() ~ oneOrMore(`iuser_info_allowed` ~ appendSB() | `pct-encoded`) ~ run {
       _userInfo = new UserInfo(getDecodedSB)
     }
   }
@@ -301,11 +284,9 @@ private[rdf] class IriParser(val input: ParserInput)
   private def `isegment`: Rule0 = rule { zeroOrMore(`ipchar`) }
   private def `isegment-nz`: Rule0 = rule { oneOrMore(`ipchar`) }
   private def `isegment-nz-nc`: Rule0 = rule { oneOrMore(!':' ~ `ipchar`) }
-
-  private val queryPartPred = `sub-delims` ++ `iunreserved` ++ `iprivate` ++ CharPredicate(":@/?") -- CharPredicate("=&")
   private def `iquery`: Rule0 = {
     def part: Rule1[String] = rule {
-      clearSB() ~ oneOrMore(!"?+" ~ ('+' ~ appendSB(' ') | queryPartPred ~ appendSB() | `pct-encoded`)) ~ push(getDecodedSB)
+      clearSB() ~ oneOrMore(!"?+" ~ ('+' ~ appendSB(' ') | `iquery_allowed` ~ appendSB() | `pct-encoded`)) ~ push(getDecodedSB)
     }
 
     /*_*/
@@ -352,7 +333,7 @@ private[rdf] class IriParser(val input: ParserInput)
 
   private val ldh = AlphaNum ++ '-'
   private def `nid`: Rule0 = rule {
-    clearSB() ~ AlphaNum ~ appendSBAsLower() ~ (1 to 31).times(ldh ~ appendSBAsLower()) ~ test(AlphaNum(lastChar)) ~ run {
+    clearSB() ~ `inid_allowed` ~ appendSBAsLower() ~ (1 to 31).times(ldh ~ appendSBAsLower()) ~ test(AlphaNum(lastChar)) ~ run {
       _nid = new Nid(sb.toString)
     }
   }
@@ -361,9 +342,8 @@ private[rdf] class IriParser(val input: ParserInput)
     `ipath-rootless`
   }
 
-  private val componentPred = `sub-delims` ++ `iunreserved` ++ ":@/?"
   private def `component`: Rule1[Component] = rule {
-    clearSB() ~ oneOrMore(!"?+" ~ !"?=" ~ componentPred ~ appendSB() | `pct-encoded`) ~ push(new Component(getDecodedSB))
+    clearSB() ~ oneOrMore(!"?+" ~ !"?=" ~ `icomponent_allowed` ~ appendSB() | `pct-encoded`) ~ push(new Component(getDecodedSB))
   }
 
   private def `rq-components`: Rule0 = {
@@ -406,6 +386,43 @@ private[rdf] class IriParser(val input: ParserInput)
 }
 
 object IriParser {
+
+  private[rdf] val `ucschar` = List(
+    0xA0    to 0xD7FF,  0xF900  to 0xFDCF,  0xFDF0  to 0xFFEF,
+    0x10000 to 0x1FFFD, 0x20000 to 0x2FFFD, 0x30000 to 0x3FFFD,
+    0x40000 to 0x4FFFD, 0x50000 to 0x5FFFD, 0x60000 to 0x6FFFD,
+    0x70000 to 0x7FFFD, 0x80000 to 0x8FFFD, 0x90000 to 0x9FFFD,
+    0xA0000 to 0xAFFFD, 0xB0000 to 0xBFFFD, 0xC0000 to 0xCFFFD,
+    0xD0000 to 0xDFFFD, 0xE1000 to 0xEFFFD
+  ).map(r => CharPredicate.from(c => r contains c.toInt)).reduce(_ ++ _)
+
+  private[rdf] val `iprivate` = List(
+    0xE000 to 0xF8FF, 0xF0000 to 0xFFFFD, 0x100000 to 0x10FFFD
+  ).map(r => CharPredicate.from(c => r contains c.toInt)).reduce(_ ++ _)
+
+  private[rdf] val `sub-delims_preds` = CharPredicate("!$&'()*+,;=")
+  private[rdf] val `unreserved_preds` = AlphaNum ++ CharPredicate("-._~")
+  private[rdf] val `iunreserved_preds` = `unreserved_preds` ++ `ucschar`
+  private[rdf] val `ipchar_preds` = `iunreserved_preds` ++ `sub-delims_preds` ++ CharPredicate(":@")
+  private[rdf] val `pchar_preds` = `unreserved_preds` ++ `sub-delims_preds` ++ CharPredicate(":@")
+
+  private[rdf] val `iuser_info_allowed` = `iunreserved_preds` ++ `sub-delims_preds` ++ ':'
+  private[rdf] val `user_info_allowed` = `unreserved_preds` ++ `sub-delims_preds` ++ ':'
+
+  private[rdf] val `inamed_host_allowed` = `iunreserved_preds` ++ `sub-delims_preds`
+  private[rdf] val `named_host_allowed` = `unreserved_preds` ++ `sub-delims_preds`
+
+  private[rdf] val `iquery_allowed` = `ipchar_preds` ++ `iprivate` ++ CharPredicate("/?") -- CharPredicate("=&")
+  private[rdf] val `query_allowed` = `pchar_preds` ++ CharPredicate("/?") -- CharPredicate("=&")
+
+  private[rdf] val `ifragment_allowed` = `ipchar_preds`  ++ CharPredicate("/?")
+  private[rdf] val `fragment_allowed` = `pchar_preds`  ++ CharPredicate("/?")
+
+  private[rdf] val `inid_allowed` = AlphaNum
+  private[rdf] val `nid_allowed` = AlphaNum
+
+  private[rdf] val `icomponent_allowed` = `ipchar_preds`  ++ CharPredicate("/?")
+  private[rdf] val `component_allowed` = `pchar_preds`  ++ CharPredicate("/?")
 
   /**
     * A direct port of the JDKs [[java.net.URLDecoder#decode(String, Charset)]] implementation that doesn't attempt to convert
