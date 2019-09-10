@@ -1000,6 +1000,16 @@ object Iri {
       new IriParser(string).parsePathAbempty
 
     /**
+      * Attempts to parse the argument string as an `ipath-rootless` Path as defined by RFC 3987.
+      * A rootless path is a path which does not start with slash
+      *
+      * @param string the string to parse as a Path
+      * @return Right(Path) if the parsing succeeds, Left(error) otherwise
+      */
+    final def rootless(string: String): Either[String, Path] =
+      new IriParser(string).parsePathRootLess
+
+    /**
       * Attempts to parse the argument string as an `isegment-nz` Segment as defined by RFC 3987.
       *
       * @param string the string to parse as a Path

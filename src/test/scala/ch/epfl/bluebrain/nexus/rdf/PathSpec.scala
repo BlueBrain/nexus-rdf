@@ -30,6 +30,24 @@ class PathSpec extends WordSpecLike with Matchers with Inspectors with EitherVal
           Path(str).right.value shouldEqual expected
       }
     }
+
+    "be parsed in the correct ADT for rootless paths" in {
+      // format: off
+      val cases = List(
+        "a/b//c/d"               -> Segment("d", Slash(Segment("c", Slash(Slash(Segment("b", Slash(Segment("a", Empty)))))))),
+        "a/b//c//"               -> Slash(Slash(Segment("c", Slash(Slash(Segment("b", Slash(Segment("a", Empty)))))))),
+        "a/b//:@//"              -> Slash(Slash(Segment(":@", Slash(Slash(Segment("b", Slash(Segment("a", Empty)))))))),
+        "a/b//:://"              -> Slash(Slash(Segment("::", Slash(Slash(Segment("b", Slash(Segment("a", Empty)))))))),
+        "a/b/%20/:://"           -> Slash(Slash(Segment("::", Slash(Segment(" ", Slash(Segment("b", Slash(Segment("a", Empty))))))))),
+        "a£/bÆc//:://"           -> Slash(Slash(Segment("::", Slash(Slash(Segment("bÆc", Slash(Segment("a£", Empty)))))))),
+        "a%C2%A3/b%C3%86c//:://" -> Slash(Slash(Segment("::", Slash(Slash(Segment("bÆc", Slash(Segment("a£", Empty))))))))
+      )
+      // format: on
+      forAll(cases) {
+        case (str, expected) =>
+          Path.rootless(str).right.value shouldEqual expected
+      }
+    }
     "fail to construct for invalid chars" in {
       val cases = List("/a/b?", "abc", "/a#", ":asd", " ")
       forAll(cases) { c =>
