@@ -63,6 +63,12 @@ class IriSpec extends WordSpecLike with Matchers with Inspectors with EitherValu
       }
     }
 
+    "avoid double pct-encoding" in {
+      val iri = Iri.absolute("http://example.com/a/path").right.value + "http%3A%2F%2Fsome.com%2Fa%2Fb%C3%86c"
+      iri.asString shouldEqual "http://example.com/a/path/http%3A%2F%2Fsome.com%2Fa%2Fb%C3%86c"
+      iri.asString shouldEqual iri.asUri
+    }
+
     "show as url" in {
       forAll(casesUrlEncoded) {
         case (in, expected) =>

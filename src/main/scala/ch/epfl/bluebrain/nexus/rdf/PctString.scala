@@ -7,14 +7,15 @@ import org.parboiled2.CharPredicate
 object PctString {
 
   private val UTF8 = UTF_8.displayName()
-  private[rdf] def pctEncodedIgnore(s: String, toIgnore: CharPredicate) =
-    s.foldLeft(new StringBuilder()) {
-        case (sb, b) if toIgnore.matchesAny(b.toString) =>
-          sb.append(b)
-        case (sb, b) =>
-          pctEncode(sb, b)
-      }
-      .toString()
+  private[rdf] def pctEncodedIgnore(s: String, toIgnore: CharPredicate) = {
+    val (_, encoded) = s.foldLeft((0, new StringBuilder())) {
+      case ((forceIgnore, sb), b) if forceIgnore > 0       => (forceIgnore - 1, sb.append(b))
+      case ((_, sb), b) if toIgnore.matchesAny(b.toString) => (0, sb.append(b))
+      case ((_, sb), b) if b == '%'                        => (2, sb.append(b))
+      case ((_, sb), b)                                    => (0, pctEncode(sb, b))
+    }
+    encoded.toString()
+  }
 
   private def pctEncode(sb: StringBuilder, char: Char): StringBuilder =
     if (char == ' ') sb.append("%20")

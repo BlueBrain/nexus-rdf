@@ -52,6 +52,11 @@ private[rdf] class IriParser(val input: ParserInput)
       .map(_ => _path)
       .leftMap(_.format(input, formatter))
 
+  def parsePathRootLess: Either[String, Path] =
+    rule(`ipath-rootless` ~ EOI).run()
+      .map(_ => _path)
+      .leftMap(_.format(input, formatter))
+
   def parsePathSegment: Either[String, Path] =
     rule(`isegment-nz` ~ EOI ~ push(getDecodedSB)).run()
       .map(str => Segment(str, Path.Empty))
