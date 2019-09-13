@@ -156,6 +156,13 @@ class GraphCursorSpec extends WordSpecLike with Matchers with OptionValues with 
       )
     }
 
+    "fetch optional encoded values" in {
+      c.downField(schema.desc).focus.asOption[String].right.value shouldEqual Some("The Empire State...")
+      c.downField(schema.desc).focus.asOption[Long].left.value shouldBe a[IllegalConversion]
+      c.downField(schema.lat).focus.asOption[Long].right.value shouldEqual None
+      c.downField(schema.lat).focus.as[Long](default = 3L).right.value shouldEqual 3L
+    }
+
     "fail to fetch encoded values" in {
       c.downField(schema.geo)
         .downAt(geoId1)

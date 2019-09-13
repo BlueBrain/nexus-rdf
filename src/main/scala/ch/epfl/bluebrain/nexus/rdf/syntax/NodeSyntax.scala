@@ -52,6 +52,15 @@ final class OptionNodeSyntaxEncoder(nodeOpt: Option[Node]) {
 
   def as[A](implicit encoder: NodeEncoder[A]): EncoderResult[A] =
     nodeOpt.toRight(NoElementToEncode).flatMap(encoder.apply)
+
+  def as[A](default: => A)(implicit encoder: NodeEncoder[A]): EncoderResult[A] =
+    asOption[A].map(_.getOrElse(default))
+
+  def asOption[A](implicit encoder: NodeEncoder[A]): EncoderResult[Option[A]] =
+    nodeOpt match {
+      case None       => Right(None)
+      case Some(node) => node.as[A].map(Option(_))
+    }
 }
 
 final class OptionNodesSyntaxEncoder(nodeListOpt: Option[Iterable[Node]]) {
