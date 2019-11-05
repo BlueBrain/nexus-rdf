@@ -38,7 +38,7 @@ final object CursorOp {
   final case class DownField(p: IriNode => Boolean) extends CursorOp
 
   /**
-    * If the current cursor is an [[ch.epfl.bluebrain.nexus.rdf.cursor.GraphCursor.ArrayNodeCursorSel]],
+    * If the current cursor is an [[ch.epfl.bluebrain.nexus.rdf.cursor.GraphCursor.SetNodeCursorSel]],
     * selects the first array element matching ''o''
     *
     * @param o the triple object function used to move the cursor
@@ -46,8 +46,14 @@ final object CursorOp {
   final case class DownAt(o: Node => Boolean) extends CursorOp
 
   /**
-    * If the current cursor is an [[ch.epfl.bluebrain.nexus.rdf.cursor.GraphCursor.ArrayNodeCursorSel]],
+    * If the current cursor is an [[ch.epfl.bluebrain.nexus.rdf.cursor.GraphCursor.SetNodeCursorSel]],
     * attempts to provide a Set[GraphCursor]
     */
-  final case object DownArray extends CursorOp
+  final case object DownSet extends CursorOp
+
+  /**
+    * If the current cursor is an [[ch.epfl.bluebrain.nexus.rdf.cursor.GraphCursor.ListNodeCursorSel]],
+    * attempts to provide a List[GraphCursor]
+    */
+  final case object DownList extends CursorOp
 }
