@@ -117,6 +117,13 @@ class CirceSyntaxSpec
       graph.right.value.as[Json](context(json)).right.value shouldEqual json
     }
 
+    "convert Graph with longs" in {
+      val json                              = jsonContentOf("/longs.json")
+      val id                                = url"http://nexus.example.com/john-doe"
+      val graph: EncoderResult[RootedGraph] = json.asGraph(id)
+      graph.right.value.as[Json](context(json)).right.value shouldEqual json
+    }
+
     "convert Graph with sorted list" in {
       val list = List(Item(1, "description elem 1"), Item(2, "description elem 2"), Item(3, "description elem 3"))
       val json = jsonContentOf("/list.json")

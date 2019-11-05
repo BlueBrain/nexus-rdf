@@ -10,6 +10,8 @@ import ch.epfl.bluebrain.nexus.rdf.encoder.{GraphEncoder, RootNode}
 import scalax.collection.edge.LkDiEdge
 import scalax.collection.immutable.{Graph => G}
 
+import scala.annotation.tailrec
+
 /**
   * An RDF Graph representation.
   */
@@ -112,6 +114,30 @@ class Graph private[rdf] (private[rdf] val underlying: G[Node, LkDiEdge]) { self
       implicit enc: GraphEncoder[F, A]
   ): F[Graph] =
     enc(value).map(elem => self + ((s, p, elem.rootNode)) ++ elem)
+
+  /**
+    * Adds the provided collection (sorted) to the subject ''s'' and predicate ''p'' to this graph.
+    *
+    * @param s    the triple subject
+    * @param p    the triple predicate
+    * @param list the collection of nodes to add
+    * @return a new graph made up of all of the triples of this graph and the triple created from the arguments
+    */
+  def add(s: IriOrBNode, p: IriNode, list: List[Node]): Graph = {
+    @tailrec
+    def inner(ss: IriOrBNode, rest: List[Node], triples: Set[Triple]): Set[Triple] =
+      rest match {
+        case Nil         => triples
+        case node :: Nil => triples ++ Set[Triple]((ss, rdf.first, node), (ss, rdf.rest, rdf.nil))
+        case node :: other =>
+          val nextSubject = blank
+          val accTriples  = triples ++ Set[Triple]((ss, rdf.first, node), (ss, rdf.rest, nextSubject))
+          inner(nextSubject, other, accTriples)
+      }
+
+    val ss = blank
+    self ++ Graph(inner(ss, list, Set[Triple]((s, p, ss))))
+  }
 
   /**
     * Adds the provided collection (sorted) to the subject ''s'' and predicate ''p'' to this graph.

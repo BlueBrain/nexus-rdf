@@ -126,7 +126,7 @@ private[decoder] final class JenaWriterCleanup(ctx: Json) extends JsonLdSyntax {
           .mapN {
             case (t, value) if t == xsd.boolean.toString  => tryBoolean(value)
             case (t, value) if t == xsd.int.toString      => tryInt(value)
-            case (t, value) if t == xsd.integer.toString  => tryInt(value)
+            case (t, value) if t == xsd.integer.toString  => tryLong(value)
             case (t, value) if t == xsd.long.toString     => tryLong(value)
             case (t, value) if t == xsd.float.toString    => tryFloat(value)
             case (t, value) if t == xsd.decimal.toString  => tryDouble(value)

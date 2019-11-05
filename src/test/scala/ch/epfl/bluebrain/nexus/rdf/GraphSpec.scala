@@ -10,6 +10,8 @@ import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
 import ch.epfl.bluebrain.nexus.rdf.encoder.{GraphEncoder, RootNode}
 import ch.epfl.bluebrain.nexus.rdf.syntax._
 import ch.epfl.bluebrain.nexus.rdf.instances._
+import io.circe.Json
+import io.circe.syntax._
 import org.scalatest.EitherValues._
 import org.scalatest.{Matchers, OptionValues, WordSpecLike}
 
@@ -33,7 +35,7 @@ class GraphSpec extends WordSpecLike with Matchers with OptionValues {
       val other  = url"$prefix/other"
     }
 
-    val triples = Set[(IriOrBNode, IriNode, Node)](
+    val triples = Set[Triple](
       (a, isa, string),
       (a, isa, bool),
       (a, hasa, b"1"),
@@ -65,12 +67,12 @@ class GraphSpec extends WordSpecLike with Matchers with OptionValues {
     }
 
     "subtract several triples" in {
-      val moreTriples = triples ++ Set[(IriOrBNode, IriNode, Node)](
+      val moreTriples = triples ++ Set[Triple](
         (b"2", p.string, "something"),
         (b"1", isa, b"2")
       )
       val graph = Graph(moreTriples)
-      graph.remove(b"1").triples shouldEqual Set[(IriOrBNode, IriNode, Node)](
+      graph.remove(b"1").triples shouldEqual Set[Triple](
         (b"2", p.string, "something"),
         (a, isa, string),
         (a, isa, bool),
@@ -79,7 +81,7 @@ class GraphSpec extends WordSpecLike with Matchers with OptionValues {
     }
 
     "subtract a triple selecting the subject and predicate" in {
-      val moreTriples = triples ++ Set[(IriOrBNode, IriNode, Node)]((b"1", isa, "something"))
+      val moreTriples = triples ++ Set[Triple]((b"1", isa, "something"))
       val graph       = Graph(moreTriples)
       graph.remove(b"1", isa).triples shouldEqual triples
     }
@@ -188,7 +190,7 @@ class GraphSpec extends WordSpecLike with Matchers with OptionValues {
 
     "replace bnode" in {
       val iri = url"http://b"
-      g.replaceNode(b"1", iri).triples shouldEqual Set[(IriOrBNode, IriNode, Node)](
+      g.replaceNode(b"1", iri).triples shouldEqual Set[Triple](
         (a, isa, string),
         (a, isa, bool),
         (a, hasa, iri),
@@ -200,7 +202,7 @@ class GraphSpec extends WordSpecLike with Matchers with OptionValues {
 
     "replace iri" in {
       val iri = url"http://b"
-      (g + ((b"1", hasa, a))).replaceNode(a, iri).triples shouldEqual Set[(IriOrBNode, IriNode, Node)](
+      (g + ((b"1", hasa, a))).replaceNode(a, iri).triples shouldEqual Set[Triple](
         (iri, isa, string),
         (iri, isa, bool),
         (iri, hasa, b"1"),
@@ -253,12 +255,12 @@ class GraphSpec extends WordSpecLike with Matchers with OptionValues {
 
     "add an object to the graph" in {
       val item     = Item(1, "description elem 1")
-      val expected = Set[(IriOrBNode, IriNode, Node)]((b"1", p.string, "asd"), (a, hasa, item.bNode)) ++ enc(item).triples
+      val expected = Set[Triple]((b"1", p.string, "asd"), (a, hasa, item.bNode)) ++ enc(item).triples
 
       Graph((b"1", p.string, "asd"): Triple).addObject(a, hasa, item).triples shouldEqual expected
     }
 
-    "add an ordered list to the graph" in {
+    "add an ordered list of items to the graph" in {
       def subjectOf(node: Node, graph: Graph) = {
         val results = graph.subjects(rdf.first, node)
         results.size shouldEqual 1
@@ -278,7 +280,7 @@ class GraphSpec extends WordSpecLike with Matchers with OptionValues {
       // Generating graph from item data
       val itemsGraph = list.foldLeft(Graph())((acc, c) => acc ++ enc(c))
 
-      val expected = itemsGraph.triples ++ Set[(IriOrBNode, IriNode, Node)](
+      val expected = itemsGraph.triples ++ Set[Triple](
         (b"1", p.string, "asd"),
         (a, hasa, bnodeIds(item1.bNode)),
         (bnodeIds(item1.bNode), rdf.first, item1.bNode),
@@ -290,6 +292,20 @@ class GraphSpec extends WordSpecLike with Matchers with OptionValues {
       )
 
       graph.triples shouldEqual expected
+    }
+
+    "add an ordered list of nodes to the graph" in {
+      val list: List[Node] = List("one", "two", "three")
+      val rootNode         = b"1"
+      val graph            = Graph((rootNode, p.string, "asd"): Triple).add(rootNode, p.other, list)
+      val ctx = Json.obj(
+        "@context" -> Json.obj(
+          "string" -> p.string.value.asJson,
+          "other"  -> Json.obj("@container" -> "@list".asJson, "@id" -> p.other.value.asJson)
+        )
+      )
+      RootedGraph(rootNode, graph).as[Json](ctx).right.value.removeKeys("@context") shouldEqual
+        Json.obj("string" -> "asd".asJson, "other" -> Json.arr("one".asJson, "two".asJson, "three".asJson))
     }
 
   }
