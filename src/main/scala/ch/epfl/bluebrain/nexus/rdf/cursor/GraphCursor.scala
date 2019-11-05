@@ -1,6 +1,7 @@
 package ch.epfl.bluebrain.nexus.rdf.cursor
 
 import ch.epfl.bluebrain.nexus.rdf.Node.{IriNode, IriOrBNode}
+import ch.epfl.bluebrain.nexus.rdf.Vocabulary.rdf
 import ch.epfl.bluebrain.nexus.rdf.cursor.CursorOp._
 import ch.epfl.bluebrain.nexus.rdf.cursor.GraphCursor.SCursor
 import ch.epfl.bluebrain.nexus.rdf.instances._
@@ -56,9 +57,14 @@ sealed abstract class GraphCursor(private val lastCursor: SCursor, private val l
   def up: GraphCursor
 
   /**
-    * If the focus is a Node array, return the list of [[GraphCursor]] resulting from it
+    * If the focus is a Node set, return the set of [[GraphCursor]] resulting from it
     */
-  def downArray: Iterable[GraphCursor]
+  def downSet: Set[GraphCursor]
+
+  /**
+    * If the focus is a Node list, return the set of [[GraphCursor]] resulting from it
+    */
+  def downList: List[GraphCursor]
 
   /**
     * If the focus is a Node array, move to the node that satisfies the given function.
@@ -91,7 +97,9 @@ object GraphCursor {
 
     def downAt(o: Node => Boolean): GraphCursor = fail(DownAt(o))
 
-    def downArray: Iterable[GraphCursor] = Set.empty
+    def downSet: Set[GraphCursor] = Set.empty
+
+    def downList: List[GraphCursor] = List.empty
 
     private def fetchTop: GraphCursor = {
       @tailrec
@@ -119,10 +127,13 @@ object GraphCursor {
     protected[this] def downField(obj: Node, p: IriNode => Boolean): GraphCursor = {
       val objects = g.select(obj, p)
       objects.toList match {
-        case (_, _, o) :: Nil => new NodeCursor(obj, o, this)(this, DownField(p), g)
-        case Nil              => fail(DownField(p))
-        case _ =>
-          new ArrayNodeCursorSel(obj, objects.map { case (_, _, o) => o }, this)(this, DownField(p), g)
+        case (_, _, o) :: Nil =>
+          sortedListCursors(o) match {
+            case Some(nodes) => new ListNodeCursorSel(obj, nodes, this)(this, DownField(p), g)
+            case None        => new NodeCursor(obj, o, this)(this, DownField(p), g)
+          }
+        case Nil => fail(DownField(p))
+        case _   => new SetNodeCursorSel(obj, objects.map { case (_, _, o) => o }, this)(this, DownField(p), g)
       }
     }
 
@@ -132,9 +143,16 @@ object GraphCursor {
         case (_, _, o) :: Nil => new NodeCursor(subject, o, parent)(this, Field(p), g)
         case Nil              => fail(Field(p))
         case _ =>
-          new ArrayNodeCursorSel(subject, objects.map { case (_, _, o) => o }, parent)(this, Field(p), g)
+          new SetNodeCursorSel(subject, objects.map { case (_, _, o) => o }, parent)(this, Field(p), g)
       }
     }
+
+    private def sortedListCursors(current: Node): Option[List[Node]] =
+      (g.select(current, rdf.first).toList, g.select(current, rdf.rest).toList) match {
+        case (((_, _, o1) :: Nil), ((_, _, o2) :: Nil)) if o2.asIri.contains(rdf.nil) => Some(List(o1))
+        case (((_, _, o1) :: Nil), ((_, _, o2) :: Nil))                               => sortedListCursors(o2).map(o1 :: _)
+        case _                                                                        => None
+      }
   }
 
   private[cursor] final class TopCursor(obj: Node)(lastCursor: SCursor, lastOp: CursorOp, graph: Graph)
@@ -160,11 +178,11 @@ object GraphCursor {
     def addOp(cursor: SCursor, op: CursorOp): SCursor = new NodeCursor(subject, obj, parent)(cursor, op, graph)
     def downField(p: IriNode => Boolean): GraphCursor = downField(obj, p)
     def up: GraphCursor                               = parent.addOp(this, MoveUp)
-    override def downArray: Iterable[GraphCursor]     = Set(this)
+    override def downSet: Set[GraphCursor]            = Set(this)
 
   }
 
-  private[cursor] final class ArrayNodeCursorSel(subject: Node, obj: Set[Node], parent: SCursor)(
+  private[cursor] final class SetNodeCursorSel(subject: Node, obj: Set[Node], parent: SCursor)(
       lastCursor: SCursor,
       lastOp: CursorOp,
       graph: Graph
@@ -172,24 +190,52 @@ object GraphCursor {
 
     def field(p: IriNode => Boolean): GraphCursor = field(subject, p, parent)
 
-    override def downArray: Iterable[GraphCursor] =
-      obj.map(new ArrayNodeCursor(subject, _, this)(this, DownArray, graph))
+    override def downSet: Set[GraphCursor] =
+      obj.map(new NodeCursorArrayElem(subject, _, this)(this, DownSet, graph))
 
     override def downAt(o: Node => Boolean): GraphCursor =
       obj.find(o) match {
         case None       => fail(DownAt(o))
-        case Some(node) => new ArrayNodeCursor(subject, node, this)(this, DownAt(o), graph)
+        case Some(node) => new NodeCursorArrayElem(subject, node, this)(this, DownAt(o), graph)
       }
 
     def focus: Option[Node]                           = None
     def values: Option[Iterable[Node]]                = Some(obj)
-    def addOp(cursor: SCursor, op: CursorOp): SCursor = new ArrayNodeCursorSel(subject, obj, parent)(cursor, op, graph)
+    def addOp(cursor: SCursor, op: CursorOp): SCursor = new SetNodeCursorSel(subject, obj, parent)(cursor, op, graph)
     def downField(p: IriNode => Boolean): GraphCursor = fail(DownField(p))
     def up: GraphCursor                               = parent.addOp(this, MoveUp)
 
   }
 
-  private[cursor] final class ArrayNodeCursor(subject: Node, obj: Node, parent: SCursor)(
+  private[cursor] final class ListNodeCursorSel(subject: Node, obj: List[Node], parent: SCursor)(
+      lastCursor: SCursor,
+      lastOp: CursorOp,
+      graph: Graph
+  ) extends FieldCursor(lastCursor, lastOp, graph) {
+
+    def field(p: IriNode => Boolean): GraphCursor = field(subject, p, parent)
+
+    override def downList: List[GraphCursor] =
+      obj.map(new NodeCursorArrayElem(subject, _, this)(this, DownList, graph))
+
+    override def downSet: Set[GraphCursor] =
+      downList.toSet
+
+    override def downAt(o: Node => Boolean): GraphCursor =
+      obj.find(o) match {
+        case None       => fail(DownAt(o))
+        case Some(node) => new NodeCursorArrayElem(subject, node, this)(this, DownAt(o), graph)
+      }
+
+    def focus: Option[Node]                           = None
+    def values: Option[Iterable[Node]]                = Some(obj)
+    def addOp(cursor: SCursor, op: CursorOp): SCursor = new ListNodeCursorSel(subject, obj, parent)(cursor, op, graph)
+    def downField(p: IriNode => Boolean): GraphCursor = fail(DownField(p))
+    def up: GraphCursor                               = parent.addOp(this, MoveUp)
+
+  }
+
+  private[cursor] final class NodeCursorArrayElem(subject: Node, obj: Node, parent: SCursor)(
       lastCursor: SCursor,
       lastOp: CursorOp,
       graph: Graph
@@ -198,10 +244,10 @@ object GraphCursor {
     def focus: Option[Node]                           = Some(obj)
     def values: Option[Iterable[Node]]                = focus.map(List(_))
     def field(p: IriNode => Boolean): GraphCursor     = fail(Field(p))
-    def addOp(cursor: SCursor, op: CursorOp): SCursor = new ArrayNodeCursor(subject, obj, parent)(cursor, op, graph)
+    def addOp(cursor: SCursor, op: CursorOp): SCursor = new NodeCursorArrayElem(subject, obj, parent)(cursor, op, graph)
     def downField(p: IriNode => Boolean): GraphCursor = downField(obj, p)
     def up: GraphCursor                               = parent.addOp(this, MoveUp)
-    override def downArray: Iterable[GraphCursor]     = Set(this)
+    override def downSet: Set[GraphCursor]            = Set(this)
 
   }
 
@@ -215,7 +261,8 @@ object GraphCursor {
     def downAt(o: Node => Boolean): GraphCursor       = this
     def field(p: IriNode => Boolean): GraphCursor     = this
     def downField(p: IriNode => Boolean): GraphCursor = this
-    def downArray: Iterable[GraphCursor]              = Set.empty
+    def downSet: Set[GraphCursor]                     = Set.empty
+    def downList: List[GraphCursor]                   = List.empty
   }
 
   /**
