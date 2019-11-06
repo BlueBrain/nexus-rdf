@@ -65,14 +65,16 @@ final class OptionNodeSyntaxEncoder(nodeOpt: Option[Node]) {
 
 final class OptionNodesSyntaxEncoder(nodeListOpt: Option[Iterable[Node]]) {
 
-  def asListOf[A](implicit encoder: NodeEncoder[A]): EncoderResult[List[A]] =
-    nodeListOpt.toRight(NoElementToEncode).flatMap { list =>
-      list.toList.foldM(List.empty[A]) {
-        case (acc, c) => encoder(c).map(v => v :: acc)
-      } match {
-        case Right(Nil)     => Left(NoElementToEncode)
-        case Right(encoded) => Right(encoded)
-        case err            => err
-      }
-    }
+  def asListOf[A](implicit encoder: NodeEncoder[A]): EncoderResult[Iterable[A]] =
+    nodeListOpt
+      .toRight(NoElementToEncode)
+      .flatMap(
+        _.toList.foldM(Vector.empty[A]) {
+          case (acc, c) => encoder(c).map(acc :+ _)
+        } match {
+          case Right(list) if list.isEmpty => Left(NoElementToEncode)
+          case Right(list)                 => Right(list)
+          case err                         => err
+        }
+      )
 }

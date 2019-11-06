@@ -214,6 +214,7 @@ class GraphCursorSpec extends WordSpecLike with Matchers with OptionValues with 
     "navigate down the sorted list elements" in {
       val list = c.downField(schema.other2).downList
       list.map(_.focus.as[Double].right.value) shouldEqual List(2.2, 3.3, 4.4)
+      c.downField(schema.other2).values.asListOf[Double].right.value shouldEqual Vector(2.2, 3.3, 4.4)
     }
 
     "fetch encoded values" in {
@@ -229,7 +230,8 @@ class GraphCursorSpec extends WordSpecLike with Matchers with OptionValues with 
       c.focus.as[AbsoluteIri].right.value shouldEqual id.value
 
       c.downField(schema.desc).focus.as[String].right.value shouldEqual "The Empire State..."
-      c.downField(schema.other).values.asListOf[Double].right.value should contain theSameElementsAs List(1.3, 2.4, 3.5)
+      c.downField(schema.other).values.asListOf[Double].right.value should contain theSameElementsAs
+        Vector(1.3, 2.4, 3.5)
       c.downField(schema.uuid).focus.as[UUID].right.value shouldEqual UUID.fromString(
         "b46ff2d0-f9d1-48e4-94eb-65d1a756c607"
       )
