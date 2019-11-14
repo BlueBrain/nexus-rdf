@@ -11,11 +11,5 @@ jobs:
     - uses: olafurpg/setup-scala@v5
       with:
         java-version: adopt@1.11
-    - uses: actions/cache@v1
-      with:
-        path: ~/.cache/coursier/v1
-        key: ${{ runner.os }}-coursier-${{ hashFiles('**/*.pom') }}
-        restore-keys: |
-          ${{ runner.os }}-coursier-
     - name: Review
       run: sbt review
