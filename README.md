@@ -3,7 +3,7 @@
 
 # Nexus RDF
 
-The project is a collection of small libraries. They facilitate the interaction with [JSON-LD] and [RDF Graphs]. More concretely, they provide:
+The project is a collection of small libraries that facilitate the interaction with [JSON-LD] and [RDF Graphs]. More concretely, they provide:
 
 - Iri ([rfc 3987](https://www.ietf.org/rfc/rfc3987.txt)) implementation.
 - JSON-LD <-> RDF Graph transformations.
