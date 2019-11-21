@@ -16,7 +16,7 @@ import ch.epfl.bluebrain.nexus.rdf.IriParser._
 import scala.collection.immutable.{SortedMap, SortedSet}
 
 // format: off
-@SuppressWarnings(Array("MethodNames", "unused"))
+@SuppressWarnings(Array("MethodNames", "unused", "UnsafeTraversableMethods"))
 @silent
 private[rdf] class IriParser(val input: ParserInput)
   (implicit formatter: ErrorFormatter = new ErrorFormatter(showExpected = false, showTraces = false))
@@ -390,6 +390,7 @@ private[rdf] class IriParser(val input: ParserInput)
   }
 }
 
+@SuppressWarnings(Array("UnsafeTraversableMethods"))
 object IriParser {
 
   private[rdf] val `ucschar` = List(

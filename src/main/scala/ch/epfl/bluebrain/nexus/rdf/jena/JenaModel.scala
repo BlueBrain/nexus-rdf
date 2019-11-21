@@ -148,7 +148,8 @@ object JenaConversions {
           case Some(dataType) =>
             Iri.url(dataType).left.map(errorMsg(dataType, _)).map(Literal(literal.getLexicalForm, _))
           case _ => Right(Literal(literal.getLexicalForm))
-        } else
+        }
+    else
       Right(
         LanguageTag(literal.getLanguage)
           .map(Literal(literal.getLexicalForm, _))
