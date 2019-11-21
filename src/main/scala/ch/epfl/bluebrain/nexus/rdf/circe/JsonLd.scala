@@ -7,6 +7,8 @@ import ch.epfl.bluebrain.nexus.rdf.jena.JenaModel
 import io.circe.syntax._
 import io.circe.{Json, JsonObject}
 
+import scala.annotation.tailrec
+
 @SuppressWarnings(Array("TraversableHead"))
 object JsonLd {
 
@@ -44,6 +46,7 @@ object JsonLd {
     * @param json  the json
     * @param value the @id value
     */
+  @SuppressWarnings(Array("UnsafeTraversableMethods"))
   def id(json: Json, value: AbsoluteIri): Json =
     (json.asObject, json.asArray) match {
       case (Some(_), _)                      => json deepMerge Json.obj("@id" -> Json.fromString(value.asString))
@@ -161,6 +164,8 @@ object JsonLd {
   /**
     * @return a new Json with the values of the top ''@context'' key
     */
+  @SuppressWarnings(Array("UnsafeTraversableMethods"))
+  @tailrec
   def contextValue(json: Json): Json =
     (json.asObject, json.asArray) match {
       case (Some(jObj), _)                   => jObj("@context").getOrElse(Json.obj())

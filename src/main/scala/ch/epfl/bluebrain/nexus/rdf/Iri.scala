@@ -883,6 +883,7 @@ object Iri {
       */
     def startsWith(other: Path): Boolean = {
       @tailrec
+      @SuppressWarnings(Array("ComparingUnrelatedTypes"))
       def inner(remainingCurr: Path, remainingOther: Path): (Path, Path) = {
         if (remainingOther.isEmpty) remainingCurr -> remainingOther
         else if (remainingCurr.head == remainingOther.head) inner(remainingCurr.tail(), remainingOther.tail())
