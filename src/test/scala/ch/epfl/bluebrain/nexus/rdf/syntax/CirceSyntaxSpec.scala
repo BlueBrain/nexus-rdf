@@ -176,6 +176,7 @@ class CirceSyntaxSpec
           json.id.right.value shouldEqual iri
       }
     }
+
     "fail to fetch the @id when not present" in {
       Json.obj("type" -> Json.fromString("Person")).id.left.value shouldEqual IdNotFound
       Json.fromString("something").id.left.value shouldEqual IdNotFound
@@ -194,6 +195,13 @@ class CirceSyntaxSpec
       val baseList = List.range(1, 4).map(i => jsonContentOf(s"/wrong-id-with-base-$i.json"))
       val list     = jsonContentOf("/wrong-id.json") :: baseList
       forAll(list)(json => JenaModel(json).left.value shouldBe a[InvalidJsonLD])
+    }
+
+    "compaction known types when @type is aliased" in {
+      val json   = jsonContentOf("/simple-type-alias.json")
+      val graph  = JenaModel(json).right.value.asGraph(url"http://nexus.example.com/john-doé").right.value
+      val result = graph.as[Json](Json.obj("@context" -> json.contextValue)).right.value
+      result.removeKeys("@context") shouldEqual json.removeKeys("@context")
     }
 
     "create a model with valid @base" in {
