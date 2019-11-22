@@ -5,6 +5,7 @@ import java.util.UUID
 import cats.implicits._
 import ch.epfl.bluebrain.nexus.rdf.Node.Literal
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary.xsd
+import ch.epfl.bluebrain.nexus.rdf.circe.JsonLd
 import ch.epfl.bluebrain.nexus.rdf.decoder.JenaWriterCleanup._
 import ch.epfl.bluebrain.nexus.rdf.jena.JenaModel
 import ch.epfl.bluebrain.nexus.rdf.syntax.JsonLdSyntax
@@ -75,6 +76,7 @@ private[decoder] final class JenaWriterCleanup(ctx: Json) extends JsonLdSyntax {
   def cleanFromJson(json: Json, g: Graph): Json = {
     val stringValues = g.triples.collect { case (_, _, lt: Literal) => lt.lexicalForm }
     val maybeBase    = json.contextValue.hcursor.get[String]("@base").flatMap(Iri.absolute)
+    val typeAliases  = JsonLd.contextAliases(json, "@type") + "@type"
 
     def inner(ctx: Json): Json =
       ctx.arrayOrObject(ctx, arr => Json.fromValues(arr.map(inner)), obj => deleteType(obj))
@@ -121,24 +123,27 @@ private[decoder] final class JenaWriterCleanup(ctx: Json) extends JsonLdSyntax {
       }
 
     def deleteType(jObj: JsonObject): Json =
-      if (jObj.contains("@type") && jObj.contains("@value") && jObj.size == 2)
-        (jObj("@type").flatMap(_.asString).map(m.expandPrefix), jObj("@value"))
-          .mapN {
-            case (t, value) if t == xsd.boolean.toString  => tryBoolean(value)
-            case (t, value) if t == xsd.int.toString      => tryInt(value)
-            case (t, value) if t == xsd.integer.toString  => tryLong(value)
-            case (t, value) if t == xsd.long.toString     => tryLong(value)
-            case (t, value) if t == xsd.float.toString    => tryFloat(value)
-            case (t, value) if t == xsd.decimal.toString  => tryDouble(value)
-            case (t, value) if t == xsd.double.toString   => tryDouble(value)
-            case (t, value) if t == xsd.dateTime.toString => value.asString.map(Json.fromString)
-            case (t, value) if t == xsd.string.toString   => value.asString.map(Json.fromString)
-            case _                                        => None
-          }
-          .flatten
-          .getOrElse(recursiveFollow(jObj))
-      else
-        recursiveFollow(jObj)
+      typeAliases.find(tpe => jObj.contains(tpe) && jObj.contains("@value") && jObj.size == 2) match {
+        case Some(typeAlias) =>
+          (jObj(typeAlias).flatMap(_.asString).map(m.expandPrefix), jObj("@value"))
+            .mapN {
+              case (t, value) if t == xsd.boolean.toString  => tryBoolean(value)
+              case (t, value) if t == xsd.int.toString      => tryInt(value)
+              case (t, value) if t == xsd.integer.toString  => tryLong(value)
+              case (t, value) if t == xsd.long.toString     => tryLong(value)
+              case (t, value) if t == xsd.float.toString    => tryFloat(value)
+              case (t, value) if t == xsd.decimal.toString  => tryDouble(value)
+              case (t, value) if t == xsd.double.toString   => tryDouble(value)
+              case (t, value) if t == xsd.dateTime.toString => value.asString.map(Json.fromString)
+              case (t, value) if t == xsd.string.toString   => value.asString.map(Json.fromString)
+              case _                                        => None
+            }
+            .flatten
+            .getOrElse(recursiveFollow(jObj))
+        case _ =>
+          recursiveFollow(jObj)
+
+      }
 
     inner(json)
   }
