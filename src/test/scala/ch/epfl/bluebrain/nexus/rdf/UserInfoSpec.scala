@@ -3,9 +3,8 @@ package ch.epfl.bluebrain.nexus.rdf
 import cats.kernel.Eq
 import cats.syntax.show._
 import ch.epfl.bluebrain.nexus.rdf.Iri._
-import org.scalatest.{EitherValues, Inspectors, Matchers, WordSpecLike}
 
-class UserInfoSpec extends WordSpecLike with Matchers with Inspectors with EitherValues {
+class UserInfoSpec extends RdfSpec {
 
   "An UserInfo" should {
     val pct =
@@ -17,45 +16,45 @@ class UserInfoSpec extends WordSpecLike with Matchers with Inspectors with Eithe
     val low    = "abcd"
 
     "be parsed correctly from a string" in {
-      UserInfo("aBcd:Efgh").right.value.value shouldEqual "aBcd:Efgh"
+      UserInfo("aBcd:Efgh").rightValue.value shouldEqual "aBcd:Efgh"
     }
 
     "equal when compared with ignored casing" in {
-      UserInfo("aBcd:Efgh").right.value equalsIgnoreCase UserInfo("Abcd:efgH").right.value shouldEqual true
+      UserInfo("aBcd:Efgh").rightValue equalsIgnoreCase UserInfo("Abcd:efgH").rightValue shouldEqual true
     }
 
     "be parsed correctly from percent encoded string" in {
-      UserInfo(pct).right.value.value shouldEqual ucsUp
+      UserInfo(pct).rightValue.value shouldEqual ucsUp
     }
 
     "be parsed correctly from ucs chars" in {
-      UserInfo(ucsUp).right.value.value shouldEqual ucsUp
+      UserInfo(ucsUp).rightValue.value shouldEqual ucsUp
     }
 
     "be parsed correctly from delimiters" in {
-      UserInfo(delims).right.value.value shouldEqual delims
+      UserInfo(delims).rightValue.value shouldEqual delims
     }
 
     "be parsed correctly from mixed characters" in {
       val in  = ucsUp + ucsLow + pct + delims + up
       val out = ucsUp + ucsLow + ucsUp + delims + up
-      UserInfo(in).right.value.value shouldEqual out
+      UserInfo(in).rightValue.value shouldEqual out
     }
 
     "fail for empty" in {
-      UserInfo("").left.value
+      UserInfo("").leftValue
     }
 
     "show" in {
-      UserInfo(up + low).right.value.show shouldEqual (up + low)
+      UserInfo(up + low).rightValue.show shouldEqual (up + low)
     }
 
     "eq" in {
-      Eq.eqv(UserInfo(ucsUp + ucsLow).right.value, UserInfo(ucsUp + ucsLow).right.value) shouldEqual true
+      Eq.eqv(UserInfo(ucsUp + ucsLow).rightValue, UserInfo(ucsUp + ucsLow).rightValue) shouldEqual true
     }
 
     "not eq" in {
-      Eq.eqv(UserInfo(ucsUp).right.value, UserInfo(ucsLow).right.value) shouldEqual false
+      Eq.eqv(UserInfo(ucsUp).rightValue, UserInfo(ucsLow).rightValue) shouldEqual false
     }
   }
 }

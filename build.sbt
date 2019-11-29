@@ -30,8 +30,8 @@ val catsVersion          = "2.0.0"
 val circeVersion         = "0.12.3"
 val parboiledVersion     = "2.1.8"
 val jenaVersion          = "3.13.1"
-val scalaGraphVersion    = "1.12.5"
-val scalaGraphDotVersion = "1.12.1"
+val scalaGraphVersion    = "1.13.1"
+val scalaGraphDotVersion = "1.13.0"
 val scalaTestVersion     = "3.0.8"
 
 // Dependency modules

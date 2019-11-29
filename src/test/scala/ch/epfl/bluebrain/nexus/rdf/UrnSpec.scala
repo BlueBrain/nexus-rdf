@@ -3,9 +3,8 @@ package ch.epfl.bluebrain.nexus.rdf
 import cats.kernel.Eq
 import cats.syntax.show._
 import ch.epfl.bluebrain.nexus.rdf.Iri._
-import org.scalatest.{EitherValues, Inspectors, Matchers, WordSpecLike}
 
-class UrnSpec extends WordSpecLike with Matchers with Inspectors with EitherValues {
+class UrnSpec extends RdfSpec {
 
   "An Urn" should {
     "be parsed correctly" in {
@@ -23,7 +22,7 @@ class UrnSpec extends WordSpecLike with Matchers with Inspectors with EitherValu
       // format: on
       forAll(cases) {
         case (in, expected) =>
-          Urn(in).right.value.asString shouldEqual expected
+          Urn(in).rightValue.asString shouldEqual expected
       }
     }
 
@@ -33,57 +32,57 @@ class UrnSpec extends WordSpecLike with Matchers with Inspectors with EitherValu
         "urn:example:some/path/?="
       )
       forAll(fail) { str =>
-        Urn(str).left.value
+        Urn(str).leftValue
       }
     }
 
-    val withHash = Iri.absolute("urn:examp-lE:foo-bar-baz-qux?+CCResolve:cc=uk?=a=b#hash").right
+    val withHash = Iri.absolute("urn:examp-lE:foo-bar-baz-qux?+CCResolve:cc=uk?=a=b#hash").rightValue
 
     "be absolute" in {
-      withHash.value.isAbsolute shouldEqual true
+      withHash.isAbsolute shouldEqual true
     }
 
     "be a Urn" in {
-      withHash.value.isUrn shouldEqual true
+      withHash.isUrn shouldEqual true
     }
 
     "as uri" in {
-      val iri = Iri.absolute("urn:example:a£/bÆc//:://?=a=b#").right.value
+      val iri = Iri.absolute("urn:example:a£/bÆc//:://?=a=b#").rightValue
       iri.asUri shouldEqual "urn:example:a%C2%A3/b%C3%86c//:://?=a=b#"
     }
 
     "show" in {
-      val iri = Iri.absolute("urn:example:a£/bÆc//:://?=a=b#").right.value
+      val iri = Iri.absolute("urn:example:a£/bÆc//:://?=a=b#").rightValue
       iri.show shouldEqual "urn:example:a£/bÆc//:://?=a=b#"
     }
 
     "return an optional self" in {
-      withHash.value.asUrn shouldEqual Some(withHash.value)
+      withHash.asUrn shouldEqual Some(withHash)
     }
 
     "return an optional self from asAbsolute" in {
-      withHash.value.asAbsolute shouldEqual Some(withHash.value)
+      withHash.asAbsolute shouldEqual Some(withHash)
     }
 
     "not be an Url" in {
-      withHash.value.isUrl shouldEqual false
+      withHash.isUrl shouldEqual false
     }
 
     "not return a url" in {
-      withHash.value.asUrl shouldEqual None
+      withHash.asUrl shouldEqual None
     }
 
     "not be a RelativeIri" in {
-      withHash.value.isRelative shouldEqual false
+      withHash.isRelative shouldEqual false
     }
 
     "not return a RelativeIri" in {
-      withHash.value.asRelative shouldEqual None
+      withHash.asRelative shouldEqual None
     }
 
     "eq" in {
-      val lhs = Urn("urn:examp-lE:foo-bar-baz-qux?+CCResolve:cc=uk?=a=b#hash").right.value
-      val rhs = Urn("urn:examp-le:foo-bar-baz-qux?+CCResolve:cc=uk?=a=b#hash").right.value
+      val lhs = Urn("urn:examp-lE:foo-bar-baz-qux?+CCResolve:cc=uk?=a=b#hash").rightValue
+      val rhs = Urn("urn:examp-le:foo-bar-baz-qux?+CCResolve:cc=uk?=a=b#hash").rightValue
       Eq.eqv(lhs, rhs) shouldEqual true
     }
   }

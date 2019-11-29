@@ -10,7 +10,7 @@ import ch.epfl.bluebrain.nexus.rdf.jena.JenaModel.JenaModelErr
 import ch.epfl.bluebrain.nexus.rdf.{Graph, MarshallingError, RootedGraph}
 import io.circe.Json
 import org.apache.jena.rdf.model.Model
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 /**
   * Defines an encoder from ''A'' to [[Graph]]

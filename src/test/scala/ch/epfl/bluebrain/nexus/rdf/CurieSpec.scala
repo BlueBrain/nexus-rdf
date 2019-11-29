@@ -3,35 +3,28 @@ package ch.epfl.bluebrain.nexus.rdf
 import cats.kernel.Eq
 import cats.syntax.show._
 import ch.epfl.bluebrain.nexus.rdf.Curie.Prefix
-import org.scalatest.{EitherValues, Inspectors, Matchers, WordSpecLike}
 
-class CurieSpec extends WordSpecLike with Matchers with Inspectors with EitherValues {
+class CurieSpec extends RdfSpec {
   "A Prefix" should {
 
     val valid   = List("prefix", "PrEfIx", "_prefix", "__prefix", "_.prefix", "pre-fix", "_123.456", "Àprefix", "Öfix")
     val invalid = List("-prefix", "!prefix", ":prefix", ".prefix", "6prefix", "prefi!x", "prefix:", "")
 
     "be parsed correctly from string" in {
-      forAll(valid) {
-        case in => Prefix(in).right.value.value shouldEqual in
-      }
+      forAll(valid)(in => Prefix(in).rightValue.value shouldEqual in)
     }
 
     "fail parsing from an invalid string" in {
-      forAll(invalid) {
-        case in => Prefix(in).left.value should not be 'empty
-      }
+      forAll(invalid)(in => Prefix(in).leftValue should not be empty)
     }
 
     "show" in {
-      forAll(valid) {
-        case in => Prefix(in).right.value.show shouldEqual in
-      }
+      forAll(valid)(in => Prefix(in).rightValue.show shouldEqual in)
     }
 
     "eq" in {
-      val lhs = Prefix("prefix").right.value
-      val rhs = Prefix("prefix").right.value
+      val lhs = Prefix("prefix").rightValue
+      val rhs = Prefix("prefix").rightValue
       Eq.eqv(lhs, rhs) shouldEqual true
     }
   }
@@ -64,7 +57,7 @@ class CurieSpec extends WordSpecLike with Matchers with Inspectors with EitherVa
     "be parsed correctly from string" in {
       forAll(valid) {
         case (in, p, r) =>
-          val curie = Curie(in).right.value
+          val curie = Curie(in).rightValue
           curie.prefix.value shouldEqual p
           curie.reference.asString shouldEqual r
           curie.show shouldEqual s"$p:${curie.reference.asString}"
@@ -72,49 +65,47 @@ class CurieSpec extends WordSpecLike with Matchers with Inspectors with EitherVa
     }
 
     "fail parsing from an invalid string" in {
-      forAll(invalid) {
-        case in => Curie(in).left.value should not be 'empty
-      }
+      forAll(invalid)(in => Curie(in).leftValue should not be empty)
     }
 
     "eq" in {
-      val lhs = Curie("rdf:type").right.value
-      val rhs = Curie("rdf:type").right.value
+      val lhs = Curie("rdf:type").rightValue
+      val rhs = Curie("rdf:type").rightValue
       Eq.eqv(lhs, rhs) shouldEqual true
     }
 
     "not eq" in {
-      val lhs = Curie("rdf:type").right.value
-      val rhs = Curie("RdF:type").right.value
+      val lhs = Curie("rdf:type").rightValue
+      val rhs = Curie("RdF:type").rightValue
       Eq.eqv(lhs, rhs) shouldEqual false
     }
 
     "fail to convert to iri when not found on prefix mappings" in {
-      val c      = Curie("rdf:type").right.value
-      val iri    = Iri.absolute("http://example.com/a").right.value
-      val prefix = Prefix("a").right.value
-      c.toIri(Map(prefix                   -> iri)).left.value
-      c.toIriUnsafePrefix(Map(prefix.value -> iri)).left.value
+      val c      = Curie("rdf:type").rightValue
+      val iri    = Iri.absolute("http://example.com/a").rightValue
+      val prefix = Prefix("a").rightValue
+      c.toIri(Map(prefix                   -> iri)).leftValue
+      c.toIriUnsafePrefix(Map(prefix.value -> iri)).leftValue
     }
 
     "fail to convert to iri when resolved curie is not an AbsoluteIri" in {
-      val c   = Curie("rdf:type?a=b").right.value
-      val iri = Iri.absolute("http://example.com/b?c=d").right.value
-      c.toIri(iri).left.value
+      val c   = Curie("rdf:type?a=b").rightValue
+      val iri = Iri.absolute("http://example.com/b?c=d").rightValue
+      c.toIri(iri).leftValue
     }
 
     "convert to iri with prefix map" in {
-      val c   = Curie("rdf:type").right.value
-      val iri = Iri.absolute("http://example.com/a/").right.value
-      val map = Map(Prefix("rdf").right.value -> iri)
-      c.toIri(map).right.value shouldEqual Iri.absolute("http://example.com/a/type").right.value
+      val c   = Curie("rdf:type").rightValue
+      val iri = Iri.absolute("http://example.com/a/").rightValue
+      val map = Map(Prefix("rdf").rightValue -> iri)
+      c.toIri(map).rightValue shouldEqual Iri.absolute("http://example.com/a/type").rightValue
     }
 
     "convert to iri with string prefix map" in {
-      val c   = Curie("rdf:type?a=b").right.value
-      val iri = Iri.absolute("http://example.com/a").right.value
+      val c   = Curie("rdf:type?a=b").rightValue
+      val iri = Iri.absolute("http://example.com/a").rightValue
       val map = Map("rdf" -> iri)
-      c.toIriUnsafePrefix(map).right.value shouldEqual Iri.absolute("http://example.com/atype?a=b").right.value
+      c.toIriUnsafePrefix(map).rightValue shouldEqual Iri.absolute("http://example.com/atype?a=b").rightValue
     }
   }
 }

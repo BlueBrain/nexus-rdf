@@ -6,29 +6,28 @@ import ch.epfl.bluebrain.nexus.rdf.Node.IriOrBNode
 import ch.epfl.bluebrain.nexus.rdf.Node.Literal.LanguageTag
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
 import ch.epfl.bluebrain.nexus.rdf.instances._
-import org.scalatest.{EitherValues, Inspectors, Matchers, WordSpecLike}
 
-class NodeSpec extends WordSpecLike with Matchers with EitherValues with Inspectors {
+class NodeSpec extends RdfSpec {
 
   "A BNode" should {
     "be constructed correctly" in {
       val cases = List("a", "a-_", "a123")
       forAll(cases) { el =>
-        Node.blank(el).right.value
+        Node.blank(el).rightValue
       }
     }
     "fail to construct" in {
       val cases = List("", " ", "a#", "_", "-", "-a", "_a")
       forAll(cases) { el =>
-        Node.blank(el).left.value
+        Node.blank(el).leftValue
       }
     }
     "show" in {
       Node.blank.show
     }
     "eq" in {
-      val lhs = Node.blank("a1").right.value
-      val rhs = Node.blank("a1").right.value
+      val lhs = Node.blank("a1").rightValue
+      val rhs = Node.blank("a1").rightValue
       Eq.eqv(lhs, rhs) shouldEqual true
     }
   }
@@ -47,7 +46,7 @@ class NodeSpec extends WordSpecLike with Matchers with EitherValues with Inspect
         "zh-Hans"
       )
       forAll(cases) { el =>
-        LanguageTag(el).right.value
+        LanguageTag(el).rightValue
       }
     }
     "fail to construct" in {
@@ -60,7 +59,7 @@ class NodeSpec extends WordSpecLike with Matchers with EitherValues with Inspect
         "aaaaaaaa4h5kj324h54"
       )
       forAll(cases) { el =>
-        LanguageTag(el).left.value
+        LanguageTag(el).leftValue
       }
     }
   }
@@ -69,7 +68,7 @@ class NodeSpec extends WordSpecLike with Matchers with EitherValues with Inspect
     "expose the appropriate properties" in {
       val cases = List(
         (Node.blank, true, false, false),
-        (Node.iri("https://a.b").right.value, false, true, false),
+        (Node.iri("https://a.b").rightValue, false, true, false),
         (Node.literal(2), false, false, true)
       )
       forAll(cases) {
@@ -84,10 +83,10 @@ class NodeSpec extends WordSpecLike with Matchers with EitherValues with Inspect
     }
     "show" in {
       val cases = List[(Node, String)](
-        (Node.blank("123").right.value, "_:123"),
-        (Node.iri("https://a.b").right.value, "<https://a.b>"),
-        (Node.iri("urn:ab:$").right.value, "<urn:ab:$>"),
-        (Node.iri("urn:ab:£").right.value, "<urn:ab:£>"),
+        (Node.blank("123").rightValue, "_:123"),
+        (Node.iri("https://a.b").rightValue, "<https://a.b>"),
+        (Node.iri("urn:ab:$").rightValue, "<urn:ab:$>"),
+        (Node.iri("urn:ab:£").rightValue, "<urn:ab:£>"),
         (Node.literal(2), """"2"^^<http://www.w3.org/2001/XMLSchema#integer>"""),
         (2, """"2"^^<http://www.w3.org/2001/XMLSchema#integer>"""),
         (2L, """"2"^^<http://www.w3.org/2001/XMLSchema#long>"""),
@@ -101,7 +100,7 @@ class NodeSpec extends WordSpecLike with Matchers with EitherValues with Inspect
         (Node.literal(2.toByte), """"2"^^<http://www.w3.org/2001/XMLSchema#byte>"""),
         (Node.literal("a"), """"a""""),
         (Node.literal("""a "name" escaped"""), """"a \"name\" escaped""""),
-        (Node.literal("a", LanguageTag("en").right.value), """"a"@en""")
+        (Node.literal("a", LanguageTag("en").rightValue), """"a"@en""")
       )
       forAll(cases) {
         case (node: Node, str) =>
@@ -111,10 +110,10 @@ class NodeSpec extends WordSpecLike with Matchers with EitherValues with Inspect
 
     "to String" in {
       val cases = List[(Node, String)](
-        (Node.blank("123").right.value, "_:123"),
-        (Node.iri("https://a.b").right.value, "https://a.b"),
-        (Node.iri("urn:ab:$").right.value, "urn:ab:$"),
-        (Node.iri("urn:ab:£").right.value, "urn:ab:£"),
+        (Node.blank("123").rightValue, "_:123"),
+        (Node.iri("https://a.b").rightValue, "https://a.b"),
+        (Node.iri("urn:ab:$").rightValue, "urn:ab:$"),
+        (Node.iri("urn:ab:£").rightValue, "urn:ab:£"),
         (Node.literal(2), "2"),
         (2, "2"),
         (2L, "2"),
@@ -125,7 +124,7 @@ class NodeSpec extends WordSpecLike with Matchers with EitherValues with Inspect
         (2.2f, "2.2"),
         (Node.literal(true), "true"),
         (Node.literal("a"), "a"),
-        (Node.literal("a", LanguageTag("en").right.value), "a")
+        (Node.literal("a", LanguageTag("en").rightValue), "a")
       )
       forAll(cases) {
         case (node: Node, str) =>
@@ -142,7 +141,7 @@ class NodeSpec extends WordSpecLike with Matchers with EitherValues with Inspect
       )
       forAll(cases) {
         case (lhs, rhs) =>
-          Eq.eqv(lhs.right.value, rhs.right.value) shouldEqual true
+          Eq.eqv(lhs.rightValue, rhs.rightValue) shouldEqual true
       }
     }
   }
@@ -150,8 +149,8 @@ class NodeSpec extends WordSpecLike with Matchers with EitherValues with Inspect
   "An IriOrBNode" should {
     "show" in {
       val cases = List[(IriOrBNode, String)](
-        (Node.blank("123").right.value, "_:123"),
-        (Node.iri("https://a.b").right.value, "<https://a.b>")
+        (Node.blank("123").rightValue, "_:123"),
+        (Node.iri("https://a.b").rightValue, "<https://a.b>")
       )
       forAll(cases) {
         case (node: Node, str) =>
@@ -160,8 +159,8 @@ class NodeSpec extends WordSpecLike with Matchers with EitherValues with Inspect
     }
     "to String" in {
       val cases = List[(IriOrBNode, String)](
-        (Node.blank("123").right.value, "_:123"),
-        (Node.iri("https://a.b").right.value, "https://a.b")
+        (Node.blank("123").rightValue, "_:123"),
+        (Node.iri("https://a.b").rightValue, "https://a.b")
       )
       forAll(cases) {
         case (node: Node, str) =>
@@ -177,7 +176,7 @@ class NodeSpec extends WordSpecLike with Matchers with EitherValues with Inspect
       )
       forAll(cases) {
         case (lhs, rhs) =>
-          Eq.eqv(lhs.right.value, rhs.right.value) shouldEqual true
+          Eq.eqv(lhs.rightValue, rhs.rightValue) shouldEqual true
       }
     }
   }
@@ -198,7 +197,7 @@ class NodeSpec extends WordSpecLike with Matchers with EitherValues with Inspect
     }
     "be string" in {
       Node.literal("a").isString shouldEqual true
-      Node.literal("a", LanguageTag("en").right.value).isString shouldEqual true
+      Node.literal("a", LanguageTag("en").rightValue).isString shouldEqual true
     }
   }
 }

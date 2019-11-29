@@ -15,11 +15,11 @@ trait RdfInstances {
   final implicit val iriEncoder: Encoder[Iri] = Encoder.encodeString.contramap(_.asString)
   final implicit val iriDecoder: Decoder[Iri] = Decoder.decodeString.emap(Iri.apply)
 
-  implicit val urlEncoder: Encoder[Url] = Encoder[AbsoluteIri].contramap(identity)
-  implicit val urlDecoder: Decoder[Url] = Decoder.decodeString.emap(Url.apply)
+  implicit def urlEncoder(implicit E: Encoder[AbsoluteIri]): Encoder[Url] = E.contramap(identity)
+  implicit val urlDecoder: Decoder[Url]                                   = Decoder.decodeString.emap(Url.apply)
 
-  implicit val urnEncoder: Encoder[Urn] = Encoder[AbsoluteIri].contramap(identity)
-  implicit val urnDecoder: Decoder[Urn] = Decoder.decodeString.emap(Urn.apply)
+  implicit def urnEncoder(implicit E: Encoder[AbsoluteIri]): Encoder[Urn] = E.contramap(identity)
+  implicit val urnDecoder: Decoder[Urn]                                   = Decoder.decodeString.emap(Urn.apply)
 
   final implicit val relativeIriEncoder: Encoder[RelativeIri] = Encoder.encodeString.contramap(_.asString)
   final implicit val relativeIriDecoder: Decoder[RelativeIri] = Decoder.decodeString.emap(Iri.relative)

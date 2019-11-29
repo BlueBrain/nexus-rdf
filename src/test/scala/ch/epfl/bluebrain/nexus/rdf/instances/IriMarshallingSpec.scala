@@ -1,21 +1,20 @@
 package ch.epfl.bluebrain.nexus.rdf.instances
 
-import ch.epfl.bluebrain.nexus.rdf.Iri
+import ch.epfl.bluebrain.nexus.rdf.{Iri, RdfSpec}
 import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Path, RelativeIri, Url, Urn}
 import io.circe.Json
-import org.scalatest._
 import io.circe.syntax._
 
-class IriMarshallingSpec extends WordSpecLike with Matchers with Inspectors with EitherValues with OptionValues {
+class IriMarshallingSpec extends RdfSpec {
   private val iriString = "http://example.com/a/b?c=d"
-  private val iri: Iri  = Iri.absolute(iriString).right.value
+  private val iri: Iri  = Iri.absolute(iriString).rightValue
 
   "An Iri" should {
     "be encoded" in {
       iri.asJson shouldEqual Json.fromString(iriString)
     }
     "be decoded" in {
-      Json.fromString(iriString).as[Iri].right.value shouldEqual iri
+      Json.fromString(iriString).as[Iri].rightValue shouldEqual iri
     }
     "fail to decode" in {
       Json.fromString("").as[Iri].left
@@ -27,7 +26,7 @@ class IriMarshallingSpec extends WordSpecLike with Matchers with Inspectors with
       iri.asAbsolute.value.asJson shouldEqual Json.fromString(iriString)
     }
     "be decoded" in {
-      Json.fromString(iriString).as[AbsoluteIri].right.value shouldEqual iri.asAbsolute.value
+      Json.fromString(iriString).as[AbsoluteIri].rightValue shouldEqual iri.asAbsolute.value
     }
     "fail to decode" in {
       Json.fromString("/a/b/c").as[AbsoluteIri].left
@@ -41,7 +40,7 @@ class IriMarshallingSpec extends WordSpecLike with Matchers with Inspectors with
       path.asJson shouldEqual Json.fromString(pathString)
     }
     "be decoded" in {
-      Json.fromString(pathString).as[Path].right.value shouldEqual path
+      Json.fromString(pathString).as[Path].rightValue shouldEqual path
     }
     "fail to decode" in {
       Json.fromString("https://example.com").as[Path].left
@@ -50,12 +49,12 @@ class IriMarshallingSpec extends WordSpecLike with Matchers with Inspectors with
 
   "A Url" should {
     val urlString = "http://example.com/a"
-    val url       = Iri.url("http://example.com/a").right.value
+    val url       = Iri.url("http://example.com/a").rightValue
     "be encoded" in {
       url.asJson shouldEqual Json.fromString(urlString)
     }
     "be decoded" in {
-      Json.fromString(urlString).as[Url].right.value shouldEqual url
+      Json.fromString(urlString).as[Url].rightValue shouldEqual url
     }
     "fail to decode" in {
       Json.fromString("urn:example:a£/bÆc//:://?=a=b#").as[Url].left
@@ -64,12 +63,12 @@ class IriMarshallingSpec extends WordSpecLike with Matchers with Inspectors with
 
   "A Urn" should {
     val urnString = "urn:example:a£/bÆc//:://?=a=b#"
-    val urn       = Iri.urn("urn:example:a£/bÆc//:://?=a=b#").right.value
+    val urn       = Iri.urn("urn:example:a£/bÆc//:://?=a=b#").rightValue
     "be encoded" in {
       urn.asJson shouldEqual Json.fromString(urnString)
     }
     "be decoded" in {
-      Json.fromString(urnString).as[Urn].right.value shouldEqual urn
+      Json.fromString(urnString).as[Urn].rightValue shouldEqual urn
     }
     "fail to decode" in {
       Json.fromString("https://example.com").as[Urn].left
@@ -78,12 +77,12 @@ class IriMarshallingSpec extends WordSpecLike with Matchers with Inspectors with
 
   "A RelativeIri" should {
     val relativeIriString = "../../../"
-    val relativeIri       = Iri.relative("../../../").right.value
+    val relativeIri       = Iri.relative("../../../").rightValue
     "be encoded" in {
       relativeIri.asJson shouldEqual Json.fromString(relativeIriString)
     }
     "be decoded" in {
-      Json.fromString(relativeIriString).as[RelativeIri].right.value shouldEqual relativeIri
+      Json.fromString(relativeIriString).as[RelativeIri].rightValue shouldEqual relativeIri
     }
     "fail to decode" in {
       Json.fromString("https://example.com").as[RelativeIri].left

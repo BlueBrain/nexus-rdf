@@ -4,9 +4,8 @@ import cats.kernel.Eq
 import cats.syntax.show._
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
 import ch.epfl.bluebrain.nexus.rdf.Iri._
-import org.scalatest.{EitherValues, Inspectors, Matchers, WordSpecLike}
 
-class UrlSpec extends WordSpecLike with Matchers with Inspectors with EitherValues {
+class UrlSpec extends RdfSpec {
 
   "An Url" should {
     "be parsed correctly" in {
@@ -27,51 +26,51 @@ class UrlSpec extends WordSpecLike with Matchers with Inspectors with EitherValu
         "http://google.com/a/../search/.."            -> "http://google.com"
       )
       forAll(cases) {
-        case (in, expected) => Url(in).right.value.asString shouldEqual expected
+        case (in, expected) => Url(in).rightValue.asString shouldEqual expected
       }
     }
-    val withHash = Iri.absolute("hTtp://1.2.3.4:80/a%C2%A3/b%C3%86c//:://#hash").right
+    val withHash = Iri.absolute("hTtp://1.2.3.4:80/a%C2%A3/b%C3%86c//:://#hash").rightValue
 
     "be absolute" in {
-      withHash.value.isAbsolute shouldEqual true
+      withHash.isAbsolute shouldEqual true
     }
 
     "be a Url" in {
-      withHash.value.isUrl shouldEqual true
+      withHash.isUrl shouldEqual true
     }
 
     "as uri" in {
-      val iri = Iri.absolute("hTtp://1.2.3.4:80/a%C2%A3/b%C3%86c/£/#hash").right.value
+      val iri = Iri.absolute("hTtp://1.2.3.4:80/a%C2%A3/b%C3%86c/£/#hash").rightValue
       iri.asUri shouldEqual "http://1.2.3.4/a%C2%A3/b%C3%86c/%C2%A3/#hash"
     }
 
     "show" in {
-      val iri = Iri.absolute("hTtp://1.2.3.4:80/a%C2%A3/b%C3%86c/£/#hash").right.value
+      val iri = Iri.absolute("hTtp://1.2.3.4:80/a%C2%A3/b%C3%86c/£/#hash").rightValue
       iri.show shouldEqual "http://1.2.3.4/a£/bÆc/£/#hash"
     }
 
     "return an optional self" in {
-      withHash.value.asUrl shouldEqual Some(withHash.value)
+      withHash.asUrl shouldEqual Some(withHash)
     }
 
     "return an optional self from asAbsolute" in {
-      withHash.value.asAbsolute shouldEqual Some(withHash.value)
+      withHash.asAbsolute shouldEqual Some(withHash)
     }
 
     "not be an Urn" in {
-      withHash.value.isUrn shouldEqual false
+      withHash.isUrn shouldEqual false
     }
 
     "not return a urn" in {
-      withHash.value.asUrn shouldEqual None
+      withHash.asUrn shouldEqual None
     }
 
     "not be a RelativeIri" in {
-      withHash.value.isRelative shouldEqual false
+      withHash.isRelative shouldEqual false
     }
 
     "not return a RelativeIri" in {
-      withHash.value.asRelative shouldEqual None
+      withHash.asRelative shouldEqual None
     }
 
     "append segment" in {
@@ -83,7 +82,7 @@ class UrlSpec extends WordSpecLike with Matchers with Inspectors with EitherValu
         ("http://google.com/a#other", "bcd", "http://google.com/a/bcd#other")
       )
       forAll(cases) {
-        case (in, segment, expected) => (Url(in).right.value + segment) shouldEqual Url(expected).right.value
+        case (in, segment, expected) => (Url(in).rightValue + segment) shouldEqual Url(expected).rightValue
       }
     }
 
@@ -96,14 +95,14 @@ class UrlSpec extends WordSpecLike with Matchers with Inspectors with EitherValu
         ("http://google.com/a#other", "/b/c/d", "http://google.com/a/b/c/d#other")
       )
       forAll(cases) {
-        case (in, p, expected) => (Url(in).right.value + Path(p).right.value) shouldEqual Url(expected).right.value
+        case (in, p, expected) => (Url(in).rightValue + Path(p).rightValue) shouldEqual Url(expected).rightValue
       }
-      Url("http://google.com/a").right.value + ("b" / "c") shouldEqual Url("http://google.com/a/b/c").right.value
+      Url("http://google.com/a").rightValue + ("b" / "c") shouldEqual Url("http://google.com/a/b/c").rightValue
     }
 
     "eq" in {
-      val lhs = Url("hTtp://gooGle.com/a/../search?q=asd#1").right.value
-      val rhs = Url("http://google.com/search?q=asd#1").right.value
+      val lhs = Url("hTtp://gooGle.com/a/../search?q=asd#1").rightValue
+      val rhs = Url("http://google.com/search?q=asd#1").rightValue
       Eq.eqv(lhs, rhs) shouldEqual true
     }
   }

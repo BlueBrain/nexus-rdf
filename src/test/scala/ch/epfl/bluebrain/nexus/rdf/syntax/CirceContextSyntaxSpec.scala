@@ -2,15 +2,14 @@ package ch.epfl.bluebrain.nexus.rdf.syntax
 
 import cats.syntax.show._
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
-import ch.epfl.bluebrain.nexus.rdf.{Iri, Resources}
+import ch.epfl.bluebrain.nexus.rdf.{Iri, RdfSpec}
 import io.circe.Json
 import io.circe.parser.parse
-import org.scalatest.{EitherValues, Inspectors, Matchers, WordSpecLike}
 
-class CirceContextSyntaxSpec extends WordSpecLike with Matchers with Inspectors with EitherValues with Resources {
+class CirceContextSyntaxSpec extends RdfSpec {
 
   private val context: AbsoluteIri =
-    Iri.absolute("https://bbp-nexus.epfl.ch/dev/v0/contexts/bbp/core/context/v0.1.0").right.value
+    Iri.absolute("https://bbp-nexus.epfl.ch/dev/v0/contexts/bbp/core/context/v0.1.0").rightValue
 
   "injecting context" should {
     val contextString = Json.fromString(context.show)
@@ -147,7 +146,7 @@ class CirceContextSyntaxSpec extends WordSpecLike with Matchers with Inspectors 
     }
 
     "extract the context IRI" in {
-      val context = parse("{\"@context\": \"http://schema.org/\"}").right.value
+      val context = parse("{\"@context\": \"http://schema.org/\"}").rightValue
       context.removeContextIris shouldEqual Json.obj("@context" -> Json.obj())
     }
 

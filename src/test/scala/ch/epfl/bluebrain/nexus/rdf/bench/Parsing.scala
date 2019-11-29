@@ -22,7 +22,7 @@ import org.openjdk.jmh.annotations.{Benchmark, Scope, State}
 class Parsing extends Resources {
 
   val iris = {
-    import scala.collection.JavaConverters._
+    import scala.jdk.CollectionConverters._
     val json  = jsonContentOf("/schema.json")
     val model = JenaModel(json).toOption.get
 

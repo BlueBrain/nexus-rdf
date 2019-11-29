@@ -69,7 +69,7 @@ final class OptionNodesSyntaxEncoder(nodeListOpt: Option[Iterable[Node]]) {
     nodeListOpt
       .toRight(NoElementToEncode)
       .flatMap(
-        _.toList.foldM(Vector.empty[A]) {
+        _.toVector.foldM(Vector.empty[A]) {
           case (acc, c) => encoder(c).map(acc :+ _)
         } match {
           case Right(list) if list.isEmpty => Left(NoElementToEncode)

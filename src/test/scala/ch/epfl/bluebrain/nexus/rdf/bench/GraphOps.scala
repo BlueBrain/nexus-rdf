@@ -1,10 +1,11 @@
 package ch.epfl.bluebrain.nexus.rdf.bench
 
-import ch.epfl.bluebrain.nexus.rdf.{Graph, Resources}
+import ch.epfl.bluebrain.nexus.rdf.{Graph, Resources, RootedGraph}
 import ch.epfl.bluebrain.nexus.rdf.Node.IriNode
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
 import ch.epfl.bluebrain.nexus.rdf.instances._
 import ch.epfl.bluebrain.nexus.rdf.syntax._
+import io.circe.Json
 import org.openjdk.jmh.annotations.{Benchmark, Scope, State}
 
 //noinspection TypeAnnotation
@@ -21,9 +22,9 @@ import org.openjdk.jmh.annotations.{Benchmark, Scope, State}
 @State(Scope.Thread)
 class GraphOps extends Resources {
 
-  val json       = jsonContentOf("/schema.json")
-  val s: IriNode = url"http://example.com/id"
-  val graph      = json.asGraph(s).right.get
+  val json: Json         = jsonContentOf("/schema.json")
+  val s: IriNode         = url"http://example.com/id"
+  val graph: RootedGraph = json.asGraph(s).getOrElse(throw new IllegalArgumentException)
 
   @Benchmark
   def parseRemoveOriginal(): Unit = {

@@ -3,11 +3,10 @@ package ch.epfl.bluebrain.nexus.rdf
 import cats.kernel.Eq
 import cats.syntax.show._
 import ch.epfl.bluebrain.nexus.rdf.Iri._
-import org.scalatest.{EitherValues, Inspectors, Matchers, WordSpecLike}
 
 import scala.collection.immutable.{SortedMap, SortedSet}
 
-class QuerySpec extends WordSpecLike with Matchers with Inspectors with EitherValues {
+class QuerySpec extends RdfSpec {
 
   "A Query" should {
     "be constructed successfully" in {
@@ -28,29 +27,29 @@ class QuerySpec extends WordSpecLike with Matchers with Inspectors with EitherVa
       // format: on
       forAll(cases) {
         case (raw, map) =>
-          Query(raw).right.value.value shouldEqual map
+          Query(raw).rightValue.value shouldEqual map
       }
     }
     "fail to parse" in {
       val cases = List("a==b", "a=b&", "a#", "a&&", "a=&b")
       forAll(cases) { str =>
-        Query(str).left.value
+        Query(str).leftValue
       }
     }
     "show" in {
       val encodedDelim = urlEncode("[]#")
-      Query("a=b&a=b&a=c&a&b&b&b=c&d&e" + encodedDelim).right.value.show shouldEqual "a&a=b&a=c&b&b=c&d&e" + encodedDelim
+      Query("a=b&a=b&a=c&a&b&b&b=c&d&e" + encodedDelim).rightValue.show shouldEqual "a&a=b&a=c&b&b=c&d&e" + encodedDelim
     }
     "pct encoded representation" in {
       val utf8         = "£Æ"
       val encodedUtf8  = urlEncode(utf8)
       val allowedDelim = "!:@!$()*,"
       val encodedDelim = urlEncode("[]#")
-      Query(utf8 + encodedUtf8 + allowedDelim + encodedDelim).right.value.pctEncoded shouldEqual (encodedUtf8 + encodedUtf8 + allowedDelim + encodedDelim)
+      Query(utf8 + encodedUtf8 + allowedDelim + encodedDelim).rightValue.pctEncoded shouldEqual (encodedUtf8 + encodedUtf8 + allowedDelim + encodedDelim)
     }
     "eq" in {
-      val lhs = Query("a=b&a=b&a=c&a&b&b&b=c&d&e").right.value
-      val rhs = Query("a=b&a=b&a=c&a&b&b=c&d&e").right.value
+      val lhs = Query("a=b&a=b&a=c&a&b&b&b=c&d&e").rightValue
+      val rhs = Query("a=b&a=b&a=c&a&b&b=c&d&e").rightValue
       Eq.eqv(lhs, rhs) shouldEqual true
     }
   }
