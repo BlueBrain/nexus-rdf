@@ -6,7 +6,11 @@ import ch.epfl.bluebrain.nexus.rdf.Node.IriOrBNode
 import ch.epfl.bluebrain.nexus.rdf.Node.Literal.LanguageTag
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
 import ch.epfl.bluebrain.nexus.rdf.instances._
+import ch.epfl.bluebrain.nexus.rdf.syntax._
 import org.scalatest.{EitherValues, Inspectors, Matchers, WordSpecLike}
+
+import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration._
 
 class NodeSpec extends WordSpecLike with Matchers with EitherValues with Inspectors {
 
@@ -107,6 +111,11 @@ class NodeSpec extends WordSpecLike with Matchers with EitherValues with Inspect
         case (node: Node, str) =>
           node.show shouldEqual str
       }
+    }
+
+    "encode durations" in {
+      Node.literal("2 seconds").as[FiniteDuration].right.value shouldEqual 2.seconds
+      Node.literal("2 somethings").as[FiniteDuration].left
     }
 
     "to String" in {

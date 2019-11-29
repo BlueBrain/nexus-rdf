@@ -7,6 +7,7 @@ import ch.epfl.bluebrain.nexus.rdf.Node
 import ch.epfl.bluebrain.nexus.rdf.encoder.NodeEncoder.EncoderResult
 import ch.epfl.bluebrain.nexus.rdf.encoder.NodeEncoderError.{IllegalConversion, IllegalType}
 
+import scala.concurrent.duration.{Duration, FiniteDuration}
 import scala.util.Try
 
 /**
@@ -52,6 +53,17 @@ object NodeEncoder {
 
   implicit val absoluteIriEncoder: NodeEncoder[AbsoluteIri] = (node: Node) =>
     node.asIri.toRight(IllegalType("Iri", node)).map(_.value)
+
+  implicit val durationEncoder: NodeEncoder[Duration] = (node: Node) =>
+    stringEncoder(node).flatMap { s =>
+      Try(Duration(s)).toEither.left.map(err => IllegalConversion(err.getMessage, Some(err)))
+    }
+
+  implicit val finiteDurationEncoder: NodeEncoder[FiniteDuration] = (node: Node) =>
+    durationEncoder(node).flatMap {
+      case infinite: Duration.Infinite => Left(IllegalConversion(s"The Duration '$infinite' is not finite"))
+      case duration: FiniteDuration    => Right(duration)
+    }
 
   private def numeric[A](node: Node, f: String => A): EncoderResult[A] = {
     node.asLiteral.toRight(IllegalType("Literal", node)).flatMap { literal =>
