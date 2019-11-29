@@ -1,11 +1,13 @@
 package ch.epfl.bluebrain.nexus.rdf
 
 import org.scalactic.source
-import org.scalatest.{EitherValues, Inspectors, Matchers, OptionValues, TryValues, WordSpecLike}
+import org.scalatest.{EitherValues, Inspectors, OptionValues, TryValues}
 import org.scalatest.exceptions.{StackDepthException, TestFailedException}
+import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.matchers.should.Matchers
 
 trait RdfSpec
-    extends WordSpecLike
+    extends AnyWordSpecLike
     with Matchers
     with Inspectors
     with EitherValues
