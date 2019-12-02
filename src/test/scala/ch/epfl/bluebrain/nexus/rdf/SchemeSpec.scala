@@ -3,21 +3,20 @@ package ch.epfl.bluebrain.nexus.rdf
 import cats.kernel.Eq
 import cats.syntax.show._
 import ch.epfl.bluebrain.nexus.rdf.Iri._
-import org.scalatest.{EitherValues, Inspectors, Matchers, WordSpecLike}
 
-class SchemeSpec extends WordSpecLike with Matchers with Inspectors with EitherValues {
+class SchemeSpec extends RdfSpec {
 
   "A Scheme" should {
     "be constructed successfully" in {
       val strings = List("urn", "https", "http", "file", "ftp", "ssh", "a", "a0", "a-", "a+", "a.", "HTTPS", "A0-+.")
       forAll(strings) { s =>
-        Scheme(s).right.value
+        Scheme(s).rightValue
       }
     }
     "fail to construct" in {
       val strings = List("", "0", "0a", "as_", "%20a", "0-+.")
       forAll(strings) { s =>
-        Scheme(s).left.value
+        Scheme(s).leftValue
       }
     }
     "return the appropriate boolean flag" in {
@@ -31,14 +30,14 @@ class SchemeSpec extends WordSpecLike with Matchers with Inspectors with EitherV
       )
       forAll(cases) {
         case (string, isUrn, isHttps, isHttp) =>
-          val scheme = Scheme(string).right.value
+          val scheme = Scheme(string).rightValue
           scheme.isUrn shouldEqual isUrn
           scheme.isHttps shouldEqual isHttps
           scheme.isHttp shouldEqual isHttp
       }
     }
 
-    val normalized = Scheme("HtTpS").right.value
+    val normalized = Scheme("HtTpS").rightValue
 
     "normalize input during construction" in {
       normalized.value shouldEqual "https"
@@ -47,7 +46,7 @@ class SchemeSpec extends WordSpecLike with Matchers with Inspectors with EitherV
       normalized.show shouldEqual "https"
     }
     "eq" in {
-      Eq.eqv(Scheme("https").right.value, normalized) shouldEqual true
+      Eq.eqv(Scheme("https").rightValue, normalized) shouldEqual true
     }
   }
 }

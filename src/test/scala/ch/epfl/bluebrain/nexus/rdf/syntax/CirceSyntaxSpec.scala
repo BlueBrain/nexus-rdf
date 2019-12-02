@@ -19,18 +19,10 @@ import io.circe.Json
 import io.circe.parser._
 import org.apache.jena.graph.NodeFactory
 import org.apache.jena.rdf.model.{Model, ResourceFactory}
-import org.scalatest.EitherValues._
-import org.scalatest._
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
-class CirceSyntaxSpec
-    extends WordSpecLike
-    with Matchers
-    with TryValues
-    with OptionValues
-    with Inspectors
-    with Resources {
+class CirceSyntaxSpec extends RdfSpec {
 
   "CirceSyntax" should {
 
@@ -39,7 +31,7 @@ class CirceSyntaxSpec
     }
 
     implicit val rootNodeItem: RootNode[Item] = _.bNode
-    implicit val encExample = GraphEncoder[Id, Example] { (id, example) =>
+    implicit val encExample: GraphEncoder[Id, Example] = GraphEncoder[Id, Example] { (id, example) =>
       Graph(
         Set[Graph.Triple](
           (id, rdf.tpe, example.tpe),
@@ -63,15 +55,15 @@ class CirceSyntaxSpec
 
     "convert valid JSON-LD into Graph and back" in {
       val json  = jsonContentOf("/simple.json")
-      val graph = json.asGraph(url"http://nexus.example.com/john-doé").right.value
+      val graph = json.asGraph(url"http://nexus.example.com/john-doé").rightValue
       graph.triples shouldEqual triples
 
-      graph.as[Json](Json.obj("@context" -> json.contextValue)).right.value shouldEqual json
+      graph.as[Json](Json.obj("@context" -> json.contextValue)).rightValue shouldEqual json
     }
 
     "failed convert into Graph when the rootNode provided is not found on the graph" in {
       val id: IriOrBNode = blank
-      jsonContentOf("/simple.json").asGraph(id).left.value shouldEqual
+      jsonContentOf("/simple.json").asGraph(id).leftValue shouldEqual
         RootNodeNotFound(Some(id), s"The provided id '$id' is not part of the graph")
     }
 
@@ -80,7 +72,7 @@ class CirceSyntaxSpec
       // format: off
       val graph = RootedGraph(url"http://nexus.example.com/john-doé", triples)
       // format: on
-      val json = graph.as[Json]().right.value.asObject.value
+      val json = graph.as[Json]().rightValue.asObject.value
       json("@id").value.asString.value shouldEqual "http://nexus.example.com/john-doé"
       json("http://schema.org/birthDate").value.asString.value shouldEqual "1999-04-09T20:00Z"
       json("http://schema.org/name").value.asString.value shouldEqual "John Doe"
@@ -88,9 +80,9 @@ class CirceSyntaxSpec
 
     "convert Graph to Json-LD ignoring the IRI context" in {
       val graph   = RootedGraph(url"http://nexus.example.com/john-doé", triples)
-      val context = parse("{\"@context\": \"http://schema.org/\"}").right.value
+      val context = parse("{\"@context\": \"http://schema.org/\"}").rightValue
 
-      graph.as[Json](context).right.value shouldEqual Json.obj(
+      graph.as[Json](context).rightValue shouldEqual Json.obj(
         "@context"                    -> Json.obj(),
         "@id"                         -> Json.fromString("http://nexus.example.com/john-doé"),
         "@type"                       -> Json.fromString("http://schema.org/Person"),
@@ -100,28 +92,28 @@ class CirceSyntaxSpec
     }
 
     "convert an empty graph back to json" in {
-      RootedGraph(url"http://nexus.example.com/john-doé", Graph()).as[Json]().right.value shouldEqual Json.obj()
+      RootedGraph(url"http://nexus.example.com/john-doé", Graph()).as[Json]().rightValue shouldEqual Json.obj()
     }
 
     "convert Graph to Json-LD ignoring the IRI context in an array" in {
       val json  = jsonContentOf("/context/simple-iri-context.json")
       val ctx   = context(json)
       val graph = RootedGraph(url"http://nexus.example.com/john-doé", triples)
-      graph.as[Json](ctx).right.value deepMerge ctx shouldEqual json
+      graph.as[Json](ctx).rightValue deepMerge ctx shouldEqual json
     }
 
     "convert Graph with nested relationships to Json-LD  with context" in {
       val json                              = jsonContentOf("/embed.json")
       val id                                = url"http://nexus.example.com/john-doe"
       val graph: EncoderResult[RootedGraph] = json.asGraph(id)
-      graph.right.value.as[Json](context(json)).right.value shouldEqual json
+      graph.rightValue.as[Json](context(json)).rightValue shouldEqual json
     }
 
     "convert Graph with longs" in {
       val json                              = jsonContentOf("/longs.json")
       val id                                = url"http://nexus.example.com/john-doe"
       val graph: EncoderResult[RootedGraph] = json.asGraph(id)
-      graph.right.value.as[Json](context(json)).right.value shouldEqual json
+      graph.rightValue.as[Json](context(json)).rightValue shouldEqual json
     }
 
     "convert Graph with sorted list" in {
@@ -130,7 +122,7 @@ class CirceSyntaxSpec
 
       val id: IriOrBNode   = url"http://example.com/id"
       val graph: Id[Graph] = Graph().add(id, url"http://example.com/items", list)
-      RootedGraph(id, graph).as[Json](context(json)).right.value shouldEqual json
+      RootedGraph(id, graph).as[Json](context(json)).rightValue shouldEqual json
     }
 
     "convert to compacted Json from entity with GraphEncoder" in {
@@ -142,7 +134,7 @@ class CirceSyntaxSpec
         "John Doe",
         "1999-04-09T20:00Z"
       )
-      example.as[Json](ctx).right.value shouldEqual json.replaceContext(json.removeContextIris)
+      example.as[Json](ctx).rightValue shouldEqual json.replaceContext(json.removeContextIris)
     }
 
     "convert to expanded Json from entity with GraphEncoder" in {
@@ -152,7 +144,7 @@ class CirceSyntaxSpec
         "John Doe",
         "1999-04-09T20:00Z"
       )
-      example.as[Json]().right.value shouldEqual Json.obj(
+      example.as[Json]().rightValue shouldEqual Json.obj(
         "@id"                         -> Json.fromString(example.id.asString),
         "@type"                       -> Json.fromString(example.tpe.asString),
         "http://schema.org/birthDate" -> Json.fromString(example.birthDate),
@@ -162,51 +154,51 @@ class CirceSyntaxSpec
 
     "fetch the @id from the Json" in {
       val list = List(
-        Iri.absolute("http://nexus.example.com/john-doe").right.value     -> jsonContentOf("/embed.json"),
-        Iri.absolute("http://nexus.example.com/john-doe").right.value     -> jsonContentOf("/with-base.json"),
-        Iri.absolute("http://example.com/id").right.value                 -> jsonContentOf("/list.json"),
-        Iri.absolute("http://schema.org/john-doe").right.value            -> jsonContentOf("/aliased.json"),
-        Iri.absolute("http://nexus.example.com/graph").right.value        -> jsonContentOf("/graph-simple.json"),
-        Iri.absolute("http://nexus.example.com/array-simple").right.value -> jsonContentOf("/array-simple.json"),
-        Iri.absolute("http://nexus.example.com/array-graph").right.value  -> jsonContentOf("/array-graph.json"),
-        Iri.absolute("http://example.com/other").right.value              -> jsonContentOf("/array-graph-top-id.json")
+        Iri.absolute("http://nexus.example.com/john-doe").rightValue     -> jsonContentOf("/embed.json"),
+        Iri.absolute("http://nexus.example.com/john-doe").rightValue     -> jsonContentOf("/with-base.json"),
+        Iri.absolute("http://example.com/id").rightValue                 -> jsonContentOf("/list.json"),
+        Iri.absolute("http://schema.org/john-doe").rightValue            -> jsonContentOf("/aliased.json"),
+        Iri.absolute("http://nexus.example.com/graph").rightValue        -> jsonContentOf("/graph-simple.json"),
+        Iri.absolute("http://nexus.example.com/array-simple").rightValue -> jsonContentOf("/array-simple.json"),
+        Iri.absolute("http://nexus.example.com/array-graph").rightValue  -> jsonContentOf("/array-graph.json"),
+        Iri.absolute("http://example.com/other").rightValue              -> jsonContentOf("/array-graph-top-id.json")
       )
       forAll(list) {
         case (iri, json) =>
-          json.id.right.value shouldEqual iri
+          json.id.rightValue shouldEqual iri
       }
     }
 
     "fail to fetch the @id when not present" in {
-      Json.obj("type" -> Json.fromString("Person")).id.left.value shouldEqual IdNotFound
-      Json.fromString("something").id.left.value shouldEqual IdNotFound
+      Json.obj("type" -> Json.fromString("Person")).id.leftValue shouldEqual IdNotFound
+      Json.fromString("something").id.leftValue shouldEqual IdNotFound
     }
 
     "fail to fetch the @id when there is a @graph with several objects" in {
-      jsonContentOf("/graph.json").id.left.value shouldEqual IdNotFound
+      jsonContentOf("/graph.json").id.leftValue shouldEqual IdNotFound
     }
 
     "fail when the @id is not an AbsoluteIri" in {
       val id = "wrong-id"
-      Json.obj("@id" -> Json.fromString(id)).id.left.value shouldEqual InvalidId(id)
+      Json.obj("@id" -> Json.fromString(id)).id.leftValue shouldEqual InvalidId(id)
     }
 
     "deal with invalid ID's" in {
       val baseList = List.range(1, 4).map(i => jsonContentOf(s"/wrong-id-with-base-$i.json"))
       val list     = jsonContentOf("/wrong-id.json") :: baseList
-      forAll(list)(json => JenaModel(json).left.value shouldBe a[InvalidJsonLD])
+      forAll(list)(json => JenaModel(json).leftValue shouldBe a[InvalidJsonLD])
     }
 
     "compaction known types when @type is aliased" in {
       val json   = jsonContentOf("/simple-type-alias.json")
-      val graph  = JenaModel(json).right.value.asGraph(url"http://nexus.example.com/john-doé").right.value
-      val result = graph.as[Json](Json.obj("@context" -> json.contextValue)).right.value
+      val graph  = JenaModel(json).rightValue.asGraph(url"http://nexus.example.com/john-doé").rightValue
+      val result = graph.as[Json](Json.obj("@context" -> json.contextValue)).rightValue
       result.removeKeys("@context") shouldEqual json.removeKeys("@context")
     }
 
     "create a model with valid @base" in {
       val json = jsonContentOf("/id-with-base.json")
-      val m    = JenaModel(json).right.value
+      val m    = JenaModel(json).rightValue
       m.listStatements().asScala.toList shouldEqual List(
         m.createStatement(
           ResourceFactory.createResource("http://nexus.example.com/john-doe"),
@@ -218,23 +210,23 @@ class CirceSyntaxSpec
 
     "convert model to graph and reverse" in {
       val json              = jsonContentOf("/simple-model2.json")
-      val graph             = JenaModel(json).right.value.asGraph(url"http://nexus.example.com/john-doe").right.value
+      val graph             = JenaModel(json).rightValue.asGraph(url"http://nexus.example.com/john-doe").rightValue
       val result: Id[Model] = RootedGraph(blank, graph).as[Model]()
-      val expected: Model   = JenaModel(json).right.value
+      val expected: Model   = JenaModel(json).rightValue
       result.listStatements().asScala.toList should contain theSameElementsAs expected.listStatements().asScala.toList
     }
 
     "deal with invalid ID's at the graph level" in {
       val json = jsonContentOf("/wrong-id-2.json")
-      JenaModel(json).left.value shouldBe a[InvalidJsonLD]
+      JenaModel(json).leftValue shouldBe a[InvalidJsonLD]
     }
 
     "convert json with @base to graph and back" in {
       val json     = jsonContentOf("/simple-with-base.json")
       val id       = url"https://example.nexus.com/nexus/v1/resources/org/project/_/Movie_Test"
-      val graph    = json.asGraph(id).right.value
+      val graph    = json.asGraph(id).rightValue
       val expected = jsonContentOf("/simple-with-base-output.json")
-      graph.as[Json](Json.obj("@context" -> json.contextValue)).right.value shouldEqual expected
+      graph.as[Json](Json.obj("@context" -> json.contextValue)).rightValue shouldEqual expected
     }
 
     "convert to graph and back to expanded Json-LD" in {
@@ -247,8 +239,8 @@ class CirceSyntaxSpec
       // format: on
       forAll(jsons) {
         case (json, expected, id) =>
-          val graph = json.asGraph(id).right.value
-          graph.as[Json]().right.value shouldEqual expected
+          val graph = json.asGraph(id).rightValue
+          graph.as[Json]().rightValue shouldEqual expected
       }
     }
   }
@@ -264,7 +256,7 @@ class CirceSyntaxSpec
 object CirceSyntaxSpec {
 
   final case class Item(step: Int, description: String) {
-    val bNode: IriOrBNode = Node.blank(s"BNode$step").right.value
+    val bNode: IriOrBNode = Node.blank(s"BNode$step").getOrElse(throw new IllegalArgumentException)
   }
 
   final case class Example(id: AbsoluteIri, tpe: AbsoluteIri, name: String, birthDate: String)

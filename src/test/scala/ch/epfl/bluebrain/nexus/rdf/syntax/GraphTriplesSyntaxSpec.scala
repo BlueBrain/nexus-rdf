@@ -1,14 +1,13 @@
 package ch.epfl.bluebrain.nexus.rdf.syntax
 
-import ch.epfl.bluebrain.nexus.rdf.{NTriples, Resources}
-import org.scalatest.{EitherValues, Matchers, WordSpecLike}
+import ch.epfl.bluebrain.nexus.rdf.{NTriples, RdfSpec}
 
-class GraphTriplesSyntaxSpec extends WordSpecLike with Matchers with EitherValues with Resources {
+class GraphTriplesSyntaxSpec extends RdfSpec {
   "A triples syntax" should {
     val json = jsonContentOf("/embed.json")
 
     "generate n triples output" in {
-      val graph = json.asGraph(url"http://nexus.example.com/other").right.value
+      val graph = json.asGraph(url"http://nexus.example.com/other").rightValue
       val expected =
         """<http://nexus.example.com/other> <http://schema.org/birthDate> "2000-04-12T20:00Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
           |<http://nexus.example.com/john-doe> <http://example.com/stringProperty> "Some property" .

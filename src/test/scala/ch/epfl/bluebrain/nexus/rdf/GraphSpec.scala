@@ -3,7 +3,7 @@ package ch.epfl.bluebrain.nexus.rdf
 import cats.Id
 import cats.kernel.Eq
 import cats.syntax.show._
-import ch.epfl.bluebrain.nexus.rdf.Graph.{Triple, _}
+import ch.epfl.bluebrain.nexus.rdf.Graph._
 import ch.epfl.bluebrain.nexus.rdf.GraphSpec.{predicate, Item}
 import ch.epfl.bluebrain.nexus.rdf.Node.{IriNode, IriOrBNode, Literal}
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
@@ -12,13 +12,11 @@ import ch.epfl.bluebrain.nexus.rdf.syntax._
 import ch.epfl.bluebrain.nexus.rdf.instances._
 import io.circe.Json
 import io.circe.syntax._
-import org.scalatest.EitherValues._
-import org.scalatest.{Matchers, OptionValues, WordSpecLike}
 
 import scala.collection.immutable.HashSet
 
 //noinspection TypeAnnotation
-class GraphSpec extends WordSpecLike with Matchers with OptionValues {
+class GraphSpec extends RdfSpec {
 
   "An RDF Graph" should {
     val a      = url"http://a"
@@ -176,7 +174,7 @@ class GraphSpec extends WordSpecLike with Matchers with OptionValues {
     }
 
     "return the filtered objects as String encoded" in {
-      g.objects(b"1", p.string).map(_.as[String].right.value) shouldEqual Set("asd")
+      g.objects(b"1", p.string).map(_.as[String].rightValue) shouldEqual Set("asd")
     }
 
     "return objects with predicate http://prop/string of http://prop/int" in {
@@ -304,7 +302,7 @@ class GraphSpec extends WordSpecLike with Matchers with OptionValues {
           "other"  -> Json.obj("@container" -> "@list".asJson, "@id" -> p.other.value.asJson)
         )
       )
-      RootedGraph(rootNode, graph).as[Json](ctx).right.value.removeKeys("@context") shouldEqual
+      RootedGraph(rootNode, graph).as[Json](ctx).rightValue.removeKeys("@context") shouldEqual
         Json.obj("string" -> "asd".asJson, "other" -> Json.arr("one".asJson, "two".asJson, "three".asJson))
     }
 
@@ -314,7 +312,7 @@ class GraphSpec extends WordSpecLike with Matchers with OptionValues {
 
 object GraphSpec {
   final case class Item(step: Int, description: String) {
-    val bNode: IriOrBNode = Node.blank(s"BNode$step").right.value
+    val bNode: IriOrBNode = Node.blank(s"BNode$step").getOrElse(throw new IllegalArgumentException)
   }
   object predicate {
     val base        = "http://vocab/elem"

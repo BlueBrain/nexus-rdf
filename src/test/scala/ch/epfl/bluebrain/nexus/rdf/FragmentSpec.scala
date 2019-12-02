@@ -3,9 +3,8 @@ package ch.epfl.bluebrain.nexus.rdf
 import cats.kernel.Eq
 import cats.syntax.show._
 import ch.epfl.bluebrain.nexus.rdf.Iri._
-import org.scalatest.{EitherValues, Inspectors, Matchers, WordSpecLike}
 
-class FragmentSpec extends WordSpecLike with Matchers with Inspectors with EitherValues {
+class FragmentSpec extends RdfSpec {
 
   "A Fragment" should {
     val pct =
@@ -15,26 +14,26 @@ class FragmentSpec extends WordSpecLike with Matchers with Inspectors with Eithe
     val rest   = "?/:@"
 
     "be parsed correctly from a string" in {
-      Fragment(pct + ucs + delims + rest).right.value.value shouldEqual ucs + ucs + delims + rest
+      Fragment(pct + ucs + delims + rest).rightValue.value shouldEqual ucs + ucs + delims + rest
     }
 
     "succeed for empty" in {
-      Fragment("").right.value
+      Fragment("").rightValue
     }
 
     "show" in {
       val encodedDelims = urlEncode("#[]")
-      Fragment(pct + ucs + delims + rest + encodedDelims).right.value.show shouldEqual ucs + ucs + delims + rest + encodedDelims
+      Fragment(pct + ucs + delims + rest + encodedDelims).rightValue.show shouldEqual ucs + ucs + delims + rest + encodedDelims
     }
 
     "pct encoded representation" in {
       val encodedDelims = urlEncode("#[]")
-      Fragment(pct + ucs + delims + rest + encodedDelims).right.value.pctEncoded shouldEqual pct + pct + delims + rest + encodedDelims
+      Fragment(pct + ucs + delims + rest + encodedDelims).rightValue.pctEncoded shouldEqual pct + pct + delims + rest + encodedDelims
     }
 
     "eq" in {
-      val lhs = Fragment(pct + ucs + delims + rest).right.value
-      val rhs = Fragment(ucs + ucs + delims + rest).right.value
+      val lhs = Fragment(pct + ucs + delims + rest).rightValue
+      val rhs = Fragment(ucs + ucs + delims + rest).rightValue
       Eq.eqv(lhs, rhs) shouldEqual true
     }
   }

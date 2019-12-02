@@ -11,10 +11,9 @@ import ch.epfl.bluebrain.nexus.rdf.cursor.GraphCursorSpec._
 import ch.epfl.bluebrain.nexus.rdf.encoder.NodeEncoderError.{IllegalConversion, IllegalType, NoElementToEncode}
 import ch.epfl.bluebrain.nexus.rdf.instances._
 import ch.epfl.bluebrain.nexus.rdf.syntax._
-import ch.epfl.bluebrain.nexus.rdf.{Graph, Node}
-import org.scalatest.{EitherValues, Matchers, OptionValues, WordSpecLike}
+import ch.epfl.bluebrain.nexus.rdf.{Graph, Node, RdfSpec}
 
-class GraphCursorSpec extends WordSpecLike with Matchers with OptionValues with EitherValues {
+class GraphCursorSpec extends RdfSpec {
 
   "A GraphCursor" should {
 
@@ -197,15 +196,15 @@ class GraphCursorSpec extends WordSpecLike with Matchers with OptionValues with 
       val result = c
         .downField(schema.geo)
         .downSet
-        .map(_.downField(schema.coord).downField(schema.lat).focus.as[Float].right.value)
+        .map(_.downField(schema.coord).downField(schema.lat).focus.as[Float].rightValue)
       result shouldEqual Set(10.75f, 40.75f)
     }
 
     "navigate down the sorted list objects" in {
       val list = c.downField(schema.floors).downList
       val result = list.map { c =>
-        val bathrooms = c.downField(schema.info).downField(schema.bathrooms).focus.as[Int].right.value
-        val name      = c.downField(schema.info).downField(schema.bathrooms).field(schema.name).focus.as[String].right.value
+        val bathrooms = c.downField(schema.info).downField(schema.bathrooms).focus.as[Int].rightValue
+        val name      = c.downField(schema.info).downField(schema.bathrooms).field(schema.name).focus.as[String].rightValue
         name -> bathrooms
       }
       result shouldEqual List("First floor" -> 1, "Second floor" -> 2, "Third floor" -> 10)
@@ -213,8 +212,8 @@ class GraphCursorSpec extends WordSpecLike with Matchers with OptionValues with 
 
     "navigate down the sorted list elements" in {
       val list = c.downField(schema.other2).downList
-      list.map(_.focus.as[Double].right.value) shouldEqual List(2.2, 3.3, 4.4)
-      c.downField(schema.other2).values.asListOf[Double].right.value shouldEqual Vector(2.2, 3.3, 4.4)
+      list.map(_.focus.as[Double].rightValue) shouldEqual List(2.2, 3.3, 4.4)
+      c.downField(schema.other2).values.asListOf[Double].rightValue shouldEqual Vector(2.2, 3.3, 4.4)
     }
 
     "fetch encoded values" in {
@@ -224,24 +223,23 @@ class GraphCursorSpec extends WordSpecLike with Matchers with OptionValues with 
         .downField(schema.lat)
         .focus
         .as[Float]
-        .right
-        .value shouldEqual 10.75f
+        .rightValue shouldEqual 10.75f
 
-      c.focus.as[AbsoluteIri].right.value shouldEqual id.value
+      c.focus.as[AbsoluteIri].rightValue shouldEqual id.value
 
-      c.downField(schema.desc).focus.as[String].right.value shouldEqual "The Empire State..."
-      c.downField(schema.other).values.asListOf[Double].right.value should contain theSameElementsAs
+      c.downField(schema.desc).focus.as[String].rightValue shouldEqual "The Empire State..."
+      c.downField(schema.other).values.asListOf[Double].rightValue should contain theSameElementsAs
         Vector(1.3, 2.4, 3.5)
-      c.downField(schema.uuid).focus.as[UUID].right.value shouldEqual UUID.fromString(
+      c.downField(schema.uuid).focus.as[UUID].rightValue shouldEqual UUID.fromString(
         "b46ff2d0-f9d1-48e4-94eb-65d1a756c607"
       )
     }
 
     "fetch optional encoded values" in {
-      c.downField(schema.desc).focus.asOption[String].right.value shouldEqual Some("The Empire State...")
-      c.downField(schema.desc).focus.asOption[Long].left.value shouldBe a[IllegalConversion]
-      c.downField(schema.lat).focus.asOption[Long].right.value shouldEqual None
-      c.downField(schema.lat).focus.as[Long](default = 3L).right.value shouldEqual 3L
+      c.downField(schema.desc).focus.asOption[String].rightValue shouldEqual Some("The Empire State...")
+      c.downField(schema.desc).focus.asOption[Long].leftValue shouldBe a[IllegalConversion]
+      c.downField(schema.lat).focus.asOption[Long].rightValue shouldEqual None
+      c.downField(schema.lat).focus.as[Long](default = 3L).rightValue shouldEqual 3L
     }
 
     "fail to fetch encoded values" in {
@@ -254,15 +252,15 @@ class GraphCursorSpec extends WordSpecLike with Matchers with OptionValues with 
         .left
         .value shouldBe a[IllegalConversion]
 
-      c.downField(schema.other).values.asListOf[String].left.value shouldBe a[IllegalConversion]
-      c.downField(schema.other).values.asListOf[AbsoluteIri].left.value shouldBe a[IllegalType]
-      c.downField(schema.desc).focus.as[UUID].left.value shouldBe a[IllegalConversion]
+      c.downField(schema.other).values.asListOf[String].leftValue shouldBe a[IllegalConversion]
+      c.downField(schema.other).values.asListOf[AbsoluteIri].leftValue shouldBe a[IllegalType]
+      c.downField(schema.desc).focus.as[UUID].leftValue shouldBe a[IllegalConversion]
 
     }
 
     "set a default value when a node does not exists" in {
-      c.downField(schema.geo).downField(schema.coord).focus.as[String].left.value shouldEqual NoElementToEncode
-      c.downField(schema.geo).downField(schema.coord).focus.as[String].orElse("v").right.value shouldEqual "v"
+      c.downField(schema.geo).downField(schema.coord).focus.as[String].leftValue shouldEqual NoElementToEncode
+      c.downField(schema.geo).downField(schema.coord).focus.as[String].getOrElse("v") shouldEqual "v"
     }
 
     "fail to navigate to a down property when the array element hasn't been selected" in {

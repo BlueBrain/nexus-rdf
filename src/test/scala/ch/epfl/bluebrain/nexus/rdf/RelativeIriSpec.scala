@@ -2,9 +2,8 @@ package ch.epfl.bluebrain.nexus.rdf
 
 import cats.kernel.Eq
 import ch.epfl.bluebrain.nexus.rdf.Iri._
-import org.scalatest.{EitherValues, Inspectors, Matchers, WordSpecLike}
 
-class RelativeIriSpec extends WordSpecLike with Matchers with Inspectors with EitherValues {
+class RelativeIriSpec extends RdfSpec {
 
   "A RelativeIri" should {
     "be parsed correctly" in {
@@ -25,7 +24,7 @@ class RelativeIriSpec extends WordSpecLike with Matchers with Inspectors with Ei
         "//1.2.3.4:80/a%C2%A3/b%C3%86c//:://" -> "//1.2.3.4:80/a£/bÆc//:://"
       )
       forAll(cases) {
-        case (in, expected) => RelativeIri(in).right.value.asString shouldEqual expected
+        case (in, expected) => RelativeIri(in).rightValue.asString shouldEqual expected
       }
     }
 
@@ -36,52 +35,50 @@ class RelativeIriSpec extends WordSpecLike with Matchers with Inspectors with Ei
         " ",
         ""
       )
-      forAll(cases) {
-        case (in) => RelativeIri(in).left.value should not be 'empty
-      }
+      forAll(cases)(in => RelativeIri(in).leftValue should not be empty)
     }
-    val withHash = Iri.relative("//1.2.3.4:80/a%C2%A3/b%C3%86c//:://#hash").right
+    val withHash = Iri.relative("//1.2.3.4:80/a%C2%A3/b%C3%86c//:://#hash").rightValue
 
     "be relative" in {
-      withHash.value.isRelative shouldEqual true
+      withHash.isRelative shouldEqual true
     }
 
     "return an optional self" in {
-      withHash.value.asRelative shouldEqual Some(withHash.value)
+      withHash.asRelative shouldEqual Some(withHash)
     }
 
     "not be an Urn" in {
-      withHash.value.isUrn shouldEqual false
+      withHash.isUrn shouldEqual false
     }
 
     "not be an absolute Iri" in {
-      withHash.value.isAbsolute shouldEqual false
+      withHash.isAbsolute shouldEqual false
     }
 
     "not return an absolute Iri" in {
-      withHash.value.asAbsolute shouldEqual None
+      withHash.asAbsolute shouldEqual None
     }
 
     "not be an Url" in {
-      withHash.value.isUrl shouldEqual false
+      withHash.isUrl shouldEqual false
     }
 
     "not return a urn" in {
-      withHash.value.asUrn shouldEqual None
+      withHash.asUrn shouldEqual None
     }
 
     "not return a url" in {
-      withHash.value.asUrl shouldEqual None
+      withHash.asUrl shouldEqual None
     }
 
     "eq" in {
-      val lhs = RelativeIri("a/./b/../?q=asd#1").right.value
-      val rhs = RelativeIri("a/?q=asd#1").right.value
+      val lhs = RelativeIri("a/./b/../?q=asd#1").rightValue
+      val rhs = RelativeIri("a/?q=asd#1").rightValue
       Eq.eqv(lhs, rhs) shouldEqual true
     }
 
     "resolve from base url http://a/b/c/d;p?q" in {
-      val base = Url("http://a/b/c/d;p?q").right.value
+      val base = Url("http://a/b/c/d;p?q").rightValue
       val cases = List(
         "g"             -> "http://a/b/c/g",
         "./g"           -> "http://a/b/c/g",
@@ -121,12 +118,12 @@ class RelativeIriSpec extends WordSpecLike with Matchers with Inspectors with Ei
       )
       forAll(cases) {
         case (in, result) =>
-          RelativeIri(in).right.value.resolve(base) shouldEqual Url(result).right.value
+          RelativeIri(in).rightValue.resolve(base) shouldEqual Url(result).rightValue
       }
     }
 
     "resolve from base url http://a/b/c/" in {
-      val base = Url("http://a/b/c/").right.value
+      val base = Url("http://a/b/c/").rightValue
       val cases = List(
         "g"            -> "http://a/b/c/g",
         "./g"          -> "http://a/b/c/g",
@@ -152,12 +149,12 @@ class RelativeIriSpec extends WordSpecLike with Matchers with Inspectors with Ei
         "../../g"      -> "http://a/g"
       )
       forAll(cases) {
-        case (in, result) => RelativeIri(in).right.value.resolve(base) shouldEqual Url(result).right.value
+        case (in, result) => RelativeIri(in).rightValue.resolve(base) shouldEqual Url(result).rightValue
       }
     }
 
     "resolve from base url http://a/b/c/d#fragment" in {
-      val base = Url("http://a/b/c/").right.value
+      val base = Url("http://a/b/c/").rightValue
       val cases = List(
         "g"            -> "http://a/b/c/g",
         "./g"          -> "http://a/b/c/g",
@@ -183,7 +180,7 @@ class RelativeIriSpec extends WordSpecLike with Matchers with Inspectors with Ei
         "../../g"      -> "http://a/g"
       )
       forAll(cases) {
-        case (in, result) => RelativeIri(in).right.value.resolve(base) shouldEqual Url(result).right.value
+        case (in, result) => RelativeIri(in).rightValue.resolve(base) shouldEqual Url(result).rightValue
       }
     }
   }

@@ -2,9 +2,8 @@ package ch.epfl.bluebrain.nexus.rdf
 
 import cats.kernel.Eq
 import ch.epfl.bluebrain.nexus.rdf.Iri._
-import org.scalatest.{EitherValues, Inspectors, Matchers, WordSpecLike}
 
-class IriSpec extends WordSpecLike with Matchers with Inspectors with EitherValues {
+class IriSpec extends RdfSpec {
   "An Iri" should {
     val casesRelative = List(
       "//me:me@hOst:443/a/b?a&e=f&b=c#frag" -> "//me:me@host:443/a/b?a&b=c&e=f#frag",
@@ -39,8 +38,8 @@ class IriSpec extends WordSpecLike with Matchers with Inspectors with EitherValu
     "be parsed correctly into a relative uri" in {
       forAll(casesRelative) {
         case (in, expected) =>
-          val iri = Iri(in).right.value
-          iri shouldEqual Iri.relative(in).right.value
+          val iri = Iri(in).rightValue
+          iri shouldEqual Iri.relative(in).rightValue
           iri.asString shouldEqual expected
       }
     }
@@ -48,8 +47,8 @@ class IriSpec extends WordSpecLike with Matchers with Inspectors with EitherValu
     "be parsed correctly into a urn" in {
       forAll(casesUrn) {
         case (in, expected) =>
-          val iri = Iri(in).right.value
-          iri shouldEqual Iri.urn(in).right.value
+          val iri = Iri(in).rightValue
+          iri shouldEqual Iri.urn(in).rightValue
           iri.asString shouldEqual expected
       }
     }
@@ -57,14 +56,14 @@ class IriSpec extends WordSpecLike with Matchers with Inspectors with EitherValu
     "be parsed correctly into a url" in {
       forAll(casesUrl) {
         case (in, expected) =>
-          val iri = Iri(in).right.value
-          iri shouldEqual Iri.url(in).right.value
+          val iri = Iri(in).rightValue
+          iri shouldEqual Iri.url(in).rightValue
           iri.asString shouldEqual expected
       }
     }
 
     "avoid double pct-encoding" in {
-      val iri = Iri.absolute("http://example.com/a/path").right.value + "http%3A%2F%2Fsome.com%2Fa%2Fb%C3%86c"
+      val iri = Iri.absolute("http://example.com/a/path").rightValue + "http%3A%2F%2Fsome.com%2Fa%2Fb%C3%86c"
       iri.asString shouldEqual "http://example.com/a/path/http%3A%2F%2Fsome.com%2Fa%2Fb%C3%86c"
       iri.asString shouldEqual iri.asUri
     }
@@ -72,39 +71,39 @@ class IriSpec extends WordSpecLike with Matchers with Inspectors with EitherValu
     "show as url" in {
       forAll(casesUrlEncoded) {
         case (in, expected) =>
-          Iri(in).right.value.asUri shouldEqual expected
+          Iri(in).rightValue.asUri shouldEqual expected
       }
     }
 
     "show as uri" in {
       forAll(casesUrnEncoded) {
         case (in, expected) =>
-          Iri(in).right.value.asUri shouldEqual expected
+          Iri(in).rightValue.asUri shouldEqual expected
       }
     }
 
     "show as relative uri" in {
       forAll(casesRelativeEncoded) {
         case (in, expected) =>
-          Iri(in).right.value.asUri shouldEqual expected
+          Iri(in).rightValue.asUri shouldEqual expected
       }
     }
 
     "eq relative" in {
-      val lhs = Iri("/?q=asd#1").right.value
-      val rhs = Iri("/?q=asd#1").right.value
+      val lhs = Iri("/?q=asd#1").rightValue
+      val rhs = Iri("/?q=asd#1").rightValue
       Eq.eqv(lhs, rhs) shouldEqual true
     }
 
     "eq urn" in {
-      val lhs = Urn("urn:examp-lE:foo-bar-baz-qux?+CCResolve:cc=uk?=a=b#hash").right.value
-      val rhs = Urn("urn:examp-le:foo-bar-baz-qux?+CCResolve:cc=uk?=a=b#hash").right.value
+      val lhs = Urn("urn:examp-lE:foo-bar-baz-qux?+CCResolve:cc=uk?=a=b#hash").rightValue
+      val rhs = Urn("urn:examp-le:foo-bar-baz-qux?+CCResolve:cc=uk?=a=b#hash").rightValue
       Eq.eqv(lhs, rhs) shouldEqual true
     }
 
     "eq url" in {
-      val lhs = Iri("hTtp://gooGle.com/?q=asd#1").right.value
-      val rhs = Iri("http://google.com/?q=asd#1").right.value
+      val lhs = Iri("hTtp://gooGle.com/?q=asd#1").rightValue
+      val rhs = Iri("http://google.com/?q=asd#1").rightValue
       Eq.eqv(lhs, rhs) shouldEqual true
     }
   }

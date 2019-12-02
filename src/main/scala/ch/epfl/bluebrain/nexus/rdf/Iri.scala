@@ -10,8 +10,8 @@ import ch.epfl.bluebrain.nexus.rdf.IriParser._
 import ch.epfl.bluebrain.nexus.rdf.syntax._
 
 import scala.annotation.tailrec
-import scala.collection.immutable.SortedSet
-import scala.collection.{immutable, SeqView, SortedMap}
+import scala.collection.immutable.{ArraySeq, SortedSet}
+import scala.collection.{immutable, SortedMap, View}
 
 /**
   * An Iri as defined by RFC 3987.
@@ -124,7 +124,7 @@ object Iri {
 
   @SuppressWarnings(Array("EitherGet"))
   final def unsafe(string: String): Iri =
-    apply(string).right.get
+    apply(string).fold(left => throw new IllegalArgumentException(left), identity)
 
   /**
     * A relative IRI.
@@ -408,7 +408,7 @@ object Iri {
 
     @SuppressWarnings(Array("EitherGet"))
     private[rdf] def unsafe(string: String): Url =
-      apply(string).right.get
+      apply(string).fold(left => throw new IllegalArgumentException(left), identity)
 
     final implicit def urlShow: Show[Url] = Show.show(_.asString)
 
@@ -686,11 +686,11 @@ object Iri {
         * @return the IPv4Host represented by these bytes
         */
       final def apply(byte1: Byte, byte2: Byte, byte3: Byte, byte4: Byte): IPv4Host =
-        fromBytes(Array(byte1, byte2, byte3, byte4))
+        new IPv4Host(ArraySeq.unsafeWrapArray(Array(byte1, byte2, byte3, byte4)))
 
       private def fromBytes(bytes: Array[Byte]): IPv4Host = {
         require(bytes.length == 4)
-        new IPv4Host(immutable.Seq(bytes: _*))
+        new IPv4Host(bytes.toIndexedSeq)
       }
 
       final implicit val ipv4HostShow: Show[IPv4Host] =
@@ -712,13 +712,13 @@ object Iri {
       override lazy val asString            = value
 
       override lazy val value: String =
-        asString(bytes.view)
+        bytesToString(bytes.view)
 
       lazy val asMixedString: String =
-        asString(bytes.view(0, 12)) + ":" + bytes.view(12, 16).map(_ & 0xFF).mkString(".")
+        bytesToString(bytes.view.slice(0, 12)) + ":" + bytes.view.slice(12, 16).map(_ & 0xFF).mkString(".")
 
-      private def asString(bytes: SeqView[Byte, immutable.Seq[Byte]]): String =
-        bytes.grouped(2).map(two => Integer.toHexString(BigInt(two.toArray).intValue())).mkString(":")
+      private def bytesToString(bytes: View[Byte]): String =
+        bytes.grouped(2).map(two => Integer.toHexString(BigInt(two.toArray).intValue)).mkString(":")
     }
 
     object IPv6Host {
@@ -736,7 +736,7 @@ object Iri {
 
       private def fromBytes(bytes: Array[Byte]): IPv6Host = {
         require(bytes.length == 16)
-        new IPv6Host(immutable.Seq(bytes: _*))
+        new IPv6Host(bytes.toIndexedSeq)
       }
 
       final implicit val ipv6HostShow: Show[IPv6Host] =

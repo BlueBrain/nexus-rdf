@@ -13,8 +13,8 @@
     "@id": "a"
   },
   "some-other": [
-    "other",
-    "https://example.nexus.com/nexus/v1/resources/project2"
+    "https://example.nexus.com/nexus/v1/resources/project2",
+    "other"
   ],
   "test": {
     "@id": "https://example.nexus.com/nexus/v1/projects/org/project"

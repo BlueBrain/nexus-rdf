@@ -99,7 +99,7 @@ class Graph private[rdf] (private[rdf] val underlying: G[Node, LkDiEdge]) { self
     * @return a new graph made up of all of the triples of this graph and the triple created from the arguments
     */
   def add(s: IriOrBNode, p: IriNode, o: Node): Graph =
-    new Graph(underlying + LkDiEdge(s, o)(p))
+    new Graph(underlying union Set(LkDiEdge(s, o)(p)))
 
   /**
     * Adds the provided object to the subject ''s'' and predicate ''p'' to this graph.
@@ -193,7 +193,7 @@ class Graph private[rdf] (private[rdf] val underlying: G[Node, LkDiEdge]) { self
     */
   def remove(s: IriOrBNode, p: IriNode, o: Node): Graph = {
     val edge = LkDiEdge(s, o)(p)
-    new Graph(underlying -! edge)
+    new Graph(underlying -- Set(edge))
   }
 
   /**
@@ -252,7 +252,7 @@ class Graph private[rdf] (private[rdf] val underlying: G[Node, LkDiEdge]) { self
     * @return a new graph that contains only the triples in this graph that are not contained in that graph
     */
   def subtract(that: Graph): Graph =
-    new Graph(underlying --! that.underlying.edges)
+    new Graph(underlying -- that.underlying.edges)
 
   /**
     * Removes all the triples of that graph that are contained in this graph.

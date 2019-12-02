@@ -3,10 +3,10 @@
   "@type": "https://example.nexus.com/nexus/v1/vocabs/org/project/Movie",
   "https://example.com/some-other": [
     {
-      "@id": "https://example.nexus.com/nexus/v1/resources/org/project/_/other"
+      "@id": "https://example.nexus.com/nexus/v1/resources/project2"
     },
     {
-      "@id": "https://example.nexus.com/nexus/v1/resources/project2"
+      "@id": "https://example.nexus.com/nexus/v1/resources/org/project/_/other"
     }
   ],
   "https://example.nexus.com/nexus/v1/vocabs/org/project/some": {
