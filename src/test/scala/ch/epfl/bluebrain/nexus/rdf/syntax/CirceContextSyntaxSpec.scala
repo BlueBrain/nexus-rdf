@@ -5,6 +5,7 @@ import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.{Iri, RdfSpec}
 import io.circe.Json
 import io.circe.parser.parse
+import io.circe.syntax._
 
 class CirceContextSyntaxSpec extends RdfSpec {
 
@@ -89,8 +90,24 @@ class CirceContextSyntaxSpec extends RdfSpec {
     "extract context" in {
       val context1          = jsonContentOf("/context/context1.json")
       val context1Extracted = jsonContentOf("/context/context1_extracted.json")
-
       context1.contextValue shouldEqual context1Extracted
+    }
+
+    "extract context with embedded contexts" in {
+      val context1          = jsonContentOf("/context/embedded-context.json")
+      val context1Extracted = jsonContentOf("/context/context1_extracted.json")
+      context1.contextValue shouldEqual context1Extracted
+    }
+
+    "extract context with embedded IRI contexts" in {
+      val context1 = jsonContentOf("/context/embedded-context-links.json")
+      context1.contextValue shouldEqual
+        Json.arr(
+          "http://example.com/1".asJson,
+          "http://example.com/2".asJson,
+          Json.obj("xsd" -> "http://www.w3.org/2001/XMLSchema#".asJson),
+          "http://example.com/3".asJson
+        )
     }
 
     "extract empty json when @context key missing" in {
@@ -161,6 +178,12 @@ class CirceContextSyntaxSpec extends RdfSpec {
         val obj = Json.obj("one" -> Json.obj("two" -> Json.fromString("something")), "two" -> Json.fromString("abc"))
         obj.removeKeys("two") shouldEqual Json.obj("one" -> Json.obj("two" -> Json.fromString("something")))
         obj.removeKeys("three") shouldEqual obj
+      }
+
+      "remove the key from the json on nested fields" in {
+        val json     = jsonContentOf("/context/embedded-context-links.json")
+        val expected = jsonContentOf("/context/embedded-links-without-context.json")
+        json.removeNestedKeys("@context") shouldEqual expected
       }
 
       "remove keys array" in {
