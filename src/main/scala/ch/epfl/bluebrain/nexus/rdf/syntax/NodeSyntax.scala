@@ -37,7 +37,11 @@ final class NodeContext(val sc: StringContext) extends AnyVal {
 
 final class NodeSyntaxEncoderResult[A](private val result: EncoderResult[A]) extends AnyVal {
 
-  def orElse(default: => A): EncoderResult[A] = result match {
+  @deprecated("Collides with Either's orElse in 2.13, use withDefault instead", "0.5.1")
+  def orElse(default: => A): EncoderResult[A] =
+    withDefault(default)
+
+  def withDefault(default: => A): EncoderResult[A] = result match {
     case Left(NoElementToEncode) => Right(default)
     case other                   => other
   }
