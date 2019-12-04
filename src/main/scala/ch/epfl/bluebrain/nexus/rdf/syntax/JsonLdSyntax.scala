@@ -31,5 +31,7 @@ final class JsonLdOps(private val json: Json) extends AnyVal {
 
   def removeKeys(keys: String*): Json = JsonLd.removeKeys(json, keys: _*)
 
+  def removeNestedKeys(keys: String*): Json = JsonLd.removeNestedKeys(json, keys: _*)
+
   def contextAliases(keyword: String): Set[String] = JsonLd.contextAliases(json, keyword)
 }

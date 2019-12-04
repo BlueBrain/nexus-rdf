@@ -7,8 +7,6 @@ import ch.epfl.bluebrain.nexus.rdf.jena.JenaModel
 import io.circe.syntax._
 import io.circe.{Json, JsonObject}
 
-import scala.annotation.tailrec
-
 @SuppressWarnings(Array("TraversableHead"))
 object JsonLd {
 
@@ -92,7 +90,7 @@ object JsonLd {
         }
 
       def inner(value: JsonObject): IdOrError =
-        (idCandidates(value) ++ singleGraph(value).map(idCandidates).getOrElse(Set.empty)) match {
+        idCandidates(value) ++ singleGraph(value).map(idCandidates).getOrElse(Set.empty) match {
           case ids if ids.isEmpty => Left(IdRetrievalError.IdNotFound)
           case ids                => collectOne(ids, buildWithPrefix).left.flatMap(_ => collectOne(ids, buildWithBase))
         }
@@ -162,28 +160,37 @@ object JsonLd {
   }
 
   /**
-    * @return a new Json with the values of the top ''@context'' key
+    * @return a new Json with the values of all the ''@context'' keys
     */
-  @SuppressWarnings(Array("UnsafeTraversableMethods"))
-  @tailrec
   def contextValue(json: Json): Json =
     (json.asObject, json.asArray) match {
-      case (Some(jObj), _)                   => jObj("@context").getOrElse(Json.obj())
-      case (_, Some(jArr)) if jArr.size == 1 => contextValue(jArr.head)
-      case _                                 => Json.obj()
+      case (Some(jObj), _) if jObj.nonEmpty =>
+        val context = jObj("@context").getOrElse(Json.obj())
+        jObj.remove("@context").values.foldLeft(context)((acc, c) => merge(acc, contextValue(c)))
+      case (_, Some(arr)) if arr.nonEmpty =>
+        arr.foldLeft(Json.obj())((acc, c) => merge(acc, contextValue(c)))
+      case _ =>
+        Json.obj()
     }
 
-  private def merge(json: Json, that: Json): Json = (json.asArray, that.asArray) match {
-    case (Some(arr), Some(thatArr)) => Json.arr(arr ++ thatArr: _*)
-    case (_, Some(thatArr))         => Json.arr(json +: thatArr: _*)
-    case (Some(arr), _)             => Json.arr(arr :+ that: _*)
-    case _                          => json deepMerge that
-  }
+  private def removeEmpty(arr: Seq[Json]): Seq[Json] =
+    arr.filter(j => j != Json.obj() && j != Json.fromString("") && j != Json.arr())
+
+  private def merge(json: Json, that: Json): Json =
+    (json.asArray, that.asArray, json.asString, that.asString) match {
+      case (Some(arr), Some(thatArr), _, _) => Json.arr(removeEmpty(arr ++ thatArr): _*)
+      case (_, Some(thatArr), _, _)         => Json.arr(removeEmpty(json +: thatArr): _*)
+      case (Some(arr), _, _, _)             => Json.arr(removeEmpty(arr :+ that): _*)
+      case (_, _, Some(str), Some(thatStr)) => Json.arr(removeEmpty(Seq(str.asJson, thatStr.asJson)): _*)
+      case (_, _, Some(str), _)             => Json.arr(removeEmpty(Seq(str.asJson, that)): _*)
+      case (_, _, _, Some(thatStr))         => Json.arr(removeEmpty(Seq(json, thatStr.asJson)): _*)
+      case _                                => json deepMerge that
+    }
 
   /**
     * @param json the primary context. E.g.: {"@context": {...}}
     * @param that the other context from where to merge this context with. E.g.: {"@context": {...}}
-    * @return a new Json with the values of the top ''@context'' key (this) and the provided ''that'' top ''@context'' key
+    * @return a new Json with the values of the ''@context'' key (this) and the provided ''that'' top ''@context'' key
     *         If two keys inside both contexts collide, the one in the ''other'' context will override the one in this context
     */
   def mergeContext(json: Json, that: Json): Json =
@@ -203,29 +210,50 @@ object JsonLd {
     * @param that the json with a @context to override the @context in the provided ''json''
     */
   def replaceContext(json: Json, that: Json): Json =
-    removeKeys(json, "@context") deepMerge Json.obj("@context" -> contextValue(that))
+    removeNestedKeys(json, "@context") deepMerge Json.obj("@context" -> contextValue(that))
 
   /**
-    * Replaces the @context value from the provided json to the provided ''iri''
+    * Replaces the top @context value from the provided json to the provided ''iri''
     *
     * @param json the primary json
     * @param iri  the iri which overrides the existing json
     */
   def replaceContext(json: Json, iri: AbsoluteIri): Json =
-    removeKeys(json, "@context") deepMerge Json.obj("@context" -> Json.fromString(iri.asString))
+    removeNestedKeys(json, "@context") deepMerge Json.obj("@context" -> Json.fromString(iri.asString))
 
   /**
-    * Removes the provided keys from the json.
+    * Removes the provided keys from the top object on the json.
     *
     * @param json the json
     * @param keys list of ''keys'' to be removed from the top level of the ''json''
     * @return the original json without the provided ''keys'' on the top level of the structure
     */
   def removeKeys(json: Json, keys: String*): Json = {
-    def inner(obj: JsonObject): Json =
-      keys.foldLeft(obj)((accObj, key) => accObj.remove(key)).asJson
+    def inner(obj: JsonObject): JsonObject = obj.filterKeys(!keys.contains(_))
+    json.arrayOrObject[Json](
+      json,
+      arr => Json.fromValues(removeEmpty(arr.map(j => removeKeys(j, keys: _*)))),
+      obj => inner(obj).asJson
+    )
+  }
 
-    json.arrayOrObject[Json](json, arr => arr.map(j => removeKeys(j, keys: _*)).asJson, obj => inner(obj))
+  /**
+    * Removes the provided keys from everywhere on the json.
+    *
+    * @param json the json
+    * @param keys list of ''keys'' to be removed from the top level of the ''json''
+    * @return the original json without the provided ''keys''
+    */
+  def removeNestedKeys(json: Json, keys: String*): Json = {
+    def inner(obj: JsonObject): JsonObject =
+      JsonObject.fromIterable(
+        obj.filterKeys(!keys.contains(_)).toVector.map { case (k, v) => k -> removeNestedKeys(v, keys: _*) }
+      )
+    json.arrayOrObject[Json](
+      json,
+      arr => Json.fromValues(removeEmpty(arr.map(j => removeNestedKeys(j, keys: _*)))),
+      obj => inner(obj).asJson
+    )
   }
 
   /**
