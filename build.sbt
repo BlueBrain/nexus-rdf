@@ -25,51 +25,129 @@ scalafmt: {
  */
 
 // Dependency versions
-val akkaHttpVersion      = "10.1.10"
-val catsVersion          = "2.0.0"
-val circeVersion         = "0.12.3"
-val parboiledVersion     = "2.1.8"
-val jenaVersion          = "3.13.1"
-val scalaGraphVersion    = "1.13.1"
-val scalaGraphDotVersion = "1.13.0"
-val scalaTestVersion     = "3.1.0"
+val akkaHttpVersion  = "10.1.11"
+val catsVersion      = "2.0.0"
+val circeVersion     = "0.12.3"
+val jenaVersion      = "3.13.1"
+val magnoliaVersion  = "0.12.3"
+val parboiledVersion = "2.1.8"
+val scalaTestVersion = "3.1.0"
+val topBraidVersion  = "1.3.1"
 
 // Dependency modules
 lazy val akkaHttpCore  = "com.typesafe.akka" %% "akka-http-core" % akkaHttpVersion
 lazy val catsCore      = "org.typelevel"     %% "cats-core"      % catsVersion
 lazy val circeCore     = "io.circe"          %% "circe-core"     % circeVersion
 lazy val circeParser   = "io.circe"          %% "circe-parser"   % circeVersion
-lazy val jenaCore      = "org.apache.jena"   % "jena-core"       % jenaVersion
+lazy val circeLiteral  = "io.circe"          %% "circe-literal"  % circeVersion
 lazy val jenaArq       = "org.apache.jena"   % "jena-arq"        % jenaVersion
+lazy val magnolia      = "com.propensive"    %% "magnolia"       % magnoliaVersion
 lazy val parboiled2    = "org.parboiled"     %% "parboiled"      % parboiledVersion
-lazy val scalaGraph    = "org.scala-graph"   %% "graph-core"     % scalaGraphVersion
-lazy val scalaGraphDot = "org.scala-graph"   %% "graph-dot"      % scalaGraphDotVersion
 lazy val scalaTest     = "org.scalatest"     %% "scalatest"      % scalaTestVersion
+lazy val topBraidShacl = "org.topbraid"      % "shacl"           % topBraidVersion
 
-lazy val root = project
-  .in(file("."))
-  .enablePlugins(JmhPlugin)
+lazy val core = project
+  .in(file("modules/core"))
   .settings(
-    name       := "rdf",
-    moduleName := "rdf",
+    name       := "rdf-core",
+    moduleName := "rdf-core",
     libraryDependencies ++= Seq(
       catsCore,
+      parboiled2,
+      scalaTest % Test
+    )
+  )
+
+lazy val derivation = project
+  .in(file("modules/derivation"))
+  .dependsOn(core)
+  .settings(
+    name       := "rdf-derivation",
+    moduleName := "rdf-derivation",
+    libraryDependencies ++= Seq(
+      magnolia,
+      circeCore    % Test,
+      circeParser  % Test,
+      circeLiteral % Test,
+      jenaArq      % Test,
+      scalaTest    % Test
+    )
+  )
+
+lazy val jsonld = project
+  .in(file("modules/jsonld"))
+  .dependsOn(core)
+  .settings(
+    name       := "rdf-jsonld",
+    moduleName := "rdf-jsonld",
+    libraryDependencies ++= Seq(
       circeCore,
       circeParser,
-      jenaCore,
+      scalaTest % Test
+    )
+  )
+
+lazy val jena = project
+  .in(file("modules/jena"))
+  .dependsOn(jsonld)
+  .settings(
+    name       := "rdf-jena-compat",
+    moduleName := "rdf-jena-compat",
+    libraryDependencies ++= Seq(
       jenaArq,
-      parboiled2,
-      scalaGraph,
-      scalaGraphDot,
-      akkaHttpCore % Test,
-      scalaTest    % Test
-    ),
+      scalaTest % Test
+    )
+  )
+
+lazy val shacl = project
+  .in(file("modules/shacl"))
+  .dependsOn(jena)
+  .settings(
+    name       := "rdf-shacl",
+    moduleName := "rdf-shacl",
+    libraryDependencies ++= Seq(
+      topBraidShacl,
+      scalaTest % Test
+    )
+  )
+
+lazy val akka = project
+  .in(file("modules/akka"))
+  .dependsOn(core)
+  .settings(
+    name       := "rdf-akka-compat",
+    moduleName := "rdf-akka-compat",
+    libraryDependencies ++= Seq(
+      akkaHttpCore,
+      scalaTest % Test
+    )
+  )
+
+lazy val bench = project
+  .in(file("modules/bench"))
+  .enablePlugins(JmhPlugin)
+  .dependsOn(jsonld, jena)
+  .settings(noPublish)
+  .settings(
+    name                       := "rdf-bench",
+    moduleName                 := "rdf-bench",
     sourceDirectory in Jmh     := (sourceDirectory in Test).value,
     classDirectory in Jmh      := (classDirectory in Test).value,
     dependencyClasspath in Jmh := (dependencyClasspath in Test).value,
     compile in Jmh             := (compile in Jmh).dependsOn(compile in Test).value,
     run in Jmh                 := (run in Jmh).dependsOn(Keys.compile in Jmh).evaluated
   )
+
+lazy val rdf = project
+  .in(file("."))
+  .aggregate(core, derivation, jsonld, jena, shacl, akka, bench)
+  .settings(noPublish)
+  .settings(
+    name       := "rdf",
+    moduleName := "rdf"
+  )
+
+lazy val noPublish = Seq(publishLocal := {}, publish := {}, publishArtifact := false)
 
 /* ********************************************************
  ******************** Grouped Settings ********************
