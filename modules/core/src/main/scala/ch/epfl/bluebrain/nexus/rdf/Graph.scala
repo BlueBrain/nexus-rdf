@@ -123,6 +123,47 @@ sealed abstract class Graph extends Product with Serializable {
           b.append(s.show).append(" ").append(p.show).append(" ").append(o.show).append(" .\n")
       }
       .toString
+
+  def dot: String = {
+
+    // ID regexes based on https://graphviz.gitlab.io/_pages/doc/info/lang.html
+    val nonEscapedStringRegex = {
+      val alphanum = "a-zA-Z\u0080-\u00ff_"
+      s"[${alphanum}][${alphanum}0-9]*".r
+    }
+    val numeralRegex = "[-]?(.[0-9]+|[0-9]+(.[0-9]*)?)".r
+
+    def escapeChar(c: Char): String = c match {
+      case '"' => "\\\""
+      case x   => x.toString
+    }
+
+    def escape(str: String): String =
+      str.flatMap(escapeChar(_: Char))
+
+    def escapeAndQuote(node: Node) = {
+      val id = node.toString
+      if (nonEscapedStringRegex.matches(id) || numeralRegex.matches(id))
+        id
+      else
+        s""""${escape(id)}""""
+    }
+
+    triples
+      .foldLeft(new StringBuilder(s"""digraph ${escapeAndQuote(node)} {\n""")) {
+        case (b, (s, p, o)) =>
+          b.append("  ")
+            .append(escapeAndQuote(s))
+            .append(" -> ")
+            .append(escapeAndQuote(o))
+            .append(" [label = ")
+            .append(escapeAndQuote(p))
+            .append("]\n")
+      }
+      .append("}")
+      .toString
+  }
+
 }
 
 object Graph {
