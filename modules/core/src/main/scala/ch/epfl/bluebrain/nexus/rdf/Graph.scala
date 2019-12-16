@@ -2,6 +2,7 @@ package ch.epfl.bluebrain.nexus.rdf
 
 import cats.implicits._
 import ch.epfl.bluebrain.nexus.rdf.Graph._
+import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.Node.{BNode, IriNode, IriOrBNode}
 
 sealed abstract class Graph extends Product with Serializable {
@@ -124,7 +125,7 @@ sealed abstract class Graph extends Product with Serializable {
       }
       .toString
 
-  def dot: String = {
+  def dot(prefixMappings: Map[AbsoluteIri, String] = Map.empty): String = {
 
     // ID regexes based on https://graphviz.gitlab.io/_pages/doc/info/lang.html
     val nonEscapedStringRegex = {
@@ -141,8 +142,26 @@ sealed abstract class Graph extends Product with Serializable {
     def escape(str: String): String =
       str.flatMap(escapeChar(_: Char))
 
+    def applyPrefix(iri: AbsoluteIri): String =
+      prefixMappings
+        .get(iri)
+        .orElse(
+          prefixMappings
+            .find {
+              case (prefix, _) if iri.toString.startsWith(prefix.toString) => true
+              case _                                                       => false
+            }
+            .map {
+              case (prefix, mapping) => s"$mapping:${iri.toString.stripPrefix(prefix.toString)}"
+            }
+        )
+        .getOrElse(iri.toString)
+
     def escapeAndQuote(node: Node) = {
-      val id = node.toString
+      val id = node match {
+        case IriNode(iri) => applyPrefix(iri)
+        case _            => node.toString
+      }
       if (nonEscapedStringRegex.matches(id) || numeralRegex.matches(id))
         id
       else
