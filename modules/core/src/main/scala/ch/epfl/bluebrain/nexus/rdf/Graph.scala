@@ -125,7 +125,7 @@ sealed abstract class Graph extends Product with Serializable {
       }
       .toString
 
-  def dot(prefixMappings: Map[AbsoluteIri, String] = Map.empty): String = {
+  def dot(prefixMappings: Map[AbsoluteIri, String] = Map.empty, sequenceBlankNodes: Boolean = true): String = {
 
     // ID regexes based on https://graphviz.gitlab.io/_pages/doc/info/lang.html
     val nonEscapedStringRegex = {
@@ -157,28 +157,51 @@ sealed abstract class Graph extends Product with Serializable {
         )
         .getOrElse(iri.toString)
 
-    def escapeAndQuote(node: Node) = {
+    def escapeAndQuote(node: Node, bNodeIds: Map[String, String] = Map.empty) = {
       val id = node match {
-        case IriNode(iri) => applyPrefix(iri)
-        case _            => node.toString
+        case IriNode(iri)                     => applyPrefix(iri)
+        case BNode(bId) if sequenceBlankNodes => bNodeIds.get(bId).map(i => s"_:b$i").getOrElse(bId)
+        case _                                => node.toString
       }
       if (nonEscapedStringRegex.matches(id) || numeralRegex.matches(id))
         id
       else
         s""""${escape(id)}""""
+
     }
 
+    def updateBNodeId(bNodeIds: Map[String, String], lastBNodeId: Int, bIds: String*): (Map[String, String], Int) =
+      bIds.foldLeft((bNodeIds, lastBNodeId)) {
+        case ((bNIds, lastId), bId) =>
+          bNIds.get(bId) match {
+            case Some(_) => (bNIds, lastId)
+            case None    => (bNIds.updated(bId, (lastId + 1).toString), lastId + 1)
+          }
+
+      }
+
+    def updateBNodeIds(triple: Triple, bNodeIds: Map[String, String], lastBNodeId: Int): (Map[String, String], Int) =
+      triple match {
+        case (BNode(bId1), _, BNode(bId2)) => updateBNodeId(bNodeIds, lastBNodeId, bId1, bId2)
+        case (BNode(bId), _, _)            => updateBNodeId(bNodeIds, lastBNodeId, bId)
+        case (_, _, BNode(bId))            => updateBNodeId(bNodeIds, lastBNodeId, bId)
+        case _                             => (bNodeIds, lastBNodeId)
+      }
+
     triples
-      .foldLeft(new StringBuilder(s"""digraph ${escapeAndQuote(node)} {\n""")) {
-        case (b, (s, p, o)) =>
+      .foldLeft((new StringBuilder(s"""digraph ${escapeAndQuote(node)} {\n"""), Map.empty[String, String], 0)) {
+        case ((b, bNodeIds, lastBnodeId), (s, p, o)) =>
+          val (updatedBNodeIds, updatedLastBNodeId) = updateBNodeIds((s, p, o), bNodeIds, lastBnodeId)
           b.append("  ")
-            .append(escapeAndQuote(s))
+            .append(escapeAndQuote(s, updatedBNodeIds))
             .append(" -> ")
-            .append(escapeAndQuote(o))
+            .append(escapeAndQuote(o, updatedBNodeIds))
             .append(" [label = ")
             .append(escapeAndQuote(p))
             .append("]\n")
+          (b, updatedBNodeIds, updatedLastBNodeId)
       }
+      ._1
       .append("}")
       .toString
   }
