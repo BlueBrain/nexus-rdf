@@ -195,11 +195,12 @@ sealed abstract class Graph extends Product with Serializable {
       }
 
     def updateBNodeIds(triple: Triple, bNodeIds: Map[String, String], lastBNodeId: Int): (Map[String, String], Int) =
-      triple match {
-        case (BNode(bId1), _, BNode(bId2)) => updateBNodeId(bNodeIds, lastBNodeId, bId1, bId2)
-        case (BNode(bId), _, _)            => updateBNodeId(bNodeIds, lastBNodeId, bId)
-        case (_, _, BNode(bId))            => updateBNodeId(bNodeIds, lastBNodeId, bId)
-        case _                             => (bNodeIds, lastBNodeId)
+      (sequenceBlankNodes, triple) match {
+        case (false, _)                         => (bNodeIds, lastBNodeId)
+        case (_, (BNode(bId1), _, BNode(bId2))) => updateBNodeId(bNodeIds, lastBNodeId, bId1, bId2)
+        case (_, (BNode(bId), _, _))            => updateBNodeId(bNodeIds, lastBNodeId, bId)
+        case (_, (_, _, BNode(bId)))            => updateBNodeId(bNodeIds, lastBNodeId, bId)
+        case _                                  => (bNodeIds, lastBNodeId)
       }
 
     triples
