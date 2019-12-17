@@ -2,8 +2,8 @@ package ch.epfl.bluebrain.nexus.rdf.jena
 
 import cats.implicits._
 import org.apache.jena.rdf.model.{Model, ModelFactory}
-import org.apache.jena.riot.{Lang, RDFParser}
 import org.apache.jena.riot.system.StreamRDFLib
+import org.apache.jena.riot.{Lang, RDFParser}
 
 import scala.util.Try
 

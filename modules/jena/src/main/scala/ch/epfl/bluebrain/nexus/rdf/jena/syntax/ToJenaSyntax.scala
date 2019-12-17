@@ -8,7 +8,7 @@ import org.apache.jena.rdf.model.{Model, Property, RDFNode, Resource}
 trait ToJenaSyntax {
   import ch.epfl.bluebrain.nexus.rdf.jena.{JenaConverters => conv}
 
-  implicit class AsJenaGraph(graph: Graph) {
+  implicit class GraphAsJena(graph: Graph) {
 
     /**
       * Converts a [[ch.epfl.bluebrain.nexus.rdf.Graph]] to a mutable Jena [[org.apache.jena.rdf.model.Model]]. The
@@ -18,7 +18,7 @@ trait ToJenaSyntax {
       conv.asJena(graph)
   }
 
-  implicit class AsJenaNode(node: Node) {
+  implicit class NodeAsJena(node: Node) {
 
     /**
       * Converts a [[ch.epfl.bluebrain.nexus.rdf.Node]] to a Jena [[org.apache.jena.rdf.model.RDFNode]].
@@ -27,7 +27,7 @@ trait ToJenaSyntax {
       conv.asJena(node)
   }
 
-  implicit class AsJenaIriOrBNode(node: IriOrBNode) {
+  implicit class IriOrBNodeAsJena(node: IriOrBNode) {
 
     /**
       * Converts a [[ch.epfl.bluebrain.nexus.rdf.Node.IriOrBNode]] to a Jena [[org.apache.jena.rdf.model.Resource]].
@@ -36,7 +36,7 @@ trait ToJenaSyntax {
       conv.asJena(node)
   }
 
-  implicit class AsJenaIriNode(node: IriNode) {
+  implicit class IriNodeAsJena(node: IriNode) {
 
     /**
       * Converts a [[ch.epfl.bluebrain.nexus.rdf.Node.IriNode]] to a Jena [[org.apache.jena.rdf.model.Property]].
@@ -45,7 +45,7 @@ trait ToJenaSyntax {
       conv.asJena(node)
   }
 
-  implicit class AsJenaBNode(node: BNode) {
+  implicit class BNodeAsJena(node: BNode) {
 
     /**
       * Converts a [[ch.epfl.bluebrain.nexus.rdf.Node.BNode]] to a Jena [[org.apache.jena.rdf.model.Resource]].
@@ -54,7 +54,7 @@ trait ToJenaSyntax {
       conv.asJena(node)
   }
 
-  implicit class AsJenaLiteral(node: Literal) {
+  implicit class LiteralAsJena(node: Literal) {
 
     /**
       * Converts a [[ch.epfl.bluebrain.nexus.rdf.Node.BNode]] to a Jena [[org.apache.jena.rdf.model.Literal]].

@@ -7,7 +7,7 @@ import org.apache.jena.rdf.model.{Model, RDFNode, Resource}
 trait FromJenaSyntax {
   import ch.epfl.bluebrain.nexus.rdf.jena.{JenaConverters => conv}
 
-  implicit class AsRdfModel(model: Model) {
+  implicit class ModelAsRdf(model: Model) {
 
     /**
       * Converts a Jena [[org.apache.jena.rdf.model.Model]] to a [[ch.epfl.bluebrain.nexus.rdf.Graph]] using the
@@ -19,7 +19,7 @@ trait FromJenaSyntax {
       conv.asRdfGraph(node, model)
   }
 
-  implicit class AsRdfResource(resource: Resource) {
+  implicit class ResourceAsRdf(resource: Resource) {
 
     /**
       * Converts a Jena [[org.apache.jena.rdf.model.Resource]] to an [[ch.epfl.bluebrain.nexus.rdf.Node.IriNode]] if the
@@ -43,7 +43,7 @@ trait FromJenaSyntax {
       conv.asRdfBNode(resource)
   }
 
-  implicit class AsRdfLiteral(literal: model.Literal) {
+  implicit class LiteralAsRdf(literal: model.Literal) {
 
     /**
       * Converts a Jena [[org.apache.jena.rdf.model.Literal]] to an [[ch.epfl.bluebrain.nexus.rdf.Node.Literal]].
@@ -52,7 +52,7 @@ trait FromJenaSyntax {
       conv.asRdfLiteral(literal)
   }
 
-  implicit class AsRdfNode(node: RDFNode) {
+  implicit class NodeAsRdf(node: RDFNode) {
 
     /**
       * Converts a Jena [[org.apache.jena.rdf.model.RDFNode]] to an [[ch.epfl.bluebrain.nexus.rdf.Node]].

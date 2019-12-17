@@ -19,16 +19,17 @@ trait ToJenaConverters {
     * Converts the argument `node` to a Jena `RDFNode`.
     */
   def asJena(node: Node): RDFNode = node match {
-    case ibn: IriOrBNode => asJena(ibn)
-    case lit: Literal    => asJena(lit)
+    case in: IriNode  => asJena(in)
+    case bn: BNode    => asJena(bn)
+    case lit: Literal => asJena(lit)
   }
 
   /**
     * Converts the argument `node` to a Jena `Resource`.
     */
   def asJena(node: IriOrBNode): Resource = node match {
-    case bn: BNode   => asJena(bn)
     case in: IriNode => asJena(in)
+    case bn: BNode   => asJena(bn)
   }
 
   /**
