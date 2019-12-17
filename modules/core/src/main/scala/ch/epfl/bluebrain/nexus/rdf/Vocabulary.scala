@@ -59,6 +59,30 @@ object Vocabulary {
     val unsignedLong       = url"${base}unsignedLong"
   }
 
+  /**
+    * XMLSchema vocabulary
+    */
+  object xml {
+    val base = "http://www.w3.org/2001/XMLSchema#"
+    val int  = url"${base}int"
+  }
+
+  /**
+    * Schema.org vocabulary
+    */
+  object schema {
+    val base              = "http://schema.org/"
+    val age               = url"${base}age"
+    val name              = url"${base}name"
+    val unitText          = url"${base}unitText"
+    val value             = url"${base}value"
+    val Person            = url"${base}Person"
+    val QuantitativeValue = url"${base}QuantitativeValue"
+  }
+
+  /**
+    * Nexus vocabulary
+    */
   object nxv {
     val base = url"https://bluebrain.github.io/nexus/vocabulary/"
   }
