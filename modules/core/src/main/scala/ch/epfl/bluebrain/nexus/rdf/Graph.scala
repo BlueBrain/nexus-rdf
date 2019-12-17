@@ -2,7 +2,8 @@ package ch.epfl.bluebrain.nexus.rdf
 
 import cats.implicits._
 import ch.epfl.bluebrain.nexus.rdf.Graph._
-import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
+import ch.epfl.bluebrain.nexus.rdf.Iri.Path.Segment
+import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Url}
 import ch.epfl.bluebrain.nexus.rdf.Node.{BNode, IriNode, IriOrBNode}
 
 sealed abstract class Graph extends Product with Serializable {
@@ -125,7 +126,11 @@ sealed abstract class Graph extends Product with Serializable {
       }
       .toString
 
-  def dot(prefixMappings: Map[AbsoluteIri, String] = Map.empty, sequenceBlankNodes: Boolean = true): String = {
+  def dot(
+      prefixMappings: Map[AbsoluteIri, String] = Map.empty,
+      sequenceBlankNodes: Boolean = true,
+      stripPrefixes: Boolean = false
+  ): String = {
 
     // ID regexes based on https://graphviz.gitlab.io/_pages/doc/info/lang.html
     val nonEscapedStringRegex = {
@@ -142,7 +147,7 @@ sealed abstract class Graph extends Product with Serializable {
     def escape(str: String): String =
       str.flatMap(escapeChar(_: Char))
 
-    def applyPrefix(iri: AbsoluteIri): String =
+    def applyOrStripPrefix(iri: AbsoluteIri): String =
       prefixMappings
         .get(iri)
         .orElse(
@@ -155,11 +160,20 @@ sealed abstract class Graph extends Product with Serializable {
               case (prefix, mapping) => s"$mapping:${iri.toString.stripPrefix(prefix.toString)}"
             }
         )
-        .getOrElse(iri.toString)
+        .getOrElse {
+          if (stripPrefixes)
+            iri match {
+              case Url(_, _, _, _, Some(fragment))  => fragment.asString
+              case Url(_, _, Segment(seg, _), _, _) => seg
+              case _                                => iri.toString
+            }
+          else iri.toString
+
+        }
 
     def escapeAndQuote(node: Node, bNodeIds: Map[String, String] = Map.empty) = {
       val id = node match {
-        case IriNode(iri)                     => applyPrefix(iri)
+        case IriNode(iri)                     => applyOrStripPrefix(iri)
         case BNode(bId) if sequenceBlankNodes => bNodeIds.get(bId).map(i => s"_:b$i").getOrElse(bId)
         case _                                => node.toString
       }

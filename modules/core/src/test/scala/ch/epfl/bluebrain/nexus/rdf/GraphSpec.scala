@@ -93,7 +93,8 @@ class GraphSpec extends RdfSpec {
 
     "create correct DOT representation with sequential blank node ids" in {
 
-      val jDoe   = url"http://nexus.example.com/john-doe"
+      val jDoe = url"http://nexus.example.com/john-doe"
+
       val other  = BNode()
       val other2 = BNode()
       val graph = Graph(
@@ -130,6 +131,53 @@ class GraphSpec extends RdfSpec {
           |}""".stripMargin
 
       graph.dot().split("\n").sorted shouldEqual expected.split("\n").sorted
+    }
+
+    "create correct DOT representation with prefix mappings and shortened URLs" in {
+
+      val jDoe  = url"http://nexus.example.com/john-doe"
+      val other = url"http://nexus.example.com/other/another"
+
+      val mappings: Map[AbsoluteIri, String] = Map(
+        url"http://schema.org/deprecated" -> "deprecated",
+        url"http://schema.org/Person"     -> "Person",
+        url"http://schema.org/"           -> "schema"
+      )
+
+      val graph = Graph(
+        jDoe,
+        Set(
+          (jDoe, url"http://schema.org/name", "John Doe"),
+          (jDoe, url"http://example.com/stringProperty", "Some property"),
+          (jDoe, url"http://www.w3.org/1999/02/22-rdf-syntax-ns#type", url"http://schema.org/Person"),
+          (jDoe, url"http://schema.org/birthDate", "1999-04-09T20:00Z"),
+          (jDoe, url"http://schema.org/deprecated", false),
+          (other, url"http://schema.org/birthDate", "2000-04-12T20:00Z"),
+          (other, url"http://schema.org/height", 9.223),
+          (other, url"http://schema.org/birthYear", 1999),
+          (other, url"http://www.w3.org/1999/02/22-rdf-syntax-ns#type", url"http://schema.org/Other"),
+          (other, url"http://schema.org/birthHour", 9),
+          (jDoe, url"http://example.com/sibling", other)
+        )
+      )
+      val expected =
+        """digraph "john-doe" {
+          |  "john-doe" -> "John Doe" [label = "schema:name"]
+          |  "john-doe" -> "Some property" [label = stringProperty]
+          |  "john-doe" -> Person [label = type]
+          |  "john-doe" -> "1999-04-09T20:00Z" [label = "schema:birthDate"]
+          |  "john-doe" -> false [label = deprecated]
+          |  another -> "2000-04-12T20:00Z" [label = "schema:birthDate"]
+          |  another -> 9.223 [label = "schema:height"]
+          |  another -> 1999 [label = "schema:birthYear"]
+          |  another -> "schema:Other" [label = type]
+          |  another -> 9 [label = "schema:birthHour"]
+          |  "john-doe" -> another [label = sibling]
+          |}""".stripMargin
+
+      graph.dot(prefixMappings = mappings, stripPrefixes = true).split("\n").sorted shouldEqual expected
+        .split("\n")
+        .sorted
     }
 
   }
