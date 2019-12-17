@@ -89,10 +89,11 @@ lazy val jsonld = project
 
 lazy val jena = project
   .in(file("modules/jena"))
-  .dependsOn(jsonld)
+  .dependsOn(jsonld, core % "test->test")
   .settings(
-    name       := "rdf-jena-compat",
-    moduleName := "rdf-jena-compat",
+    name                     := "rdf-jena-compat",
+    moduleName               := "rdf-jena-compat",
+    Test / parallelExecution := false,
     libraryDependencies ++= Seq(
       jenaArq,
       scalaTest % Test
