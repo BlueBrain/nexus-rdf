@@ -25,6 +25,7 @@ scalafmt: {
  */
 
 // Dependency versions
+val akkaActorVersion = "2.6.1"
 val akkaHttpVersion  = "10.1.11"
 val catsVersion      = "2.0.0"
 val circeVersion     = "0.12.3"
@@ -35,6 +36,7 @@ val scalaTestVersion = "3.1.0"
 val topBraidVersion  = "1.3.1"
 
 // Dependency modules
+lazy val akkaActor     = "com.typesafe.akka" %% "akka-actor"     % akkaActorVersion
 lazy val akkaHttpCore  = "com.typesafe.akka" %% "akka-http-core" % akkaHttpVersion
 lazy val catsCore      = "org.typelevel"     %% "cats-core"      % catsVersion
 lazy val circeCore     = "io.circe"          %% "circe-core"     % circeVersion
@@ -114,11 +116,12 @@ lazy val shacl = project
 
 lazy val akka = project
   .in(file("modules/akka"))
-  .dependsOn(core)
+  .dependsOn(core % "test->test;compile->compile")
   .settings(
     name       := "rdf-akka-compat",
     moduleName := "rdf-akka-compat",
     libraryDependencies ++= Seq(
+      akkaActor,
       akkaHttpCore,
       scalaTest % Test
     )
