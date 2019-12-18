@@ -19,9 +19,9 @@ trait ToAkkaSyntax {
   implicit class AbsoluteIriAsAkka(iri: AbsoluteIri) {
 
     /**
-      *  Converts an [[AbsoluteIri]] to Akka [[Uri]] if possible.
+      *  Converts an [[AbsoluteIri]] to Akka [[Uri]].
       */
-    def asAkka: Either[String, Uri] = conv.asAkka(iri)
+    def asAkka: Uri = conv.asAkka(iri)
   }
 
 }

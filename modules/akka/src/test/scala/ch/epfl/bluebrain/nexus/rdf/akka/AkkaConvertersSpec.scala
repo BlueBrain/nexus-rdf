@@ -13,6 +13,9 @@ class AkkaConvertersSpec extends RdfSpec {
       "it's an IriNode with a valid URL" in {
         IriNode(url"http://example.com/path").asAkka.rightValue shouldEqual Uri("http://example.com/path")
       }
+      "it's an IriNode with Iri which is not a valid Uri" in {
+        IriNode(url"http://example.com/päth").asAkka.rightValue shouldEqual Uri("http://example.com/p%C3%A4th")
+      }
     }
 
     "fail to convert" when {
@@ -20,23 +23,16 @@ class AkkaConvertersSpec extends RdfSpec {
         BNode("1").rightValue.asAkka.leftValue shouldEqual "_:1 cannot be converted to URI."
         Literal(true).asAkka.leftValue shouldEqual "\"true\"^^<http://www.w3.org/2001/XMLSchema#boolean> cannot be converted to URI."
       }
-      "it's an IriNode with Iri which is not a valid Uri" in {
-        IriNode(url"http://example.com/päth").asAkka.leftValue shouldEqual "'http://example.com/päth' is not a valid URI."
-
-      }
     }
   }
 
   "An AbsoluteIri" should {
     "be converted correctly to Uri" when {
       "it's a valid Uri" in {
-        url"http://example.com/path".asAkka.rightValue shouldEqual Uri("http://example.com/path")
+        url"http://example.com/path".asAkka shouldEqual Uri("http://example.com/path")
       }
-    }
-    "fail to convert" when {
       "it's not a valid Uri" in {
-        url"http://example.com/päth".asAkka.leftValue shouldEqual "'http://example.com/päth' is not a valid URI."
-
+        url"http://example.com/päth".asAkka shouldEqual Uri("http://example.com/p%C3%A4th")
       }
     }
   }
