@@ -4,6 +4,7 @@ import ch.epfl.bluebrain.nexus.rdf.{Graph, Resources, RootedGraph}
 import ch.epfl.bluebrain.nexus.rdf.Node.IriNode
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
 import ch.epfl.bluebrain.nexus.rdf.instances._
+import ch.epfl.bluebrain.nexus.rdf.jena.JenaModel
 import ch.epfl.bluebrain.nexus.rdf.syntax._
 import io.circe.Json
 import org.openjdk.jmh.annotations.{Benchmark, Scope, State}
@@ -23,9 +24,20 @@ import org.openjdk.jmh.annotations.{Benchmark, Scope, State}
 class GraphOps extends Resources {
 
   val json: Json         = jsonContentOf("/schema.json")
-  val s: IriNode         = url"http://example.com/id"
+  val s: IriNode         = url"https://bluebrain.github.io/nexus/schemas/resolver"
   val graph: RootedGraph = json.asGraph(s).getOrElse(throw new IllegalArgumentException)
+  val model              = JenaModel(json).getOrElse(throw new IllegalArgumentException)
 
+  @Benchmark
+  def convertGraphToJenaModel(): Unit = {
+    val _ = JenaModel(graph)
+  }
+
+  @Benchmark
+  def convertJenaModelToGraph(): Unit = {
+    val _ = model.asGraph(s).getOrElse(throw new IllegalArgumentException)
+
+  }
   @Benchmark
   def parseRemoveOriginal(): Unit = {
     val _ = graph
@@ -69,4 +81,5 @@ class GraphOps extends Resources {
           p == rdf.rest
     )
   }
+
 }
