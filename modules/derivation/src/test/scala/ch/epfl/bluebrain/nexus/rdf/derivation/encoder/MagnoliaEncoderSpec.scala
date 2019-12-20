@@ -2,13 +2,12 @@ package ch.epfl.bluebrain.nexus.rdf.derivation.encoder
 
 import java.util.UUID
 
-import ch.epfl.bluebrain.nexus.rdf.Encoder
-import ch.epfl.bluebrain.nexus.rdf.derivation.DerivationSpec
 import ch.epfl.bluebrain.nexus.rdf.derivation.Fixture.View.{AggregateElasticSearchView, ElasticSearchView, ViewRef}
 import ch.epfl.bluebrain.nexus.rdf.derivation.Fixture.{mapping, View}
 import ch.epfl.bluebrain.nexus.rdf.implicits._
+import ch.epfl.bluebrain.nexus.rdf.{Encoder, RdfSpec}
 
-class MagnoliaEncoderSpec extends DerivationSpec {
+class MagnoliaEncoderSpec extends RdfSpec {
 
   "A MagnoliaEncoder" should {
     "derive an Encoder for fixed ElasticSearchView" in {

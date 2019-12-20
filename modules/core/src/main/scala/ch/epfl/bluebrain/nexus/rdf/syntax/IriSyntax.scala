@@ -16,4 +16,6 @@ final class IriContext(val sc: StringContext) extends AnyVal {
     Iri.unsafe(sc.s(args: _*))
   def nxv(args: Any*): AbsoluteIri =
     Vocabulary.nxv.base + sc.s(args: _*)
+  def schema(args: Any*): AbsoluteIri =
+    Url.unsafe(Vocabulary.schema.base + sc.s(args: _*))
 }

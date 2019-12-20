@@ -27,11 +27,8 @@ private[derivation] object MagnoliaDecoder {
         caseClass.constructMonadic { p =>
           if (p.label == config.idMemberName) p.typeclass.apply(cursor)
           else {
-            val next = cursor.downField(_ == paramPredicateLookup(p.label))
-            next.focus match {
-              case None    => p.default.fold(p.typeclass.apply(next))(Right[DecodingFailure, p.PType])
-              case Some(_) => p.typeclass.apply(next)
-            }
+            val next = cursor.downSet(paramPredicateLookup(p.label))
+            p.typeclass.apply(next)
           }
         }
     }
@@ -40,10 +37,9 @@ private[derivation] object MagnoliaDecoder {
   def dispatch[A](sealedTrait: SealedTrait[Decoder, A])(implicit config: Configuration): Decoder[A] =
     new Decoder[A] {
       override def apply(c: Cursor): Result[A] = {
-        c.downField(_ == IriNode(config.discriminatorPredicate)).values match {
+        c.downSet(IriNode(config.discriminatorPredicate)).values match {
           case Some(values) =>
-            val vset = values.toSet
-            sealedTrait.subtypes.find(st => vset.contains(IriNode(config.base + st.typeName.short))) match {
+            sealedTrait.subtypes.find(st => values.contains(IriNode(config.base + st.typeName.short))) match {
               case Some(st) => st.typeclass.apply(c)
               case None =>
                 Left(DecodingFailure(s"Unable to find type discriminator for ${sealedTrait.typeName.short}", c.history))

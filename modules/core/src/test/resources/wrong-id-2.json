@@ -1,9 +1,0 @@
-{
-  "@context": "http://schema.org/",
-  "@type": "Person",
-  "@id": "http://nexus.example.com/john-doe",
-  "name": "John Doe",
-  "embed": {
-    "@id": "file:///Users/some/path with spaces"
-  }
-}

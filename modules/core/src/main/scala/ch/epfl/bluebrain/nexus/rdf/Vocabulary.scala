@@ -73,6 +73,7 @@ object Vocabulary {
   object schema {
     val base              = "http://schema.org/"
     val age               = url"${base}age"
+    val description       = url"${base}description"
     val name              = url"${base}name"
     val unitText          = url"${base}unitText"
     val value             = url"${base}value"
