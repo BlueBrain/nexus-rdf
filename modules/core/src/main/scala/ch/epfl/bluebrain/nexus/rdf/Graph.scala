@@ -126,18 +126,25 @@ sealed abstract class Graph extends Product with Serializable {
       }
       .toString
 
+  private val dotNonEscapedStringRegex = {
+    val alphanum = "a-zA-Z\u0080-\u00ff_"
+    s"[${alphanum}][${alphanum}0-9]*".r
+  }
+  private val dotNumeralRegex = "[-]?(.[0-9]+|[0-9]+(.[0-9]*)?)".r
+
+  /**
+    * Returns DOT representation of [[Graph]].
+    *
+    * @param prefixMappings     prefix mappings to apply to IRIs.
+    * @param sequenceBlankNodes whether to replace blank node IDs with sequential identifiers.
+    * @param stripPrefixes      whether to strip prefixes from IRIs.
+    * @return the DOT representation as [[String]].
+    */
   def dot(
       prefixMappings: Map[AbsoluteIri, String] = Map.empty,
       sequenceBlankNodes: Boolean = true,
       stripPrefixes: Boolean = false
   ): String = {
-
-    // ID regexes based on https://graphviz.gitlab.io/_pages/doc/info/lang.html
-    val nonEscapedStringRegex = {
-      val alphanum = "a-zA-Z\u0080-\u00ff_"
-      s"[${alphanum}][${alphanum}0-9]*".r
-    }
-    val numeralRegex = "[-]?(.[0-9]+|[0-9]+(.[0-9]*)?)".r
 
     def escapeChar(c: Char): String = c match {
       case '"' => "\\\""
@@ -177,7 +184,7 @@ sealed abstract class Graph extends Product with Serializable {
         case BNode(bId) if sequenceBlankNodes => bNodeIds.get(bId).map(i => s"_:b$i").getOrElse(bId)
         case _                                => node.toString
       }
-      if (nonEscapedStringRegex.matches(id) || numeralRegex.matches(id))
+      if (dotNonEscapedStringRegex.matches(id) || dotNumeralRegex.matches(id))
         id
       else
         s""""${escape(id)}""""
@@ -205,8 +212,8 @@ sealed abstract class Graph extends Product with Serializable {
 
     triples
       .foldLeft((new StringBuilder(s"""digraph ${escapeAndQuote(node)} {\n"""), Map.empty[String, String], 0)) {
-        case ((b, bNodeIds, lastBnodeId), (s, p, o)) =>
-          val (updatedBNodeIds, updatedLastBNodeId) = updateBNodeIds((s, p, o), bNodeIds, lastBnodeId)
+        case ((b, bNodeIds, lastBNodeId), (s, p, o)) =>
+          val (updatedBNodeIds, updatedLastBNodeId) = updateBNodeIds((s, p, o), bNodeIds, lastBNodeId)
           b.append("  ")
             .append(escapeAndQuote(s, updatedBNodeIds))
             .append(" -> ")
