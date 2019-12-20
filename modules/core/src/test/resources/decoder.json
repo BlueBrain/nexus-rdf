@@ -36,5 +36,7 @@
   "set": [1, 2, 2],
   "bnode": {
     "value": 3
-  }
+  },
+  "duration": "Inf",
+  "finiteDuration": "3 minutes"
 }

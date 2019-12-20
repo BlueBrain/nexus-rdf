@@ -1,10 +1,13 @@
 package ch.epfl.bluebrain.nexus.rdf
 
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Url, Urn}
 import ch.epfl.bluebrain.nexus.rdf.Node.{BNode, IriNode, IriOrBNode, Literal}
 import ch.epfl.bluebrain.nexus.rdf.implicits._
+
+import scala.concurrent.duration.{Duration, FiniteDuration}
 
 class DecoderSpec extends RdfSpec {
 
@@ -30,6 +33,8 @@ class DecoderSpec extends RdfSpec {
       c.down(nxv"list").as[List[Int]].rightValue shouldEqual List(1, 2, 2)
       c.down(nxv"list").as[Vector[Int]].rightValue shouldEqual Vector(1, 2, 2)
       c.downSet(nxv"set").as[Set[Int]].rightValue should contain theSameElementsAs Set(1, 2)
+      c.down(nxv"duration").as[Duration].rightValue shouldEqual Duration.Inf
+      c.down(nxv"finiteDuration").as[FiniteDuration].rightValue shouldEqual FiniteDuration(3, TimeUnit.MINUTES)
     }
     "successfully decode rdf types" in {
       c.as[AbsoluteIri].rightValue shouldEqual id
@@ -64,6 +69,7 @@ class DecoderSpec extends RdfSpec {
       c.down(nxv"float").as[List[Float]].leftValue
       c.down(nxv"float").as[Vector[Float]].leftValue
       c.down(nxv"string").as[UUID].leftValue
+      c.down(nxv"duration").as[FiniteDuration].leftValue
     }
   }
 

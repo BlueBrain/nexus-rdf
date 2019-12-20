@@ -8,6 +8,7 @@ import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Url, Urn}
 import ch.epfl.bluebrain.nexus.rdf.Node.{BNode, IriNode, IriOrBNode, Literal}
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary.rdf
 
+import scala.concurrent.duration.{Duration, FiniteDuration}
 import scala.reflect.ClassTag
 import scala.util.Try
 
@@ -101,7 +102,7 @@ trait PrimitiveDecoderInstances {
   }
 }
 
-trait StandardDecoderInstances {
+trait StandardDecoderInstances { this: PrimitiveDecoderInstances =>
   import alleycats.std.set._
 
   implicit final val graphDecodeUUID: Decoder[UUID] = Decoder.instance { c =>
@@ -112,6 +113,17 @@ trait StandardDecoderInstances {
       case _ => Left(DecodingFailure("Unable to decode node as an UUID", c.history))
     }
   }
+
+  implicit final val graphDecodeDuration: Decoder[Duration] =
+    graphDecodeString.emap { str =>
+      Try(Duration(str)).toEither.leftMap(_ => "Unable to decode node as a Duration")
+    }
+
+  implicit final val graphDecodeFiniteDuration: Decoder[FiniteDuration] =
+    graphDecodeDuration.emap {
+      case _: Duration.Infinite     => Left("Unable to decode node as a FiniteDuration")
+      case duration: FiniteDuration => Right(duration)
+    }
 
   implicit final def graphDecodeSet[A](implicit A: Decoder[A]): Decoder[Set[A]] = Decoder.instance { c =>
     c.cursors match {
