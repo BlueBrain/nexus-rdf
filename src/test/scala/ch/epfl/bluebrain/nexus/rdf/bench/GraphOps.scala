@@ -1,8 +1,12 @@
 package ch.epfl.bluebrain.nexus.rdf.bench
 
-import ch.epfl.bluebrain.nexus.rdf.{Graph, Resources, RootedGraph}
+import java.util.UUID
+
+import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
+import ch.epfl.bluebrain.nexus.rdf.{Graph, Iri, Resources, RootedGraph}
 import ch.epfl.bluebrain.nexus.rdf.Node.IriNode
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
+import ch.epfl.bluebrain.nexus.rdf.bench.GraphOps._
 import ch.epfl.bluebrain.nexus.rdf.instances._
 import ch.epfl.bluebrain.nexus.rdf.jena.JenaModel
 import ch.epfl.bluebrain.nexus.rdf.syntax._
@@ -28,6 +32,10 @@ class GraphOps extends Resources {
   val graph: RootedGraph = json.asGraph(s).getOrElse(throw new IllegalArgumentException)
   val model              = JenaModel(json).getOrElse(throw new IllegalArgumentException)
 
+  val resolverGraph: RootedGraph = jsonContentOf("/resolver.json")
+    .asGraph(url"http://example.com/resolver")
+    .getOrElse(throw new IllegalArgumentException)
+
   @Benchmark
   def convertGraphToJenaModel(): Unit = {
     val _ = JenaModel(graph)
@@ -36,8 +44,46 @@ class GraphOps extends Resources {
   @Benchmark
   def convertJenaModelToGraph(): Unit = {
     val _ = model.asGraph(s).getOrElse(throw new IllegalArgumentException)
-
   }
+
+  @Benchmark
+  def decodeFromGraph(): Unit = {
+    val c = resolverGraph.cursor()
+    val view = for {
+      uuid <- c.downField(nxv.uuid).focus.as[UUID]
+      schemas <- c
+        .downField(nxv.resourceSchemas)
+        .values
+        .asListOf[AbsoluteIri]
+        .map(_.toSet)
+      types <- c
+        .downField(nxv.resourceTypes)
+        .values
+        .asListOf[AbsoluteIri]
+        .map(_.toSet)
+      tag <- c
+        .downField(nxv.resourceTag)
+        .focus
+        .asOption[String]
+      includeMeta <- c
+        .downField(nxv.includeMetadata)
+        .focus
+        .as[Boolean]
+      includeDep <- c
+        .downField(nxv.includeDeprecated)
+        .focus
+        .as[Boolean]
+    } yield SparqlView(
+      schemas,
+      types,
+      tag,
+      includeMeta,
+      includeDep,
+      uuid
+    )
+    val _ = view.getOrElse(throw new IllegalArgumentException)
+  }
+
   @Benchmark
   def parseRemoveOriginal(): Unit = {
     val _ = graph
@@ -81,5 +127,28 @@ class GraphOps extends Resources {
           p == rdf.rest
     )
   }
+
+}
+
+object GraphOps {
+  final case class SparqlView(
+      resourceSchemas: Set[AbsoluteIri],
+      resourceTypes: Set[AbsoluteIri],
+      resourceTag: Option[String],
+      includeMetadata: Boolean,
+      includeDeprecated: Boolean,
+      uuid: UUID
+  )
+  object nxv {
+    val base: Iri.AbsoluteIri = url"https://bluebrain.github.io/nexus/vocabulary/".value
+
+    val uuid              = base + "_uuid"
+    val resourceSchemas   = base + "resourceSchemas"
+    val resourceTypes     = base + "resourceTypes"
+    val resourceTag       = base + "resourceTag"
+    val includeMetadata   = base + "includeMetadata"
+    val includeDeprecated = base + "includeDeprecated"
+  }
+  implicit def prefixIriToIriNodeF(iri: AbsoluteIri): IriNode => Boolean = _ == IriNode(iri)
 
 }

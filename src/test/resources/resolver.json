@@ -1,0 +1,33 @@
+{
+  "@context": {
+    "nxv": "https://bluebrain.github.io/nexus/vocabulary/",
+    "@vocab": "https://bluebrain.github.io/nexus/vocabulary/",
+    "resourceSchemas": {
+      "@id": "nxv:resourceSchemas",
+      "@type": "@id",
+      "@container": "@set"
+    },
+    "resourceTypes": {
+      "@id": "nxv:resourceTypes",
+      "@type": "@id",
+      "@container": "@set"
+    }
+  },
+  "@id": "http://example.com/resolver",
+  "@type": [
+    "View",
+    "SparqlView"
+  ],
+  "resourceTypes": [
+    "nxv:MyType",
+    "nxv:MyType2"
+  ],
+  "resourceSchemas": [
+    "nxv:Schema",
+    "nxv:Resource"
+  ],
+  "includeDeprecated": false,
+  "includeMetadata": true,
+  "resourceTag": "one",
+  "_uuid": "247d223b-1d38-4c6e-8fed-f9a8c2ccb4a1"
+}
