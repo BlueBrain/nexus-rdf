@@ -19,10 +19,13 @@ import org.openjdk.jmh.annotations.{Benchmark, Scope, State}
   * To run it, execute on the sbt shell: ''jmh:run -i 20 -wi 10 -f1 -t1 .*GraphOps.*''
   * Which means "10 iterations" "10 warmup iterations" "1 fork" "1 thread"
   * Results:
-  * Benchmark              Mode  Cnt     Score     Error  Units
-  * Parsing.parseAkkaUri  thrpt   10  1011,101 ± 412,756  ops/s
-  * Parsing.parseIri      thrpt   10   219,526 ±  35,304  ops/s
-  * Parsing.parseJenaIri  thrpt   10  1178,370 ± 289,768  ops/s
+  * Benchmark                                  Mode  Cnt      Score     Error  Units
+  * GraphOps.convertGraphToJenaModel          thrpt   20   4061,012 ±  81,771  ops/s
+  * GraphOps.convertJenaModelToGraph          thrpt   20    270,261 ±   1,241  ops/s
+  * GraphOps.decodeFromGraph                  thrpt   20  62423,539 ± 408,686  ops/s
+  * GraphOps.parseRemoveFromSet               thrpt   20   1420,970 ±   2,481  ops/s
+  * GraphOps.parseRemoveOriginal              thrpt   20    186,158 ±   0,346  ops/s
+  * GraphOps.parseRemoveOriginalWithFunction  thrpt   20   1871,456 ± 107,865  ops/s
   */
 @State(Scope.Thread)
 class GraphOps extends Resources {
@@ -107,7 +110,6 @@ class GraphOps extends Resources {
       case _ => false
     }
     val _ = graph -- Graph(triples)
-
   }
 
   @Benchmark
@@ -127,7 +129,6 @@ class GraphOps extends Resources {
           p == rdf.rest
     )
   }
-
 }
 
 object GraphOps {
@@ -150,5 +151,4 @@ object GraphOps {
     val includeDeprecated = base + "includeDeprecated"
   }
   implicit def prefixIriToIriNodeF(iri: AbsoluteIri): IriNode => Boolean = _ == IriNode(iri)
-
 }
