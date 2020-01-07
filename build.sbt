@@ -38,6 +38,7 @@ val topBraidVersion  = "1.3.1"
 // Dependency modules
 lazy val akkaActor     = "com.typesafe.akka" %% "akka-actor"     % akkaActorVersion
 lazy val akkaHttpCore  = "com.typesafe.akka" %% "akka-http-core" % akkaHttpVersion
+lazy val alleycatsCore = "org.typelevel"     %% "alleycats-core" % catsVersion
 lazy val catsCore      = "org.typelevel"     %% "cats-core"      % catsVersion
 lazy val circeCore     = "io.circe"          %% "circe-core"     % circeVersion
 lazy val circeParser   = "io.circe"          %% "circe-parser"   % circeVersion
@@ -54,25 +55,26 @@ lazy val core = project
     name       := "rdf-core",
     moduleName := "rdf-core",
     libraryDependencies ++= Seq(
+      alleycatsCore,
       catsCore,
       parboiled2,
-      scalaTest % Test
-    )
-  )
-
-lazy val derivation = project
-  .in(file("modules/derivation"))
-  .dependsOn(core)
-  .settings(
-    name       := "rdf-derivation",
-    moduleName := "rdf-derivation",
-    libraryDependencies ++= Seq(
-      magnolia,
       circeCore    % Test,
       circeParser  % Test,
       circeLiteral % Test,
       jenaArq      % Test,
       scalaTest    % Test
+    )
+  )
+
+lazy val derivation = project
+  .in(file("modules/derivation"))
+  .dependsOn(core % "compile->compile;test->test")
+  .settings(
+    name       := "rdf-derivation",
+    moduleName := "rdf-derivation",
+    libraryDependencies ++= Seq(
+      magnolia,
+      scalaTest % Test
     )
   )
 
