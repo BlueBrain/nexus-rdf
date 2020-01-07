@@ -132,7 +132,7 @@ lazy val akka = project
 lazy val bench = project
   .in(file("modules/bench"))
   .enablePlugins(JmhPlugin)
-  .dependsOn(jsonld, jena)
+  .dependsOn(core, jsonld, jena)
   .settings(noPublish)
   .settings(
     name                       := "rdf-bench",
@@ -141,7 +141,10 @@ lazy val bench = project
     classDirectory in Jmh      := (classDirectory in Test).value,
     dependencyClasspath in Jmh := (dependencyClasspath in Test).value,
     compile in Jmh             := (compile in Jmh).dependsOn(compile in Test).value,
-    run in Jmh                 := (run in Jmh).dependsOn(Keys.compile in Jmh).evaluated
+    run in Jmh                 := (run in Jmh).dependsOn(Keys.compile in Jmh).evaluated,
+    libraryDependencies ++= Seq(
+      scalaTest % Test
+    )
   )
 
 lazy val rdf = project
