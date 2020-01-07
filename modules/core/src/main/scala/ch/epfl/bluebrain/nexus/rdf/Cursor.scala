@@ -1,14 +1,18 @@
 package ch.epfl.bluebrain.nexus.rdf
 
-import ch.epfl.bluebrain.nexus.rdf.Cursor.SCursor
-import ch.epfl.bluebrain.nexus.rdf.CursorOp._
-import ch.epfl.bluebrain.nexus.rdf.Node.IriNode
-import ch.epfl.bluebrain.nexus.rdf.Vocabulary.rdf
+import ch.epfl.bluebrain.nexus.rdf.Node.{IriNode, IriOrBNode, Literal}
 
 import scala.annotation.tailrec
 
-@SuppressWarnings(Array("NullParameter"))
-sealed abstract class Cursor(private val lastCursor: SCursor, private val lastOp: CursorOp) extends Serializable {
+/**
+  * A zipper that represents a position in a Graph and supports navigation. The implementation is inspired from the
+  * circe project (https://github.com/circe/circe) but it's limited to traversals only, no modifications.
+  *
+  * @param lastCursor the previous cursor
+  * @param lastOp the previous operation
+  * @param g the target graph
+  */
+sealed abstract class Cursor(private val lastCursor: Cursor, private val lastOp: CursorOp, private val g: Graph) {
 
   /**
     * The current node in the graph
@@ -16,260 +20,224 @@ sealed abstract class Cursor(private val lastCursor: SCursor, private val lastOp
   def focus: Option[Node]
 
   /**
-    * The operations that have been performed so far from the first to the more recent.
+    * If the focus is a set of nodes return its elements.
     */
-  def history: List[CursorOp] = {
-    @tailrec
-    def inner(cursor: Cursor, acc: List[CursorOp]): List[CursorOp] =
-      if (cursor.lastCursor == null) acc
-      else inner(cursor.lastCursor, cursor.lastOp :: acc)
-
-    inner(this, List.empty)
-  }
+  def values: Option[Set[Node]]
 
   /**
-    * Indicate whether this cursor represents the result of a successful
-    * operation.
+    * If the focus is a set of nodes return a set of cursors positioned on each of the nodes.
+    */
+  def cursors: Option[Set[Cursor]]
+
+  /**
+    * If the focus is a set of nodes with a single value, return the cursor for the underlying node. Otherwise return
+    * a failed cursor.
+    */
+  def narrow: Cursor
+
+  /**
+    * Indicate whether this cursor represents the result of a successful operation.
     */
   def succeeded: Boolean
 
   /**
-    * Indicate whether this cursor represents the result of an unsuccessful
-    * operation.
+    * Indicate whether this cursor represents the result of a failed operation.
     */
-  final def failed: Boolean = !succeeded
+  def failed: Boolean = !succeeded
 
   /**
-    * If the focus is a Node array, return its elements.
+    * Return the top cursor with an empty history.
     */
-  def values: Option[Iterable[Node]]
-
-  /**
-    * The top cursor
-    */
-  def top: Cursor
+  def top: Cursor =
+    Cursor(g)
 
   /**
     * Move the focus to the parent.
     */
-  def up: Cursor
+  def parent: Cursor =
+    lastCursor
 
   /**
-    * If the focus is a Node set, return the set of [[Cursor]] resulting from it
+    * Move the focus to the `subject` node that satisfies the relationship `subject p focus`. Fails if there are no
+    * matches or more than one.
     */
-  def downSet: Set[Cursor]
+  def up(p: IriNode): Cursor
 
   /**
-    * If the focus is a Node list, return the set of [[Cursor]] resulting from it
+    * Move the focus to all `subject` nodes that satisfy the relationship `subject p focus`.
     */
-  def downList: List[Cursor]
+  def upSet(p: IriNode): Cursor
 
   /**
-    * If the focus is a Node array, move to the node that satisfies the given function.
+    * Move the focus to the `object` node that satisfies the relationship `focus p object`. Fails if there are no
+    * matches or more than one.
     */
-  def downAt(o: Node => Boolean): Cursor
+  def down(p: IriNode): Cursor
 
   /**
-    * If the focus is a Node, move to a sibling that satisfies the given predicate.
+    * Move the focus to all `object` nodes that satisfy the relationship `focus p object`.
     */
-  def field(p: IriNode => Boolean): Cursor
+  def downSet(p: IriNode): Cursor
 
   /**
-    * If the focus is a Node, move to the value that satisfies the given predicate.
+    * The operations that have been performed so far from the first to the more recent.
     */
-  def downField(p: IriNode => Boolean): Cursor
+  def history: List[CursorOp] = {
+    @tailrec
+    @SuppressWarnings(Array("NullParameter"))
+    def inner(cursor: Cursor, acc: List[CursorOp]): List[CursorOp] =
+      if (cursor.lastCursor == null) acc
+      else inner(cursor.lastCursor, cursor.lastOp :: acc)
+    inner(this, List.empty)
+  }
+
+  /**
+    * Attempts to decode the current focus or values a an `A`.
+    */
+  def as[A](implicit A: Decoder[A]): Decoder.Result[A] =
+    A(this)
 }
 
-@SuppressWarnings(Array("NullParameter"))
 object Cursor {
-  private[rdf] sealed abstract class SCursor(val lastCursor: SCursor, lastOp: CursorOp)
-      extends Cursor(lastCursor, lastOp) {
-
-    protected[this] final def fail(op: CursorOp): Cursor = new FailedCursor(this, op)
-
-    def addOp(cursor: SCursor, op: CursorOp): SCursor
-
-    def succeeded: Boolean = true
-
-    def downAt(o: Node => Boolean): Cursor = fail(DownAt(o))
-
-    def downSet: Set[Cursor] = Set.empty
-
-    def downList: List[Cursor] = List.empty
-
-    private def fetchTop: Cursor = {
-      @tailrec
-      def inner(cursor: Cursor): Cursor =
-        if (cursor == null)
-          fail(MoveTop)
-        else
-          cursor match {
-            case c: TopCursor => c
-            case _            => inner(cursor.lastCursor)
-          }
-
-      inner(this)
-    }
-
-    def top: Cursor = fetchTop match {
-      case t: TopCursor => t.addOp(this, MoveTop)
-      case o            => o
-    }
-  }
-
-  private[rdf] sealed abstract class FieldCursor(lastCursor: SCursor, lastOp: CursorOp, g: Graph)
-      extends SCursor(lastCursor, lastOp) {
-
-    protected[this] def downField(obj: Node, p: IriNode => Boolean): Cursor = {
-      val objects = g.select(obj, p)
-      objects.toList match {
-        case (_, _, o) :: Nil =>
-          sortedListCursors(o) match {
-            case Some(nodes) => new ListNodeCursorSel(obj, nodes, this)(this, DownField(p), g)
-            case None        => new NodeCursor(obj, o, this)(this, DownField(p), g)
-          }
-        case Nil => fail(DownField(p))
-        case _   => new SetNodeCursorSel(obj, objects.map { case (_, _, o) => o }, this)(this, DownField(p), g)
-      }
-    }
-
-    protected[this] def field(subject: Node, p: IriNode => Boolean, parent: SCursor): Cursor = {
-      val objects = g.select(subject, p)
-      objects.toList match {
-        case (_, _, o) :: Nil => new NodeCursor(subject, o, parent)(this, Field(p), g)
-        case Nil              => fail(Field(p))
-        case _ =>
-          new SetNodeCursorSel(subject, objects.map { case (_, _, o) => o }, parent)(this, Field(p), g)
-      }
-    }
-
-    private def sortedListCursors(current: Node): Option[List[Node]] =
-      (g.select(current, rdf.first).toList, g.select(current, rdf.rest).toList) match {
-        case ((_, _, o1) :: Nil, (_, _, o2) :: Nil) if o2.asIri.map(_.value).contains(rdf.nil) => Some(List(o1))
-        case ((_, _, o1) :: Nil, (_, _, o2) :: Nil)                                            => sortedListCursors(o2).map(o1 :: _)
-        case _                                                                                 => None
-      }
-  }
-
-  private[rdf] final class TopCursor(obj: Node)(lastCursor: SCursor, lastOp: CursorOp, graph: Graph)
-      extends FieldCursor(lastCursor, lastOp, graph) {
-
-    def focus: Option[Node]                           = Some(obj)
-    def values: Option[Iterable[Node]]                = focus.map(List(_))
-    def up: Cursor                                    = fail(MoveUp)
-    def field(p: IriNode => Boolean): Cursor          = fail(Field(p))
-    def addOp(cursor: SCursor, op: CursorOp): SCursor = new TopCursor(obj)(cursor, op, graph)
-    def downField(p: IriNode => Boolean): Cursor      = downField(obj, p)
-    override def top: Cursor                          = fail(MoveTop)
-  }
-  private[rdf] final class NodeCursor(subject: Node, obj: Node, parent: SCursor)(
-      lastCursor: SCursor,
-      lastOp: CursorOp,
-      graph: Graph
-  ) extends FieldCursor(lastCursor, lastOp, graph) {
-
-    def field(p: IriNode => Boolean): Cursor          = field(subject, p, parent)
-    def focus: Option[Node]                           = Some(obj)
-    def values: Option[Iterable[Node]]                = focus.map(List(_))
-    def addOp(cursor: SCursor, op: CursorOp): SCursor = new NodeCursor(subject, obj, parent)(cursor, op, graph)
-    def downField(p: IriNode => Boolean): Cursor      = downField(obj, p)
-    def up: Cursor                                    = parent.addOp(this, MoveUp)
-    override def downSet: Set[Cursor]                 = Set(this)
-
-  }
-
-  private[rdf] final class SetNodeCursorSel(subject: Node, obj: Set[Node], parent: SCursor)(
-      lastCursor: SCursor,
-      lastOp: CursorOp,
-      graph: Graph
-  ) extends FieldCursor(lastCursor, lastOp, graph) {
-
-    def field(p: IriNode => Boolean): Cursor = field(subject, p, parent)
-
-    override def downSet: Set[Cursor] =
-      obj.map(new NodeCursorArrayElem(subject, _, this)(this, DownSet, graph))
-
-    override def downAt(o: Node => Boolean): Cursor =
-      obj.find(o) match {
-        case None       => fail(DownAt(o))
-        case Some(node) => new NodeCursorArrayElem(subject, node, this)(this, DownAt(o), graph)
-      }
-
-    def focus: Option[Node]                           = None
-    def values: Option[Iterable[Node]]                = Some(obj)
-    def addOp(cursor: SCursor, op: CursorOp): SCursor = new SetNodeCursorSel(subject, obj, parent)(cursor, op, graph)
-    def downField(p: IriNode => Boolean): Cursor      = fail(DownField(p))
-    def up: Cursor                                    = parent.addOp(this, MoveUp)
-
-  }
-
-  private[rdf] final class ListNodeCursorSel(subject: Node, obj: List[Node], parent: SCursor)(
-      lastCursor: SCursor,
-      lastOp: CursorOp,
-      graph: Graph
-  ) extends FieldCursor(lastCursor, lastOp, graph) {
-
-    def field(p: IriNode => Boolean): Cursor = field(subject, p, parent)
-
-    override def downList: List[Cursor] =
-      obj.map(new NodeCursorArrayElem(subject, _, this)(this, DownList, graph))
-
-    override def downSet: Set[Cursor] =
-      downList.toSet
-
-    override def downAt(o: Node => Boolean): Cursor =
-      obj.find(o) match {
-        case None       => fail(DownAt(o))
-        case Some(node) => new NodeCursorArrayElem(subject, node, this)(this, DownAt(o), graph)
-      }
-
-    def focus: Option[Node]                           = None
-    def values: Option[Iterable[Node]]                = Some(obj)
-    def addOp(cursor: SCursor, op: CursorOp): SCursor = new ListNodeCursorSel(subject, obj, parent)(cursor, op, graph)
-    def downField(p: IriNode => Boolean): Cursor      = fail(DownField(p))
-    def up: Cursor                                    = parent.addOp(this, MoveUp)
-
-  }
-
-  private[rdf] final class NodeCursorArrayElem(subject: Node, obj: Node, parent: SCursor)(
-      lastCursor: SCursor,
-      lastOp: CursorOp,
-      graph: Graph
-  ) extends FieldCursor(lastCursor, lastOp, graph) {
-
-    def focus: Option[Node]                           = Some(obj)
-    def values: Option[Iterable[Node]]                = focus.map(List(_))
-    def field(p: IriNode => Boolean): Cursor          = fail(Field(p))
-    def addOp(cursor: SCursor, op: CursorOp): SCursor = new NodeCursorArrayElem(subject, obj, parent)(cursor, op, graph)
-    def downField(p: IriNode => Boolean): Cursor      = downField(obj, p)
-    def up: Cursor                                    = parent.addOp(this, MoveUp)
-    override def downSet: Set[Cursor]                 = Set(this)
-
-  }
-
-  private[rdf] final class FailedCursor(lastCursor: SCursor, lastOp: CursorOp) extends Cursor(lastCursor, lastOp) {
-    def focus: Option[Node]                      = None
-    def succeeded: Boolean                       = false
-    def values: Option[Iterable[Node]]           = None
-    def top: Cursor                              = this
-    def up: Cursor                               = this
-    def downAt(o: Node => Boolean): Cursor       = this
-    def field(p: IriNode => Boolean): Cursor     = this
-    def downField(p: IriNode => Boolean): Cursor = this
-    def downSet: Set[Cursor]                     = Set.empty
-    def downList: List[Cursor]                   = List.empty
-  }
 
   /**
-    * Construct an initial cursor from the provided ''node''
-    *
-    * @param g    the [[Graph]] to traverse
+    * Creates the default cursor for the argument Graph by positioning the cursor on the graph anchor node.
     */
-  final def apply(g: Graph): Cursor =
-    new TopCursor(g.node)(null, null, g)
+  @SuppressWarnings(Array("NullParameter"))
+  final def apply(graph: Graph): Cursor =
+    NodeCursor(graph.node, null, null, graph)
 
-  /**
-    * @return an initial failed cursor
-    */
-  final def failed: Cursor = new FailedCursor(null, null)
+  private[this] final case class NodeCursor(node: Node, lastCursor: Cursor, lastOp: CursorOp, g: Graph)
+      extends Cursor(lastCursor, lastOp, g) {
+
+    override def focus: Option[Node]          = Some(node)
+    override def values: Option[Set[Node]]    = None
+    override def cursors: Option[Set[Cursor]] = None
+    override def narrow: Cursor               = this
+    override def succeeded: Boolean           = true
+
+    override def up(p: IriNode): Cursor = {
+      val ss = g.selectReverse(node, p)
+      ss.take(2).toList match {
+        case s :: Nil => NodeCursor(s, this, CursorOp.Up(p), g)
+        case _        => FailedCursor(this, CursorOp.Up(p), g)
+      }
+    }
+
+    override def upSet(p: IriNode): Cursor = {
+      val ss = g.selectReverse(node, p)
+      val cs = ss.map(s => NodeCursor(s, this, CursorOp.UpSet(p), g))
+      SetCursor(cs, this, CursorOp.UpSet(p), g)
+    }
+
+    override def down(p: IriNode): Cursor = node match {
+      case s: IriOrBNode =>
+        val os = g.select(s, p)
+        os.take(2).toList match {
+          case o :: Nil => NodeCursor(o, this, CursorOp.Down(p), g)
+          case _        => FailedCursor(this, CursorOp.Down(p), g)
+        }
+      case _: Literal => FailedCursor(this, CursorOp.Down(p), g)
+    }
+
+    override def downSet(p: IriNode): Cursor = node match {
+      case s: IriOrBNode =>
+        val os = g.select(s, p)
+        val cs = os.map(o => NodeCursor(o, this, CursorOp.DownSet(p), g))
+        SetCursor(cs, this, CursorOp.DownSet(p), g)
+      case _: Literal => FailedCursor(this, CursorOp.DownSet(p), g)
+    }
+
+  }
+
+  private[this] final case class FailedCursor(lastCursor: Cursor, lastOp: CursorOp, g: Graph)
+      extends Cursor(lastCursor, lastOp, g) {
+    override def focus: Option[Node]          = None
+    override def values: Option[Set[Node]]    = None
+    override def cursors: Option[Set[Cursor]] = None
+    override def narrow: Cursor               = this
+    override def succeeded: Boolean           = false
+    override def up(p: IriNode): Cursor       = FailedCursor(this, CursorOp.Up(p), g)
+    override def upSet(p: IriNode): Cursor    = FailedCursor(this, CursorOp.UpSet(p), g)
+    override def down(p: IriNode): Cursor     = FailedCursor(this, CursorOp.Down(p), g)
+    override def downSet(p: IriNode): Cursor  = FailedCursor(this, CursorOp.DownSet(p), g)
+  }
+
+  private[this] final case class SetCursor(cursorSet: Set[NodeCursor], lastCursor: Cursor, lastOp: CursorOp, g: Graph)
+      extends Cursor(lastCursor, lastOp, g) {
+
+    override def focus: Option[Node] = None
+
+    override def values: Option[Set[Node]] = {
+      val nodes = cursorSet.foldLeft(Set.empty[Node]) {
+        case (set, c) =>
+          c.focus match {
+            case Some(n) => set + n
+            case None    => set
+          }
+      }
+      Some(nodes)
+    }
+
+    override def cursors: Option[Set[Cursor]] =
+      Some(cursorSet.asInstanceOf[Set[Cursor]])
+
+    override def narrow: Cursor =
+      cursorSet.take(2).toList match {
+        case c :: Nil => c
+        case _        => FailedCursor(this, CursorOp.Narrow, g)
+      }
+
+    override def succeeded: Boolean = true
+
+    override def up(p: IriNode): Cursor = {
+      val cs = cursorSet.foldLeft(Set.empty[NodeCursor]) {
+        case (set, c) =>
+          val ss = g.selectReverse(c.node, p)
+          ss.take(2).toList match {
+            case s :: Nil => set + NodeCursor(s, c, CursorOp.Up(p), g)
+            case _        => set
+          }
+      }
+      SetCursor(cs, this, CursorOp.Up(p), g)
+    }
+
+    override def upSet(p: IriNode): Cursor = {
+      val cs = cursorSet.foldLeft(Set.empty[NodeCursor]) {
+        case (set, c) =>
+          val ss = g.selectReverse(c.node, p)
+          set union ss.map(s => NodeCursor(s, c, CursorOp.UpSet(p), g))
+      }
+      SetCursor(cs, this, CursorOp.UpSet(p), g)
+    }
+
+    override def down(p: IriNode): Cursor = {
+      val cs = cursorSet.foldLeft(Set.empty[NodeCursor]) {
+        case (set, c) =>
+          c.node match {
+            case s: IriOrBNode =>
+              val os = g.select(s, p)
+              os.take(2).toList match {
+                case o :: Nil => set + NodeCursor(o, c, CursorOp.Down(p), g)
+                case _        => set
+              }
+            case _ => set
+          }
+      }
+      SetCursor(cs, this, CursorOp.Down(p), g)
+    }
+
+    override def downSet(p: IriNode): Cursor = {
+      val cs = cursorSet.foldLeft(Set.empty[NodeCursor]) {
+        case (set, c) =>
+          c.node match {
+            case s: IriOrBNode =>
+              val os = g.select(s, p)
+              set union os.map(o => NodeCursor(o, c, CursorOp.Down(p), g))
+            case _ => set
+          }
+      }
+      SetCursor(cs, this, CursorOp.Down(p), g)
+    }
+  }
 }

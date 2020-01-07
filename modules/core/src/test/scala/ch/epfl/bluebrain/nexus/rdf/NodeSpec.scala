@@ -2,6 +2,7 @@ package ch.epfl.bluebrain.nexus.rdf
 
 import cats.kernel.Eq
 import cats.syntax.show._
+import ch.epfl.bluebrain.nexus.rdf.syntax.all._
 import ch.epfl.bluebrain.nexus.rdf.Node.IriOrBNode
 import ch.epfl.bluebrain.nexus.rdf.Node.Literal.LanguageTag
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
@@ -13,6 +14,7 @@ class NodeSpec extends RdfSpec {
       val cases = List("a", "a-_", "a123")
       forAll(cases) { el =>
         Node.blank(el).rightValue
+        b"$el"
       }
     }
     "fail to construct" in {

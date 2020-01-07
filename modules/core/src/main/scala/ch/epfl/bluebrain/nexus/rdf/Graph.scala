@@ -115,6 +115,12 @@ sealed abstract class Graph extends Product with Serializable {
   ): Set[Triple] =
     selectAs(s, p, o, identity)
 
+  def select(s: IriOrBNode, p: IriNode): Set[Node] =
+    spToO.getOrElse((s, p), Set.empty)
+
+  def selectReverse(o: Node, p: IriNode): Set[IriOrBNode] =
+    opToS.getOrElse((o, p), Set.empty)
+
   def cursor: Cursor =
     Cursor(this)
 
@@ -125,6 +131,12 @@ sealed abstract class Graph extends Product with Serializable {
           b.append(s.show).append(" ").append(p.show).append(" ").append(o.show).append(" .\n")
       }
       .toString
+
+  private[rdf] lazy val spToO: Map[(IriOrBNode, IriNode), Set[Node]] =
+    triples.groupMap({ case (s, p, _) => (s, p) })({ case (_, _, o) => o })
+
+  private[rdf] lazy val opToS: Map[(Node, IriNode), Set[IriOrBNode]] =
+    triples.groupMap({ case (_, p, o) => (o, p) })({ case (s, _, _) => s })
 
   private val dotNonEscapedStringRegex = {
     val alphanum = "a-zA-Z\u0080-\u00ff_"
