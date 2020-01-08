@@ -12,10 +12,10 @@ import org.openjdk.jmh.annotations.{Benchmark, Scope, State}
   * Which means "10 iterations" "10 warmup iterations" "1 fork" "1 thread"
   *
   * Result:
-  * Benchmark                                  Mode  Cnt    Score     Error  Units
-  * GraphOps.parseRemoveFromSet               thrpt   10  725,328 ± 133,843  ops/s
-  * GraphOps.parseRemoveOriginal              thrpt   10   94,264 ±   9,212  ops/s
-  * GraphOps.parseRemoveOriginalWithFunction  thrpt   10  991,081 ±  23,164  ops/s
+  * Benchmark              Mode  Cnt     Score     Error  Units
+  * Parsing.parseAkkaUri  thrpt   10  1011,101 ± 412,756  ops/s
+  * Parsing.parseIri      thrpt   10   219,526 ±  35,304  ops/s
+  * Parsing.parseJenaIri  thrpt   10  1178,370 ± 289,768  ops/s
   */
 //noinspection TypeAnnotation
 @State(Scope.Thread)
