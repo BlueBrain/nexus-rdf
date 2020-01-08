@@ -72,15 +72,14 @@ class GraphOps {
       includeDep <- c
         .down(nxv.includeDeprecated)
         .as[Boolean]
-    } yield
-      SparqlView(
-        schemas,
-        types,
-        tag,
-        includeMeta,
-        includeDep,
-        uuid
-      )
+    } yield SparqlView(
+      schemas,
+      types,
+      tag,
+      includeMeta,
+      includeDep,
+      uuid
+    )
     val _ = view.getOrElse(throw new IllegalArgumentException)
   }
 
