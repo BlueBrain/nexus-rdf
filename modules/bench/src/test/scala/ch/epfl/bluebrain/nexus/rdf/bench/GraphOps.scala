@@ -102,7 +102,6 @@ class GraphOps {
     }
     val _ = graph -- triples
   }
-//
 }
 
 object GraphOps {
