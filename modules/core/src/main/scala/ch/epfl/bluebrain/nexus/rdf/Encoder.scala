@@ -54,33 +54,38 @@ object Encoder
   implicit final val graphEncoderContravariant: Contravariant[Encoder] = new Contravariant[Encoder] {
     override def contramap[A, B](fa: Encoder[A])(f: B => A): Encoder[B] = fa.contramap(f)
   }
-}
 
-private[rdf] abstract class IterableAsListEncoder[C[_], A](A: Encoder[A]) extends Encoder[C[A]] {
-  protected def toIterator(a: C[A]): Iterator[A]
-  override def apply(a: C[A]): Graph = {
-    val it = toIterator(a)
-    @tailrec
-    def inner(acc: Graph, head: A): Graph = {
-      if (it.hasNext) {
-        val bnode = BNode()
-        val g =
-          acc
-            .append(A(head), IriNode(rdf.first))
-            .append(IriNode(rdf.rest), bnode)
-            .withNode(bnode)
-        inner(g, it.next())
-      } else {
-        acc
-          .append(A(head), IriNode(rdf.first))
-          .append(IriNode(rdf.rest), IriNode(rdf.nil))
-      }
+  private[rdf] final def apply[C[_], A](f: C[A] => Iterator[A])(implicit A: Encoder[A]): Encoder[C[A]] =
+    new IterableAsListEncoder[C, A](A) {
+      override protected def toIterator(a: C[A]): Iterator[A] = f(a)
     }
 
-    if (it.hasNext) {
-      val bnode = BNode()
-      inner(Graph(bnode), it.next()).withNode(bnode)
-    } else Graph(IriNode(rdf.nil))
+  private[rdf] abstract class IterableAsListEncoder[C[_], A](A: Encoder[A]) extends Encoder[C[A]] {
+    protected def toIterator(a: C[A]): Iterator[A]
+    override def apply(a: C[A]): Graph = {
+      val it = toIterator(a)
+      @tailrec
+      def inner(acc: Graph, head: A): Graph = {
+        if (it.hasNext) {
+          val bnode = BNode()
+          val g =
+            acc
+              .append(A(head), IriNode(rdf.first))
+              .append(IriNode(rdf.rest), bnode)
+              .withNode(bnode)
+          inner(g, it.next())
+        } else {
+          acc
+            .append(A(head), IriNode(rdf.first))
+            .append(IriNode(rdf.rest), IriNode(rdf.nil))
+        }
+      }
+
+      if (it.hasNext) {
+        val bnode = BNode()
+        inner(Graph(bnode), it.next()).withNode(bnode)
+      } else Graph(IriNode(rdf.nil))
+    }
   }
 }
 
@@ -112,20 +117,9 @@ trait StandardEncoderInstances {
     }
   }
 
-  implicit final def graphEncodeList[A](implicit A: Encoder[A]): Encoder[List[A]] =
-    new IterableAsListEncoder[List, A](A) {
-      override protected def toIterator(a: List[A]): Iterator[A] = a.iterator
-    }
-
-  implicit final def graphEncodeVector[A](implicit A: Encoder[A]): Encoder[Vector[A]] =
-    new IterableAsListEncoder[Vector, A](A) {
-      override protected def toIterator(a: Vector[A]): Iterator[A] = a.iterator
-    }
-
-  implicit final def graphEncodeArray[A](implicit A: Encoder[A]): Encoder[Array[A]] =
-    new IterableAsListEncoder[Array, A](A) {
-      override protected def toIterator(a: Array[A]): Iterator[A] = a.iterator
-    }
+  implicit final def graphEncodeList[A](implicit A: Encoder[A]): Encoder[List[A]]     = Encoder[List, A](_.iterator)
+  implicit final def graphEncodeVector[A](implicit A: Encoder[A]): Encoder[Vector[A]] = Encoder[Vector, A](_.iterator)
+  implicit final def graphEncodeArray[A](implicit A: Encoder[A]): Encoder[Array[A]]   = Encoder[Array, A](_.iterator)
 
   implicit final def graphEncodeOption[A](implicit A: Encoder[A]): Encoder[Option[A]] = new Encoder[Option[A]] {
     override def apply(a: Option[A]): Graph =
@@ -148,9 +142,7 @@ trait RdfEncoderInstances {
 
 trait LowPriorityEncoderInstances {
   implicit final def encodeIterable[C[_], A](implicit A: Encoder[A], ev: C[A] => Iterable[A]): Encoder[C[A]] =
-    new IterableAsListEncoder[C, A](A) {
-      override protected def toIterator(a: C[A]): Iterator[A] = ev(a).iterator
-    }
+    Encoder[C, A](ca => ev(ca).iterator)
 
   implicit final def encodeFoldable[F[_], A](implicit A: Encoder[A], F: Foldable[F]): Encoder[F[A]] =
     encodeIterable[Vector, A].contramap(fa => F.foldLeft(fa, Vector.empty[A])((acc, el) => acc :+ el))

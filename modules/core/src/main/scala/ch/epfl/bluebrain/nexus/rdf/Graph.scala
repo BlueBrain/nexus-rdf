@@ -12,10 +12,16 @@ sealed abstract class Graph extends Product with Serializable {
 
   def triples: Set[Triple]
 
-  def ::(prepend: (IriOrBNode, IriNode)): Graph = {
-    val (s, p) = prepend
-    val triple = (s, p, node)
-    Graph(s, triples + triple)
+  def ::(prepend: (IriOrBNode, IriNode)): Graph = this match {
+    case SetGraph(_, graphs) =>
+      val (s, p) = prepend
+      Graph(s, graphs.map(g => (s, p, g.node)) ++ triples)
+    case OptionalGraph(None)        => this
+    case OptionalGraph(Some(graph)) => prepend :: graph
+    case _ =>
+      val (s, p) = prepend
+      val triple = (s, p, node)
+      Graph(s, triples + triple)
   }
 
   def prepend(g: Graph, predicate: IriNode): Graph = this match {
