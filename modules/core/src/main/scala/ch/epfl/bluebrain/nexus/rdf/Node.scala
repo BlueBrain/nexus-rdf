@@ -535,6 +535,8 @@ object Node extends PrimitiveNodeConversions with StandardNodeConversions with F
 
 trait PrimitiveNodeConversions {
 
+  implicit final def byteToNode(value: Byte): Node       = Literal(value)
+  implicit final def shortToNode(value: Short): Node     = Literal(value)
   implicit final def intToNode(value: Int): Node         = Literal(value)
   implicit final def longToNode(value: Long): Node       = Literal(value)
   implicit final def floatToNode(value: Float): Node     = Literal(value)
