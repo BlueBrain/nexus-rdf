@@ -2,7 +2,12 @@ package ch.epfl.bluebrain.nexus.rdf.jsonld
 
 import cats.implicits._
 import ch.epfl.bluebrain.nexus.rdf.RdfSpec
-import ch.epfl.bluebrain.nexus.rdf.jsonld.JsonLd.{CircularContextDependency, ContextNotFound, IllegalContextValue}
+import ch.epfl.bluebrain.nexus.rdf.jsonld.JsonLd.{
+  removeNestedKeys,
+  CircularContextDependency,
+  ContextNotFound,
+  IllegalContextValue
+}
 import ch.epfl.bluebrain.nexus.rdf.jsonld.syntax._
 import ch.epfl.bluebrain.nexus.rdf.syntax.all._
 import io.circe.literal._
@@ -14,7 +19,7 @@ class JsonLdSpec extends RdfSpec {
   "JsonLd" should {
     "resolve contexts" when {
       "no @context is present" in {
-        val json = json"{}"
+        val json = json"""{"someKey": "value"}"""
 
         json
           .resolveContext[Try](_ => Failure(new IllegalArgumentException))
@@ -24,7 +29,8 @@ class JsonLdSpec extends RdfSpec {
           .rightValue shouldEqual
           json"""
           {
-            "@context": {}
+            "@context": {},
+            "someKey": "value"
           }
           """
       }
@@ -103,7 +109,7 @@ class JsonLdSpec extends RdfSpec {
           .value
           .rightValue shouldEqual expected
       }
-      "when contexts are nested" in {
+      "contexts are nested" in {
         val contextUri1 = url"http://context1.example.com"
         val contextUri2 = url"http://context2.example.com"
         val json =
@@ -161,6 +167,57 @@ class JsonLdSpec extends RdfSpec {
           .value
           .rightValue shouldEqual expected
       }
+
+      "there are scoped contexts" in {
+        val contextUri = url"http://context.example.com"
+        val json =
+          json"""
+           {
+             "@context": {
+               "xsd": "http://www.default-xsd.com#"
+             },
+             "key": {
+               "@context": {
+                 "xsd": "http://www.w3.org/2001/XMLSchema#"
+               },
+               "key2": {
+                 "@context": ${contextUri.asString}
+               }
+             }
+           }
+           """
+
+        val contextValue =
+          json"""
+          {
+            "@context": {
+              "schema": "http://schema.org/"
+            }
+          }
+          """
+        val expected =
+          json"""
+          {
+            "@context": {
+              "schema": "http://schema.org/",
+              "xsd": "http://www.w3.org/2001/XMLSchema#"
+            },
+            "key": {
+              "key2": {}
+            }
+          }
+          """
+
+        json
+          .resolveContext[Try] {
+            case `contextUri` => Success(Some(contextValue))
+            case _            => Failure(new IllegalArgumentException)
+          }
+          .value
+          .success
+          .value
+          .rightValue shouldEqual expected
+      }
     }
 
     "fail to resolve" when {
@@ -210,6 +267,22 @@ class JsonLdSpec extends RdfSpec {
           .leftValue shouldEqual CircularContextDependency(List(contextUri1, contextUri2, contextUri1))
       }
 
+      "context reference is not a string" in {
+        val json =
+          json"""
+          {
+            "@context": 1
+          }
+          """
+
+        json
+          .resolveContext[Try](_ => Failure(new IllegalArgumentException))
+          .value
+          .success
+          .value
+          .leftValue shouldEqual IllegalContextValue("1")
+
+      }
       "context reference is an invalid IRI" in {
         val json =
           json"""
@@ -244,6 +317,64 @@ class JsonLdSpec extends RdfSpec {
           .success
           .value
           .leftValue shouldEqual ContextNotFound(contextUri)
+      }
+    }
+
+    "return context value" when {
+      "json is an array" in {
+        json"""
+         [
+           {
+             "@context": {
+               "xsd": "http://www.w3.org/2001/XMLSchema#"
+             }
+           },
+           {
+             "@context": {
+               "schema": "http://schema.org/"
+             }
+           }
+         ]
+         """.contextValue shouldEqual
+          json"""
+          {
+            "xsd": "http://www.w3.org/2001/XMLSchema#",
+            "schema": "http://schema.org/"
+          }
+          """
+      }
+    }
+    "remove nested keys" when {
+      "json is an array" in {
+        removeNestedKeys(
+          json"""
+         [
+           {
+             "@context": {
+               "xsd": "http://www.w3.org/2001/XMLSchema#"
+             }
+           },
+           {
+             "@context": {
+               "schema": "http://schema.org/"
+             }
+           }
+         ]
+         """,
+          "xsd"
+        ) shouldEqual
+          json"""
+          [
+            {
+              "@context": {}
+            },
+            {
+              "@context": {
+                "schema": "http://schema.org/"
+              }
+            }
+          ]
+          """
       }
     }
   }

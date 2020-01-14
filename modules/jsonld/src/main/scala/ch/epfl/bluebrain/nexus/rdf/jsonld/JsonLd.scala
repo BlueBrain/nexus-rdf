@@ -4,7 +4,7 @@ import cats.Monad
 import cats.data.EitherT
 import ch.epfl.bluebrain.nexus.rdf.Iri
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
-import io.circe.Json
+import io.circe.{Json, JsonObject}
 import io.circe.syntax._
 import cats.implicits._
 
@@ -29,7 +29,7 @@ object JsonLd {
           for {
             next  <- EitherT.fromOption[F](nextRef, IllegalContextValue(str))
             _     <- if (resolvedIds.contains(next)) EitherT.leftT[F, Unit](CircularContextDependency(next :: resolvedIds)) else EitherT.rightT[F, ContextResolutionException](())
-            res   <- resolveOrNotFound(next)
+            res   <- EitherT.fromOptionF(resolver(next), ContextNotFound(next))
             value <- inner(next :: resolvedIds, contextValue(res))
           } yield value
         // format: on
@@ -46,10 +46,7 @@ object JsonLd {
         case (_, _, Some(_)) => EitherT.rightT[F, ContextResolutionException](context)
         case (_, _, _)       => EitherT.leftT[F, Json](IllegalContextValue(context.spaces2): ContextResolutionException)
       }
-    def resolveOrNotFound(ref: AbsoluteIri): EitherT[F, ContextResolutionException, Json] =
-      EitherT.fromOptionF(resolver(ref), ContextNotFound(ref))
-
-    inner(List.empty, contextValue(json)).map(flattened => json deepMerge Json.obj("@context" -> flattened))
+    inner(List.empty, contextValue(json)).map(flattened => replaceContext(json, Json.obj("@context" -> flattened)))
   }
 
   /**
@@ -66,6 +63,34 @@ object JsonLd {
         Json.obj()
     }
 
+  /**
+    * Replaces the @context value from the provided json to the one in ''that'' json
+    *
+    * @param json the primary json
+    * @param that the json with a @context to override the @context in the provided ''json''
+    */
+  def replaceContext(json: Json, that: Json): Json =
+    removeNestedKeys(json, "@context") deepMerge Json.obj("@context" -> contextValue(that))
+
+  /**
+    * Removes the provided keys from everywhere on the json.
+    *
+    * @param json the json
+    * @param keys list of ''keys'' to be removed from the top level of the ''json''
+    * @return the original json without the provided ''keys''
+    */
+  def removeNestedKeys(json: Json, keys: String*): Json = {
+    def inner(obj: JsonObject): JsonObject =
+      JsonObject.fromIterable(
+        obj.filterKeys(!keys.contains(_)).toVector.map { case (k, v) => k -> removeNestedKeys(v, keys: _*) }
+      )
+    json.arrayOrObject[Json](
+      json,
+      arr => Json.fromValues(removeEmpty(arr.map(j => removeNestedKeys(j, keys: _*)))),
+      obj => inner(obj).asJson
+    )
+  }
+
   private def removeEmpty(arr: Seq[Json]): Seq[Json] =
     arr.filter(j => j != Json.obj() && j != Json.fromString("") && j != Json.arr())
 
@@ -74,10 +99,12 @@ object JsonLd {
       case (Some(arr), Some(thatArr), _, _) => Json.arr(removeEmpty(arr ++ thatArr): _*)
       case (_, Some(thatArr), _, _)         => Json.arr(removeEmpty(json +: thatArr): _*)
       case (Some(arr), _, _, _)             => Json.arr(removeEmpty(arr :+ that): _*)
+      // $COVERAGE-OFF$
       case (_, _, Some(str), Some(thatStr)) => Json.arr(removeEmpty(Seq(str.asJson, thatStr.asJson)): _*)
       case (_, _, Some(str), _)             => Json.arr(removeEmpty(Seq(str.asJson, that)): _*)
       case (_, _, _, Some(thatStr))         => Json.arr(removeEmpty(Seq(json, thatStr.asJson)): _*)
-      case _                                => json deepMerge that
+      // $COVERAGE-ON$
+      case _ => json deepMerge that
     }
 
   /**
@@ -86,7 +113,9 @@ object JsonLd {
     */
   sealed abstract class ContextResolutionException(val msg: String) extends Exception with Product with Serializable {
     override def fillInStackTrace(): ContextResolutionException = this
-    override def getMessage: String                             = msg
+    // $COVERAGE-OFF$
+    override def getMessage: String = msg
+    // $COVERAGE-ON$
   }
 
   /**
