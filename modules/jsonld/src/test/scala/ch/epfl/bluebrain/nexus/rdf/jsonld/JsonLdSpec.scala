@@ -2,12 +2,7 @@ package ch.epfl.bluebrain.nexus.rdf.jsonld
 
 import cats.implicits._
 import ch.epfl.bluebrain.nexus.rdf.RdfSpec
-import ch.epfl.bluebrain.nexus.rdf.jsonld.JsonLd.{
-  removeNestedKeys,
-  CircularContextDependency,
-  ContextNotFound,
-  IllegalContextValue
-}
+import ch.epfl.bluebrain.nexus.rdf.jsonld.JsonLd._
 import ch.epfl.bluebrain.nexus.rdf.jsonld.syntax._
 import ch.epfl.bluebrain.nexus.rdf.syntax.all._
 import io.circe.literal._
@@ -180,8 +175,10 @@ class JsonLdSpec extends RdfSpec {
                "@context": {
                  "xsd": "http://www.w3.org/2001/XMLSchema#"
                },
+               "key-value1": "value1",
                "key2": {
-                 "@context": ${contextUri.asString}
+                 "@context": ${contextUri.asString},
+                 "key-value2": "value2"
                }
              }
            }
@@ -203,7 +200,10 @@ class JsonLdSpec extends RdfSpec {
               "xsd": "http://www.w3.org/2001/XMLSchema#"
             },
             "key": {
-              "key2": {}
+              "key-value1": "value1",
+              "key2": {
+                "key-value2": "value2"
+              }
             }
           }
           """
@@ -345,35 +345,47 @@ class JsonLdSpec extends RdfSpec {
       }
     }
     "remove nested keys" when {
-      "json is an array" in {
+      "json contains nested keys" in {
         removeNestedKeys(
           json"""
-         [
-           {
-             "@context": {
-               "xsd": "http://www.w3.org/2001/XMLSchema#"
-             }
-           },
-           {
-             "@context": {
-               "schema": "http://schema.org/"
-             }
-           }
-         ]
+          {
+            "@context": "http://example.com/1",
+            "field1": {
+              "@context": "http://example.com/2",
+              "field2": {
+                "field3": "Other text"
+              }
+            },
+            "field3": [
+              {
+                "@context": {
+                  "xsd": "http://www.w3.org/2001/XMLSchema#"
+                }
+              },
+              {
+                "@context": "http://example.com/3",
+                "field4": 2
+              }
+            ],
+            "field5": "Some text"
+          }
          """,
-          "xsd"
+          "@context"
         ) shouldEqual
           json"""
-          [
-            {
-              "@context": {}
-            },
-            {
-              "@context": {
-                "schema": "http://schema.org/"
+          {
+            "field1" : {
+              "field2" : {
+                "field3" : "Other text"
               }
-            }
-          ]
+            },
+            "field3" : [
+              {
+                "field4" : 2
+              }
+            ],
+            "field5" : "Some text"
+          }
           """
       }
     }

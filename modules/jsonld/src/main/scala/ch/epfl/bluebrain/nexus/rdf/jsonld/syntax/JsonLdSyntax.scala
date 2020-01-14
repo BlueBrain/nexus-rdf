@@ -29,4 +29,19 @@ final class JsonLdOps(private val json: Json) extends AnyVal {
     */
   def contextValue: Json = JsonLd.contextValue(json)
 
+  /**
+    * Replaces the @context value from the provided json to the one in ''that'' json
+    *
+    * @param context the json with a @context to override the @context in the provided ''json''
+    */
+  def replaceContext(context: Json): Json = JsonLd.replaceContext(json, context)
+
+  /**
+    * Removes the provided keys from everywhere on the json.
+    *
+    * @param keys list of ''keys'' to be removed from the top level of the ''json''
+    * @return the original json without the provided ''keys''
+    */
+  def removeNestedKeys(keys: String*): Json = JsonLd.removeNestedKeys(json, keys: _*)
+
 }
