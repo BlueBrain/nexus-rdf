@@ -2,7 +2,7 @@ package ch.epfl.bluebrain.nexus.rdf.derivation
 
 import ch.epfl.bluebrain.nexus.rdf.Decoder.Result
 import ch.epfl.bluebrain.nexus.rdf.Node.IriNode
-import ch.epfl.bluebrain.nexus.rdf.{Cursor, Decoder, DecodingFailure}
+import ch.epfl.bluebrain.nexus.rdf.{Cursor, Decoder, DecodingError}
 import magnolia.{CaseClass, SealedTrait}
 
 private[derivation] object MagnoliaDecoder {
@@ -42,10 +42,10 @@ private[derivation] object MagnoliaDecoder {
             sealedTrait.subtypes.find(st => values.contains(IriNode(config.base + st.typeName.short))) match {
               case Some(st) => st.typeclass.apply(c)
               case None =>
-                Left(DecodingFailure(s"Unable to find type discriminator for ${sealedTrait.typeName.short}", c.history))
+                Left(DecodingError(s"Unable to find type discriminator for ${sealedTrait.typeName.short}", c.history))
             }
           case None =>
-            Left(DecodingFailure(s"Unable to find type discriminator for ${sealedTrait.typeName.short}", c.history))
+            Left(DecodingError(s"Unable to find type discriminator for ${sealedTrait.typeName.short}", c.history))
         }
       }
     }

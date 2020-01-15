@@ -38,5 +38,7 @@
     "value": 3
   },
   "duration": "Inf",
-  "finiteDuration": "3 minutes"
+  "finiteDuration": "3 minutes",
+  "instant": "2019-05-29T09:09:22.754Z",
+  "period": "P2Y3M4D"
 }
