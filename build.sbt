@@ -80,14 +80,15 @@ lazy val derivation = project
 
 lazy val jsonld = project
   .in(file("modules/jsonld"))
-  .dependsOn(core)
+  .dependsOn(core % "compile->compile;test->test")
   .settings(
     name       := "rdf-jsonld",
     moduleName := "rdf-jsonld",
     libraryDependencies ++= Seq(
       circeCore,
       circeParser,
-      scalaTest % Test
+      circeLiteral % Test,
+      scalaTest    % Test
     )
   )
 
