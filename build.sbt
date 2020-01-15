@@ -80,7 +80,7 @@ lazy val derivation = project
 
 lazy val jsonld = project
   .in(file("modules/jsonld"))
-  .dependsOn(core % "compile->compile;test->test")
+  .dependsOn(core % "compile->compile;test->test", jena)
   .settings(
     name       := "rdf-jsonld",
     moduleName := "rdf-jsonld",
@@ -94,7 +94,7 @@ lazy val jsonld = project
 
 lazy val jena = project
   .in(file("modules/jena"))
-  .dependsOn(jsonld, core % "test->test")
+  .dependsOn(core % "compile->compile;test->test")
   .settings(
     name                     := "rdf-jena-compat",
     moduleName               := "rdf-jena-compat",
