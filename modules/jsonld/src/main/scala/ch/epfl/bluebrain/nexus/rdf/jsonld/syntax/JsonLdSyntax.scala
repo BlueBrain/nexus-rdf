@@ -3,7 +3,7 @@ package ch.epfl.bluebrain.nexus.rdf.jsonld.syntax
 import cats.Monad
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.jsonld.JsonLd
-import ch.epfl.bluebrain.nexus.rdf.jsonld.JsonLd.ContextResolutionError
+import ch.epfl.bluebrain.nexus.rdf.jsonld.JsonLd.{ContextResolutionError, IdRetrievalError}
 import io.circe.Json
 
 trait JsonLdSyntax {
@@ -36,11 +36,77 @@ final class JsonLdOps(private val json: Json) extends AnyVal {
   def replaceContext(context: Json): Json = JsonLd.replaceContext(json, context)
 
   /**
+    * Replaces the top @context value from the provided json to the provided ''iri''
+    *
+    * @param iri  the iri which overrides the existing json
+    */
+  def replaceContext(iri: AbsoluteIri): Json = JsonLd.replaceContext(json, iri)
+
+  /**
     * Removes the provided keys from everywhere on the json.
     *
     * @param keys list of ''keys'' to be removed from the top level of the ''json''
     * @return the original json without the provided ''keys''
     */
   def removeNestedKeys(keys: String*): Json = JsonLd.removeNestedKeys(json, keys: _*)
+
+  /**
+    * Adds or merges a context URI to an existing JSON object.
+    *
+    * @param context the standard context URI
+    * @return a new JSON object
+    */
+  def addContext(context: AbsoluteIri): Json = JsonLd.addContext(json, context)
+
+  /**
+    * @param  context the context to merge with this context . E.g.: {"@context": {...}}
+    * @return a new Json with the values of the ''@context'' key (this) and the provided ''that'' top ''@context'' key
+    *         If two keys inside both contexts collide, the one in the ''other'' context will override the one in this context
+    */
+  def mergeContext(context: Json): Json = JsonLd.mergeContext(json, context)
+
+  /**
+    * @param that the context to append to this json. E.g.: {"@context": {...}}
+    * @return a new Json with the original context plus the provided context
+    */
+  def appendContextOf(that: Json): Json = JsonLd.appendContextOf(json, that)
+
+  /**
+    * Filter out context which are strings/iris as Jena doesn't  handle them. Other invalid contexts(booleans, numbers) etc.
+    * will by handled by Jena and cause an error.
+    *
+    * @return the context in the form {"@context": {...}}. The values that are not inside the key @context are dropped
+    */
+  def removeContextIris: Json = JsonLd.removeContextIris(json)
+
+  /**
+    * Attempts to find the top `@id` value on the provided json.
+    *
+    * @return Right(iri) if found, Left(error) otherwise
+    */
+  def id: Either[IdRetrievalError, AbsoluteIri] = JsonLd.id(json)
+
+  /**
+    * Adds @id value to the provided Json
+    *
+    * @param value the @id value
+    */
+  def id(value: AbsoluteIri): Json = JsonLd.id(json, value)
+
+  /**
+    * Removes the provided keys from the top object on the json.
+    *
+    * @param keys list of ''keys'' to be removed from the top level of the ''json''
+    * @return the original json without the provided ''keys'' on the top level of the structure
+    */
+  def removeKeys(keys: String*): Json = JsonLd.removeKeys(json, keys: _*)
+
+  /**
+    * Retrieves the aliases on the provided ''json'' @context for the provided ''keyword''
+    *
+    * @param keyword the Json-LD keyword. E.g.: @id, @type, @container, @set
+    * @return a set of aliases found for the given keyword
+    */
+  def contextAliases(keyword: String): Set[String] = JsonLd.contextAliases(json, keyword)
 
 }
