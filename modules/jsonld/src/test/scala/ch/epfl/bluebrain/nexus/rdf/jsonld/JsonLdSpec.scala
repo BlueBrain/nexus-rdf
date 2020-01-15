@@ -18,7 +18,6 @@ class JsonLdSpec extends RdfSpec {
 
         json
           .resolveContext[Try](_ => Failure(new IllegalArgumentException))
-          .value
           .success
           .value
           .rightValue shouldEqual
@@ -54,7 +53,6 @@ class JsonLdSpec extends RdfSpec {
             case `contextUri` => Success(Some(contextValue))
             case _            => Failure(new IllegalArgumentException)
           }
-          .value
           .success
           .value
           .rightValue shouldEqual (json deepMerge contextValue)
@@ -99,7 +97,6 @@ class JsonLdSpec extends RdfSpec {
             case `contextUri` => Success(Some(contextValue))
             case _            => Failure(new IllegalArgumentException)
           }
-          .value
           .success
           .value
           .rightValue shouldEqual expected
@@ -157,7 +154,6 @@ class JsonLdSpec extends RdfSpec {
             case `contextUri2` => Success(Some(contextValue2))
             case _             => Failure(new IllegalArgumentException)
           }
-          .value
           .success
           .value
           .rightValue shouldEqual expected
@@ -213,7 +209,6 @@ class JsonLdSpec extends RdfSpec {
             case `contextUri` => Success(Some(contextValue))
             case _            => Failure(new IllegalArgumentException)
           }
-          .value
           .success
           .value
           .rightValue shouldEqual expected
@@ -261,7 +256,6 @@ class JsonLdSpec extends RdfSpec {
             case `contextUri2` => Success(Some(contextValue2))
             case _             => Failure(new IllegalArgumentException)
           }
-          .value
           .success
           .value
           .leftValue shouldEqual CircularContextDependency(List(contextUri1, contextUri2, contextUri1))
@@ -277,7 +271,6 @@ class JsonLdSpec extends RdfSpec {
 
         json
           .resolveContext[Try](_ => Failure(new IllegalArgumentException))
-          .value
           .success
           .value
           .leftValue shouldEqual IllegalContextValue("1")
@@ -293,7 +286,6 @@ class JsonLdSpec extends RdfSpec {
 
         json
           .resolveContext[Try](_ => Failure(new IllegalArgumentException))
-          .value
           .success
           .value
           .leftValue shouldEqual IllegalContextValue("notAContext")
@@ -313,7 +305,6 @@ class JsonLdSpec extends RdfSpec {
             case `contextUri` => Success(None)
             case _            => Failure(new IllegalArgumentException)
           }
-          .value
           .success
           .value
           .leftValue shouldEqual ContextNotFound(contextUri)

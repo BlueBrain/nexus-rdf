@@ -19,7 +19,7 @@ object JsonLd {
     */
   def resolveContext[F[_]: Monad](
       json: Json
-  )(resolver: AbsoluteIri => F[Option[Json]]): EitherT[F, ContextResolutionError, Json] = {
+  )(resolver: AbsoluteIri => F[Option[Json]]): F[Either[ContextResolutionError, Json]] = {
 
     def inner(resolvedIds: List[AbsoluteIri], context: Json): EitherT[F, ContextResolutionError, Json] =
       (context.asString, context.asArray, context.asObject) match {
@@ -46,7 +46,9 @@ object JsonLd {
         case (_, _, Some(_)) => EitherT.rightT[F, ContextResolutionError](context)
         case (_, _, _)       => EitherT.leftT[F, Json](IllegalContextValue(context.spaces2): ContextResolutionError)
       }
-    inner(List.empty, contextValue(json)).map(flattened => replaceContext(json, Json.obj("@context" -> flattened)))
+    inner(List.empty, contextValue(json))
+      .map(flattened => replaceContext(json, Json.obj("@context" -> flattened)))
+      .value
   }
 
   /**

@@ -1,7 +1,6 @@
 package ch.epfl.bluebrain.nexus.rdf.jsonld.syntax
 
 import cats.Monad
-import cats.data.EitherT
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.jsonld.JsonLd
 import ch.epfl.bluebrain.nexus.rdf.jsonld.JsonLd.ContextResolutionError
@@ -21,7 +20,7 @@ final class JsonLdOps(private val json: Json) extends AnyVal {
     */
   def resolveContext[F[_]: Monad](
       resolver: AbsoluteIri => F[Option[Json]]
-  ): EitherT[F, ContextResolutionError, Json] =
+  ): F[Either[ContextResolutionError, Json]] =
     JsonLd.resolveContext(json)(resolver)
 
   /**
