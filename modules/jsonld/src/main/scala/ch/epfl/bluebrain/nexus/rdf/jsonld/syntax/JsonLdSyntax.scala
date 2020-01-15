@@ -72,14 +72,6 @@ final class JsonLdOps(private val json: Json) extends AnyVal {
   def appendContextOf(that: Json): Json = JsonLd.appendContextOf(json, that)
 
   /**
-    * Filter out context which are strings/iris as Jena doesn't  handle them. Other invalid contexts(booleans, numbers) etc.
-    * will by handled by Jena and cause an error.
-    *
-    * @return the context in the form {"@context": {...}}. The values that are not inside the key @context are dropped
-    */
-  def removeContextIris: Json = JsonLd.removeContextIris(json)
-
-  /**
     * Attempts to find the top `@id` value on the provided json.
     *
     * @return Right(iri) if found, Left(error) otherwise

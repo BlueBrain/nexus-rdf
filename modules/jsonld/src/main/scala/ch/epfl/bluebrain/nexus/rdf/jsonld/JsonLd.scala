@@ -157,30 +157,6 @@ object JsonLd {
   def appendContextOf(json: Json, that: Json): Json = json deepMerge mergeContext(json, that)
 
   /**
-    * Filter out context which are strings/iris as Jena doesn't  handle them. Other invalid contexts(booleans, numbers) etc.
-    * will by handled by Jena and cause an error.
-    *
-    * @param json the json
-    * @return the context in the form {"@context": {...}}. The values that are not inside the key @context are dropped
-    */
-  def removeContextIris(json: Json): Json = {
-    if (json == Json.obj()) json
-    else {
-      val ctx = contextValue(json)
-      (ctx.asString, ctx.asArray) match {
-        case (Some(_), _) => Json.obj("@context" -> Json.obj())
-        case (_, Some(arr)) =>
-          arr.filterNot(_.isString) match {
-            case jsonObj +: IndexedSeq() => Json.obj("@context" -> jsonObj)
-            case IndexedSeq()            => Json.obj("@context" -> Json.obj())
-            case jsonArray               => Json.obj("@context" -> Json.arr(jsonArray: _*))
-          }
-        case _ => Json.obj("@context" -> ctx)
-      }
-    }
-  }
-
-  /**
     * Adds @id value to the provided Json
     *
     * @param json  the json

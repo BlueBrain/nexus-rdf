@@ -8,7 +8,6 @@ import ch.epfl.bluebrain.nexus.rdf.jsonld.syntax._
 import ch.epfl.bluebrain.nexus.rdf.syntax.all._
 import io.circe.Json
 import io.circe.literal._
-import io.circe.parser.parse
 import io.circe.syntax._
 
 import scala.util.{Failure, Success, Try}
@@ -468,17 +467,6 @@ class JsonLdSpec extends RdfSpec {
 
         json replaceContext context shouldEqual
           Json.obj("@context" -> Json.fromString(context.asString), "one" -> Json.fromInt(1), "two" -> Json.fromInt(2))
-      }
-
-      "extract the context IRI" in {
-        val context = parse("{\"@context\": \"http://schema.org/\"}").rightValue
-        context.removeContextIris shouldEqual Json.obj("@context" -> Json.obj())
-      }
-
-      "extract the context iri from an array" in {
-        val json     = jsonContentOf("/context/simple-iri-context.json")
-        val expected = jsonContentOf("/context/simple-iri-context-without-iri.json")
-        json.removeContextIris shouldEqual expected
       }
     }
 
