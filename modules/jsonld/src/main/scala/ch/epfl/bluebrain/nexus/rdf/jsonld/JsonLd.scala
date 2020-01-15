@@ -19,23 +19,23 @@ object JsonLd {
     */
   def resolveContext[F[_]: Monad](
       json: Json
-  )(resolver: AbsoluteIri => F[Option[Json]]): EitherT[F, ContextResolutionException, Json] = {
+  )(resolver: AbsoluteIri => F[Option[Json]]): EitherT[F, ContextResolutionError, Json] = {
 
-    def inner(resolvedIds: List[AbsoluteIri], context: Json): EitherT[F, ContextResolutionException, Json] =
+    def inner(resolvedIds: List[AbsoluteIri], context: Json): EitherT[F, ContextResolutionError, Json] =
       (context.asString, context.asArray, context.asObject) match {
         case (Some(str), _, _) =>
           val nextRef = Iri.absolute(str).toOption
           // format: off
           for {
             next  <- EitherT.fromOption[F](nextRef, IllegalContextValue(str))
-            _     <- if (resolvedIds.contains(next)) EitherT.leftT[F, Unit](CircularContextDependency(next :: resolvedIds)) else EitherT.rightT[F, ContextResolutionException](())
+            _     <- if (resolvedIds.contains(next)) EitherT.leftT[F, Unit](CircularContextDependency(next :: resolvedIds)) else EitherT.rightT[F, ContextResolutionError](())
             res   <- EitherT.fromOptionF(resolver(next), ContextNotFound(next))
             value <- inner(next :: resolvedIds, contextValue(res))
           } yield value
         // format: on
         case (_, Some(arr), _) =>
           EitherT(arr.traverse(j => inner(resolvedIds, j).value).map {
-            _.foldLeft[Either[ContextResolutionException, Json]](Right(Json.obj())) {
+            _.foldLeft[Either[ContextResolutionError, Json]](Right(Json.obj())) {
               case (Right(accJ), Right(json)) =>
                 Right(accJ deepMerge json)
               case (Left(rej), _) => Left(rej)
@@ -43,8 +43,8 @@ object JsonLd {
             }
           })
 
-        case (_, _, Some(_)) => EitherT.rightT[F, ContextResolutionException](context)
-        case (_, _, _)       => EitherT.leftT[F, Json](IllegalContextValue(context.spaces2): ContextResolutionException)
+        case (_, _, Some(_)) => EitherT.rightT[F, ContextResolutionError](context)
+        case (_, _, _)       => EitherT.leftT[F, Json](IllegalContextValue(context.spaces2): ContextResolutionError)
       }
     inner(List.empty, contextValue(json)).map(flattened => replaceContext(json, Json.obj("@context" -> flattened)))
   }
@@ -111,8 +111,9 @@ object JsonLd {
     * Exception signalling an error during context resolution.
     * @param msg error message
     */
-  sealed abstract class ContextResolutionException(val msg: String) extends Exception with Product with Serializable {
-    override def fillInStackTrace(): ContextResolutionException = this
+  @SuppressWarnings(Array("IncorrectlyNamedExceptions"))
+  sealed abstract class ContextResolutionError(val msg: String) extends Exception with Product with Serializable {
+    override def fillInStackTrace(): ContextResolutionError = this
     // $COVERAGE-OFF$
     override def getMessage: String = msg
     // $COVERAGE-ON$
@@ -124,7 +125,7 @@ object JsonLd {
     */
   @SuppressWarnings(Array("IncorrectlyNamedExceptions"))
   final case class CircularContextDependency(ids: List[AbsoluteIri])
-      extends ContextResolutionException(
+      extends ContextResolutionError(
         s"Context dependency graph '${ids.reverseIterator.map(_.show).to(List).mkString(" -> ")}' contains a cycle"
       )
 
@@ -134,7 +135,7 @@ object JsonLd {
     */
   @SuppressWarnings(Array("IncorrectlyNamedExceptions"))
   final case class IllegalContextValue(context: String)
-      extends ContextResolutionException(s"'$context' is not a valid @context value")
+      extends ContextResolutionError(s"'$context' is not a valid @context value")
 
   /**
     * Exception signalling that a context could not be resolved.
@@ -142,6 +143,6 @@ object JsonLd {
     */
   @SuppressWarnings(Array("IncorrectlyNamedExceptions"))
   final case class ContextNotFound(id: AbsoluteIri)
-      extends ContextResolutionException(s"Context ${id.show} could not be resolved.")
+      extends ContextResolutionError(s"Context ${id.show} could not be resolved.")
 
 }
