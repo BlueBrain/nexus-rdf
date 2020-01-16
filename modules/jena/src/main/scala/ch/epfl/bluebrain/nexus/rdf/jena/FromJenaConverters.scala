@@ -19,7 +19,7 @@ import scala.util.Try
 trait FromJenaConverters {
 
   /**
-    * Converts the argument `model` to a `Graph` using the `node` as an anchor.
+    * Converts the argument `model` to a `Graph` using the `node` as the root node.
     */
   def asRdfGraph(node: Node, model: Model): Either[String, Graph] = {
     val triples = model.listStatements().asScala.foldLeft[Either[String, Set[Triple]]](Right(Set.empty)) {
