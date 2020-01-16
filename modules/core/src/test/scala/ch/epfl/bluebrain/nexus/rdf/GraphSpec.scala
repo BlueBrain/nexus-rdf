@@ -5,7 +5,7 @@ import ch.epfl.bluebrain.nexus.rdf.Graph.{OptionalGraph, SetGraph, Triple}
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.Node.{BNode, IriNode, IriOrBNode}
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary.schema
-import ch.epfl.bluebrain.nexus.rdf.implicits._
+import ch.epfl.bluebrain.nexus.rdf.syntax.all._
 import org.scalactic.Equality
 
 class GraphSpec extends RdfSpec {

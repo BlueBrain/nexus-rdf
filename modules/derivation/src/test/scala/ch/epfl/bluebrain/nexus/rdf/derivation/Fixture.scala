@@ -6,7 +6,7 @@ import cats.implicits._
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.derivation.decoder.semiauto.deriveDecoder
 import ch.epfl.bluebrain.nexus.rdf.derivation.encoder.semiauto.deriveEncoder
-import ch.epfl.bluebrain.nexus.rdf.implicits._
+import ch.epfl.bluebrain.nexus.rdf.syntax.all._
 import ch.epfl.bluebrain.nexus.rdf.{Decoder, Encoder}
 import com.github.ghik.silencer.silent
 import io.circe.Json

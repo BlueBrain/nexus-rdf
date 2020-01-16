@@ -4,7 +4,7 @@ import java.util.UUID
 
 import ch.epfl.bluebrain.nexus.rdf.derivation.Fixture.View.{AggregateElasticSearchView, ElasticSearchView, ViewRef}
 import ch.epfl.bluebrain.nexus.rdf.derivation.Fixture.{mapping, View}
-import ch.epfl.bluebrain.nexus.rdf.implicits._
+import ch.epfl.bluebrain.nexus.rdf.syntax.all._
 import ch.epfl.bluebrain.nexus.rdf.{Decoder, RdfSpec}
 
 class MagnoliaDecoderSpec extends RdfSpec {
