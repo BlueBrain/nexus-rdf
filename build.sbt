@@ -151,7 +151,7 @@ lazy val bench = project
 lazy val rdf = project
   .in(file("."))
   .aggregate(core, derivation, jsonld, jena, shacl, akka, bench)
-  .settings(noPublish)
+  .dependsOn(core, derivation, jsonld, jena, shacl, akka)
   .settings(
     name       := "rdf",
     moduleName := "rdf"

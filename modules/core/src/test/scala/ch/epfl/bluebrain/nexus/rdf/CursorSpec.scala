@@ -4,7 +4,7 @@ import java.util.UUID
 
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary.{rdf, schema}
-import ch.epfl.bluebrain.nexus.rdf.implicits._
+import ch.epfl.bluebrain.nexus.rdf.syntax.all._
 
 class CursorSpec extends RdfSpec {
 
