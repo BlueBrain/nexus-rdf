@@ -8,7 +8,7 @@ import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Url}
 import ch.epfl.bluebrain.nexus.rdf.Node.{BNode, IriNode, IriOrBNode}
 
 /**
-  * A rooted RDF node. All vertices except the root are existential. Operations like append or prepend use the root to
+  * A rooted RDF graph. All vertices except the root are existential. Operations like append or prepend use the root to
   * generate a relationship as a triple between the graph and the node / graph that gets appended or prepended.
   */
 sealed abstract class Graph extends Product with Serializable {
