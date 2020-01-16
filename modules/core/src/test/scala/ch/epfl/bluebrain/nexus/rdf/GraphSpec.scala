@@ -263,9 +263,9 @@ class GraphSpec extends RdfSpec {
     }
 
     "replace main node" in {
-      OptionalGraph(None).withNode(id) shouldEqual Graph(id)
-      Graph(b"1").withNode(id) shouldEqual Graph(id)
-      SetGraph(b"1", Set(Graph(b"1"))).withNode(id) shouldEqual SetGraph(id, Set(Graph(b"1")))
+      OptionalGraph(None).withRoot(id) shouldEqual Graph(id)
+      Graph(b"1").withRoot(id) shouldEqual Graph(id)
+      SetGraph(b"1", Set(Graph(b"1"))).withRoot(id) shouldEqual SetGraph(id, Set(Graph(b"1")))
     }
 
     "replace a node" in {

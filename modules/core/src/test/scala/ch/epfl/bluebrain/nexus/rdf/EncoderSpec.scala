@@ -24,7 +24,7 @@ class EncoderSpec extends RdfSpec {
     "contramap" in {
       val encoder: Encoder[Int] = Contravariant[Encoder].contramap(Encoder[String])(_.toString)
       val g                     = encoder(1)
-      g.node shouldEqual Literal("1")
+      g.root shouldEqual Literal("1")
       g.triples.isEmpty shouldEqual true
     }
     "correctly encode primitives" in {
@@ -81,8 +81,8 @@ class EncoderSpec extends RdfSpec {
         val g   = Encoder[Set[Int]].apply(set)
         // a set graph of primitives has no triples
         g.triples.isEmpty shouldEqual true
-        // one of the nodes is selected as an anchor
-        set.map[Node](Literal.apply).contains(g.node) shouldEqual true
+        // one of the nodes is selected as the root
+        set.map[Node](Literal.apply).contains(g.root) shouldEqual true
         // prepending a (IriOrBNode, IriNode) pair will generate triples using the values in the set graph in object position
         val withPrependedId = (exampleIri: IriNode, schema.value: IriNode) :: g
         withPrependedId shouldEqual Graph(
@@ -99,36 +99,36 @@ class EncoderSpec extends RdfSpec {
         val g   = Encoder[Set[Int]].apply(set)
         // a set graph of primitives has no triples
         g.triples.isEmpty shouldEqual true
-        g.node shouldEqual Literal(1)
+        g.root shouldEqual Literal(1)
       }
       "the set contains a single object" in {
         val set      = Set(IntValue(url"${example}1", 1))
         val expected = Set[Triple]((url"${example}1", schema.value, 1))
         val g        = Encoder[Set[IntValue]].apply(set)
         g.triples shouldEqual expected
-        g.node shouldEqual (url"${example}1": IriNode)
+        g.root shouldEqual (url"${example}1": IriNode)
       }
       "the set is empty" in {
         Encoder[Set[IntValue]].apply(Set.empty).triples.isEmpty shouldEqual true
-        Encoder[Set[IntValue]].apply(Set.empty).node.isBlank shouldEqual true
-        Encoder[Set[Int]].apply(Set.empty).node.isBlank shouldEqual true
+        Encoder[Set[IntValue]].apply(Set.empty).root.isBlank shouldEqual true
+        Encoder[Set[Int]].apply(Set.empty).root.isBlank shouldEqual true
         Encoder[Set[Int]].apply(Set.empty).triples.isEmpty shouldEqual true
       }
     }
 
     "correctly encode a Some" in {
       val g = Encoder[Option[IntValue]].apply(Some(IntValue(exampleIri, 1)))
-      g.node shouldEqual (exampleIri: IriNode)
+      g.root shouldEqual (exampleIri: IriNode)
       g.triples shouldEqual Set[Triple]((exampleIri, schema.value, 1))
     }
     "correctly encode a None" in {
       val g = Encoder[Option[IntValue]].apply(None)
       g.triples.isEmpty shouldEqual true
-      g.node.isBlank shouldEqual true
+      g.root.isBlank shouldEqual true
     }
     "correctly encode Either" in {
-      Encoder[Either[Int, Boolean]].apply(Left(1)).node shouldEqual Literal(1)
-      Encoder[Either[Int, Boolean]].apply(Right(true)).node shouldEqual Literal(true)
+      Encoder[Either[Int, Boolean]].apply(Left(1)).root shouldEqual Literal(1)
+      Encoder[Either[Int, Boolean]].apply(Right(true)).root shouldEqual Literal(true)
     }
 
     "correctly encode sequences of objects" when {

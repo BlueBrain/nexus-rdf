@@ -72,7 +72,7 @@ object Encoder
             acc
               .append(rdf.first, A(head))
               .append(rdf.rest, bnode)
-              .withNode(bnode)
+              .withRoot(bnode)
           inner(g, it.next())
         } else {
           acc
@@ -83,7 +83,7 @@ object Encoder
 
       if (it.hasNext) {
         val bnode = BNode()
-        inner(Graph(bnode), it.next()).withNode(bnode)
+        inner(Graph(bnode), it.next()).withRoot(bnode)
       } else Graph(IriNode(rdf.nil))
     }
   }
@@ -113,7 +113,7 @@ trait StandardEncoderInstances {
   implicit final def graphEncodeSet[A](implicit A: Encoder[A]): Encoder[Set[A]] = new Encoder[Set[A]] {
     override def apply(a: Set[A]): Graph = {
       val graphs = a.map(A.apply)
-      SetGraph(graphs.headOption.map(_.node).getOrElse(BNode()), graphs)
+      SetGraph(graphs.headOption.map(_.root).getOrElse(BNode()), graphs)
     }
   }
 

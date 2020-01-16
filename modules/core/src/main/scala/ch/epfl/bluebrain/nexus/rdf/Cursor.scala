@@ -101,11 +101,11 @@ sealed abstract class Cursor(private val lastCursor: Cursor, private val lastOp:
 object Cursor {
 
   /**
-    * Creates the default cursor for the argument Graph by positioning the cursor on the graph anchor node.
+    * Creates the default cursor for the argument Graph by positioning the cursor on the graph root node.
     */
   @SuppressWarnings(Array("NullParameter"))
   final def apply(graph: Graph): Cursor =
-    NodeCursor(graph.node, null, null, graph)
+    NodeCursor(graph.root, null, null, graph)
 
   private[this] final case class NodeCursor(node: Node, lastCursor: Cursor, lastOp: CursorOp, g: Graph)
       extends Cursor(lastCursor, lastOp, g) {
