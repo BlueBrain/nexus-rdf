@@ -70,14 +70,14 @@ object Encoder
           val bnode = BNode()
           val g =
             acc
-              .append(A(head), IriNode(rdf.first))
-              .append(IriNode(rdf.rest), bnode)
+              .append(rdf.first, A(head))
+              .append(rdf.rest, bnode)
               .withNode(bnode)
           inner(g, it.next())
         } else {
           acc
-            .append(A(head), IriNode(rdf.first))
-            .append(IriNode(rdf.rest), IriNode(rdf.nil))
+            .append(rdf.first, A(head))
+            .append(rdf.rest, rdf.nil)
         }
       }
 

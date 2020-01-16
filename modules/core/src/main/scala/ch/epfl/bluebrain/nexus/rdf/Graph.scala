@@ -1,29 +1,42 @@
 package ch.epfl.bluebrain.nexus.rdf
 
+import cats.Eq
 import cats.implicits._
 import ch.epfl.bluebrain.nexus.rdf.Graph._
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path.Segment
 import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Url}
 import ch.epfl.bluebrain.nexus.rdf.Node.{BNode, IriNode, IriOrBNode}
 
+/**
+  * An RDF Graph anchored to a specific node. All vertices except the anchor are existential. Operations like append
+  * or prepend use the anchor to generate a relationship as a triple between the graph and the node / graph that gets
+  * appended or prepended.
+  */
 sealed abstract class Graph extends Product with Serializable {
 
+  /**
+    * The graph anchor. It represents the "main" node of the graph such that traversals have a default starting point.
+    */
   def node: Node
 
+  /**
+    * The collection of triples that make up this graph.
+    */
   def triples: Set[Triple]
 
-  def ::(prepend: (IriOrBNode, IriNode)): Graph = this match {
-    case SetGraph(_, graphs) =>
-      val (s, p) = prepend
-      Graph(s, graphs.map(g => (s, p, g.node)) ++ triples)
-    case OptionalGraph(None)        => this
-    case OptionalGraph(Some(graph)) => prepend :: graph
-    case _ =>
-      val (s, p) = prepend
-      val triple = (s, p, node)
-      Graph(s, triples + triple)
+  /**
+    * Adds a new triple (s, p, this.node) to this graph yielding a new one. The provided subject becomes the new graph
+    * anchor.
+    */
+  def ::(subjectAndPredicate: (IriOrBNode, IriNode)): Graph = this match {
+    case OptionalGraph(None) => this
+    case _                   => prepend(Graph(subjectAndPredicate._1), subjectAndPredicate._2)
   }
 
+  /**
+    * Merges this graph with the provided one and additionally generates a new triple (g.node, predicate, this.node)
+    * that represents a relationship between the two sub-graphs. The anchor of the resulting graph is `g.node`.
+    */
   def prepend(g: Graph, predicate: IriNode): Graph = this match {
     case SetGraph(_, graphs) =>
       g.node match {
@@ -36,61 +49,117 @@ sealed abstract class Graph extends Product with Serializable {
     case OptionalGraph(Some(graph)) =>
       graph.prepend(g, predicate)
     case _ =>
-      g.node match {
-        case s: IriOrBNode =>
-          val link = (s, predicate, node)
-          Graph(g.node, g.triples ++ triples + link)
+      g match {
+        case OptionalGraph(None) => this
         case _ =>
-          Graph(g.node, g.triples ++ triples)
+          g.node match {
+            case s: IriOrBNode =>
+              val link = (s, predicate, node)
+              Graph(g.node, g.triples ++ triples + link)
+            case _ =>
+              Graph(g.node, g.triples ++ triples)
+          }
       }
   }
 
-  def append(g: Graph, predicate: IriNode): Graph =
+  /**
+    * Merges this graph with the provided one and additionally generates a new triple (this.node, predicate, g.node)
+    * that represents a relationship between the two subgraphs. The anchor of the resulting graph is `this.node`.
+    */
+  def append(predicate: IriNode, g: Graph): Graph =
     g.prepend(this, predicate)
 
+  /**
+    * Adds a new triple (this.node, p, o) to this graph yielding a new one. The anchor is retained.
+    */
   def append(p: IriNode, o: Node): Graph =
-    node match {
-      case ibn: IriOrBNode => this + ((ibn, p, o))
-      case _               => this
+    this match {
+      case OptionalGraph(None) => this
+      case _ =>
+        node match {
+          case ibn: IriOrBNode => this + ((ibn, p, o))
+          case _               => this
+        }
     }
 
+  /**
+    * Adds the provided triple to the graph yielding a new one.
+    */
   def +(triple: Triple): Graph =
     Graph(node, triples + triple)
 
+  /**
+    * Adds the provided triples to the graph yielding a new one.
+    */
   def ++(triples: Set[Triple]): Graph =
     Graph(node, this.triples ++ triples)
 
+  /**
+    * Merges the this graph with that graph while retaining the anchor.
+    */
   def ++(that: Graph): Graph =
     ++(that.triples)
 
+  /**
+    * Removes a specific triple from the graph if it exists.
+    */
   def -(triple: Triple): Graph =
     Graph(node, triples - triple)
 
+  /**
+    * Removes the provided triples from the graph.
+    */
   def --(triples: Set[Triple]): Graph =
     Graph(node, this.triples -- triples)
 
+  /**
+    * Removes the triples of that graph from this graph.
+    */
   def --(that: Graph): Graph =
     --(that.triples)
 
+  /**
+    * The set of nodes in subject position.
+    */
   def subjects: Set[IriOrBNode] =
     triples.map(_._1)
 
+  /**
+    * The set of predicates.
+    */
   def predicates: Set[IriNode] =
     triples.map(_._2)
 
+  /**
+    * The set of nodes in object position.
+    */
   def objects: Set[Node] =
     triples.map(_._3)
 
+  /**
+    * Returns a subgraph retaining all the triples that satisfy the provided predicate.
+    */
   def filter(p: Triple => Boolean): Graph =
     Graph(node, triples.filter(p))
 
+  /**
+    * Replaces this graph anchor.
+    */
   def withNode(node: Node): Graph =
     Graph(node, triples)
 
+  /**
+    * Replaces a node in the graph.
+    */
   def replaceNode(target: IriOrBNode, value: IriOrBNode): Graph = this match {
     case _: SingleNodeGraph if target == node => SingleNodeGraph(value)
     case _: SingleNodeGraph                   => this
-    case _ =>
+    case OptionalGraph(Some(g))               => OptionalGraph(Some(g.replaceNode(target, value)))
+    case g @ OptionalGraph(None)              => g
+    case SetGraph(_, graphs) =>
+      val newNode = if (node == target) value else node
+      SetGraph(newNode, graphs.map(_.replaceNode(target, value)))
+    case _: MultiNodeGraph =>
       val newNode = if (node == target) value else node
       MultiNodeGraph(newNode, triples.map {
         case (`target`, p, `target`) => (value, p, value)
@@ -100,36 +169,33 @@ sealed abstract class Graph extends Product with Serializable {
       })
   }
 
+  /**
+    * Folds over the collection of triples.
+    */
   def foldLeft[Z](z: Z)(f: (Z, (IriOrBNode, IriNode, Node)) => Z): Z =
     triples.foldLeft(z)(f)
 
-  def selectAs[A](
-      sp: IriOrBNode => Boolean,
-      pp: IriNode => Boolean,
-      op: Node => Boolean,
-      f: Triple => A
-  ): Set[A] =
-    foldLeft(Set.empty[A]) {
-      case (acc, (s, p, o)) if sp(s) && pp(p) && op(o) => acc + f((s, p, o))
-      case (acc, _)                                    => acc
-    }
-
-  def select(
-      s: IriOrBNode => Boolean = _ => true,
-      p: IriNode => Boolean = _ => true,
-      o: Node => Boolean = _ => true
-  ): Set[Triple] =
-    selectAs(s, p, o, identity)
-
+  /**
+    * Selects all nodes in object position that form triples with the provided subject and predicate.
+    */
   def select(s: IriOrBNode, p: IriNode): Set[Node] =
     spToO.getOrElse((s, p), Set.empty)
 
+  /**
+    * Selects all nodes in subject position that form triples with the provided object and predicate.
+    */
   def selectReverse(o: Node, p: IriNode): Set[IriOrBNode] =
     opToS.getOrElse((o, p), Set.empty)
 
+  /**
+    * The default graph cursor.
+    */
   def cursor: Cursor =
     Cursor(this)
 
+  /**
+    * An n-triples representation of this graph.
+    */
   def ntriples: String =
     triples
       .foldLeft(new StringBuilder) {
@@ -151,7 +217,7 @@ sealed abstract class Graph extends Product with Serializable {
   private val dotNumeralRegex = "[-]?(.[0-9]+|[0-9]+(.[0-9]*)?)".r
 
   /**
-    * Returns DOT representation of [[Graph]].
+    * Returns a DOT representation of this graph.
     *
     * @param prefixMappings     prefix mappings to apply to IRIs.
     * @param sequenceBlankNodes whether to replace blank node IDs with sequential identifiers.
@@ -250,6 +316,9 @@ sealed abstract class Graph extends Product with Serializable {
 
 object Graph {
 
+  /**
+    * Constructs a new [[Graph]] from the provided anchor node and set of triples.
+    */
   final def apply(node: Node, triples: Set[Triple] = Set.empty): Graph =
     if (triples.isEmpty) SingleNodeGraph(node)
     else MultiNodeGraph(node, triples)
@@ -272,5 +341,10 @@ object Graph {
   private[rdf] final case class MultiNodeGraph(node: Node, triples: Set[Triple]) extends Graph
 
   type Triple = (IriOrBNode, IriNode, Node)
+
+  implicit final val graphEq: Eq[Graph] = Eq.instance {
+    case (OptionalGraph(None), OptionalGraph(None)) => true
+    case (left, right)                              => left.node == right.node && left.triples == right.triples
+  }
 
 }

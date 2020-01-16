@@ -31,7 +31,7 @@ private[derivation] object MagnoliaEncoder {
               case (g, field) =>
                 val predicate  = paramPredicateLookup(field.label)
                 val fieldGraph = field.typeclass.apply(field.dereference(a))
-                g.append(fieldGraph, predicate)
+                g.append(predicate, fieldGraph)
             }
           }
         }
@@ -42,7 +42,7 @@ private[derivation] object MagnoliaEncoder {
               case (g, field) =>
                 val predicate  = paramPredicateLookup(field.label)
                 val fieldGraph = field.typeclass.apply(field.dereference(a))
-                g.append(fieldGraph, predicate)
+                g.append(predicate, fieldGraph)
             }
           }
         }
