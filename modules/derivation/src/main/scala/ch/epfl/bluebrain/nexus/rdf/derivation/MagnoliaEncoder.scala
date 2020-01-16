@@ -31,7 +31,7 @@ private[derivation] object MagnoliaEncoder {
               case (g, field) =>
                 val predicate  = paramPredicateLookup(field.label)
                 val fieldGraph = field.typeclass.apply(field.dereference(a))
-                g.append(fieldGraph, predicate)
+                g.append(predicate, fieldGraph)
             }
           }
         }
@@ -42,7 +42,7 @@ private[derivation] object MagnoliaEncoder {
               case (g, field) =>
                 val predicate  = paramPredicateLookup(field.label)
                 val fieldGraph = field.typeclass.apply(field.dereference(a))
-                g.append(fieldGraph, predicate)
+                g.append(predicate, fieldGraph)
             }
           }
         }
@@ -54,7 +54,7 @@ private[derivation] object MagnoliaEncoder {
       override def apply(a: A): Graph =
         sealedTrait.dispatch(a) { subType =>
           val g = subType.typeclass.apply(subType.cast(a))
-          g.node match {
+          g.root match {
             case ibn: IriOrBNode =>
               val discriminatorTriple =
                 (ibn, IriNode(config.discriminatorPredicate), IriNode(config.base + subType.typeName.short))

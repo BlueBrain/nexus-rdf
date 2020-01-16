@@ -11,12 +11,12 @@ trait FromJenaSyntax {
 
     /**
       * Converts a Jena [[org.apache.jena.rdf.model.Model]] to a [[ch.epfl.bluebrain.nexus.rdf.Graph]] using the
-      * argument `node` as an anchor.
+      * argument `node` as the graph root node.
       *
-      * @param node the graph anchor
+      * @param root the graph root node
       */
-    def asRdfGraph(node: Node): Either[String, Graph] =
-      conv.asRdfGraph(node, model)
+    def asRdfGraph(root: Node): Either[String, Graph] =
+      conv.asRdfGraph(root, model)
   }
 
   implicit class ResourceAsRdf(resource: Resource) {

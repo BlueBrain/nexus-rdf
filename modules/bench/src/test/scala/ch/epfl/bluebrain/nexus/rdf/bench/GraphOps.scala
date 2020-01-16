@@ -54,7 +54,7 @@ class GraphOps {
 
   @Benchmark
   def decodeFromGraph(): Unit = {
-    val c = Graph(resolverGraph.node, resolverGraph.triples).cursor
+    val c = Graph(resolverGraph.root, resolverGraph.triples).cursor
     val view = for {
       uuid <- c.down(nxv.uuid).as[UUID]
       schemas <- c

@@ -12,7 +12,7 @@ trait ToJenaSyntax {
 
     /**
       * Converts a [[ch.epfl.bluebrain.nexus.rdf.Graph]] to a mutable Jena [[org.apache.jena.rdf.model.Model]]. The
-      * conversion is lossy as the graph anchor is lost.
+      * conversion is lossy as the graph root is lost.
       */
     def asJena: Model =
       conv.asJena(graph)
