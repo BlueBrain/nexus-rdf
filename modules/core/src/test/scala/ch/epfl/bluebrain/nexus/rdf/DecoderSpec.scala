@@ -8,7 +8,7 @@ import cats.{Applicative, FlatMap, Functor, MonadError, SemigroupK}
 import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Url, Urn}
 import ch.epfl.bluebrain.nexus.rdf.Node.{BNode, IriNode, IriOrBNode, Literal}
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary.xsd
-import ch.epfl.bluebrain.nexus.rdf.implicits._
+import ch.epfl.bluebrain.nexus.rdf.syntax.all._
 
 import scala.concurrent.duration.{Duration, FiniteDuration}
 
