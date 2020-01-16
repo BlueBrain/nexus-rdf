@@ -239,14 +239,12 @@ trait StandardDecoderInstances { this: PrimitiveDecoderInstances =>
     @tailrec
     def inner(c: Cursor, acc: Either[DecodingError, mutable.Builder[A, C[A]]]): Either[DecodingError, C[A]] =
       acc match {
-        case l @ Left(_) => l.asInstanceOf[Either[DecodingError, C[A]]]
+        case l @ Left(_)                                                  => l.asInstanceOf[Either[DecodingError, C[A]]]
+        case Right(builder) if c.narrow.as[AbsoluteIri] == Right(rdf.nil) => Right(builder.result())
         case Right(builder) =>
-          if (c.narrow.as[AbsoluteIri] == Right(rdf.nil)) Right(builder.result())
-          else {
-            val first = c.down(rdf.first).as[A]
-            val rest  = c.down(rdf.rest)
-            inner(rest, first.map(a => builder.addOne(a)))
-          }
+          val first = c.down(rdf.first).as[A]
+          val rest  = c.down(rdf.rest)
+          inner(rest, first.map(a => builder.addOne(a)))
       }
 
     Decoder.instance { c =>
