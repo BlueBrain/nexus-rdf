@@ -142,6 +142,12 @@ sealed abstract class Graph extends Product with Serializable {
     Graph(root, triples.filter(p))
 
   /**
+    * Returns a triple matching the predicate if found.
+    */
+  def find(p: Triple => Boolean): Option[Triple] =
+    triples.find(p)
+
+  /**
     * Replaces this graph root.
     */
   def withRoot(root: Node): Graph =

@@ -107,7 +107,7 @@ lazy val jena = project
 
 lazy val shacl = project
   .in(file("modules/shacl"))
-  .dependsOn(jena)
+  .dependsOn(core % "test->test", jena, jsonld)
   .settings(
     name       := "rdf-shacl",
     moduleName := "rdf-shacl",
