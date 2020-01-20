@@ -2,12 +2,13 @@ package ch.epfl.bluebrain.nexus.rdf.derivation
 
 import java.util.UUID
 
+import cats.data._
 import cats.implicits._
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.derivation.decoder.semiauto.deriveDecoder
 import ch.epfl.bluebrain.nexus.rdf.derivation.encoder.semiauto.deriveEncoder
 import ch.epfl.bluebrain.nexus.rdf.syntax.all._
-import ch.epfl.bluebrain.nexus.rdf.{Decoder, Encoder}
+import ch.epfl.bluebrain.nexus.rdf.{Decoder, Encoder, NonEmptyString}
 import com.github.ghik.silencer.silent
 import io.circe.Json
 import io.circe.literal._
@@ -15,7 +16,16 @@ import io.circe.parser._
 
 @silent
 object Fixture {
-  sealed trait View extends Product with Serializable
+  sealed trait View   extends Product with Serializable
+  sealed trait Values extends Product with Serializable
+
+  object Values {
+    final case class StringValue(id: AbsoluteIri, nonEmpty: NonEmptyString, empty: String)     extends Values
+    final case class ListValue(id: AbsoluteIri, nonEmpty: NonEmptyList[Int], empty: List[Int]) extends Values
+    final case class SetValue(id: AbsoluteIri, nonEmpty: NonEmptySet[Int], empty: Set[Int])    extends Values
+    implicit final val valuesEncoder: Encoder[Values] = deriveEncoder[Values]
+    implicit final val valuesDecoder: Decoder[Values] = deriveDecoder[Values]
+  }
 
   object View {
 

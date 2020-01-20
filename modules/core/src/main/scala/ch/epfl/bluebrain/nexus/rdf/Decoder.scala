@@ -3,8 +3,10 @@ package ch.epfl.bluebrain.nexus.rdf
 import java.time.{Instant, Period}
 import java.util.UUID
 
+import cats.data._
 import cats.{MonadError, SemigroupK}
 import cats.implicits._
+import cats.kernel.Order
 import ch.epfl.bluebrain.nexus.rdf.Decoder.Result
 import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Url, Urn}
 import ch.epfl.bluebrain.nexus.rdf.Node.{BNode, IriNode, IriOrBNode, Literal}
@@ -12,6 +14,7 @@ import ch.epfl.bluebrain.nexus.rdf.Vocabulary.rdf
 
 import scala.annotation.tailrec
 import scala.collection.Factory
+import scala.collection.immutable.SortedSet
 import scala.concurrent.duration.{Duration, FiniteDuration}
 import scala.reflect.ClassTag
 import scala.util.Try
@@ -155,12 +158,16 @@ object Decoder extends PrimitiveDecoderInstances with StandardDecoderInstances w
 }
 
 trait PrimitiveDecoderInstances {
+
   implicit final val graphDecodeString: Decoder[String] = Decoder.instance { c =>
     c.narrow.focus match {
       case Some(lit: Literal) if lit.isString => Right(lit.lexicalForm)
       case _                                  => Left(DecodingError("Unable to decode node as a literal String", c.history))
     }
   }
+
+  implicit final val graphDecodeNonEmptyString: Decoder[NonEmptyString] =
+    graphDecodeString.emap(NonEmptyString(_).toRight(s"Unable to decode node as a NonEmptyString"))
 
   implicit final val graphDecodeBoolean: Decoder[Boolean] = Decoder.instance { c =>
     c.narrow.focus match {
@@ -284,6 +291,26 @@ trait StandardDecoderInstances { this: PrimitiveDecoderInstances =>
         case Left(_)  => B(c).map(b => Right(b))
         case Right(a) => Right(Left(a))
       }
+    }
+
+  implicit final def graphDecodeNonEmptySet[A: Decoder: Order]: Decoder[NonEmptySet[A]] =
+    graphDecodeSet[A].emap { set =>
+      set.headOption match {
+        case Some(head) => Right(NonEmptySet(head, SortedSet(set.drop(1).toSeq: _*)))
+        case None       => Left(s"Unable to decode node as a NonEmptySet")
+      }
+    }
+
+  implicit final def graphDecodeNonEmptyVector[A: Decoder]: Decoder[NonEmptyVector[A]] =
+    graphDecodeVector[A].emap {
+      case head +: tail => Right(NonEmptyVector(head, tail))
+      case _            => Left(s"Unable to decode node as a NonEmptyVector")
+    }
+
+  implicit final def graphDecodeNonEmptyList[A: Decoder]: Decoder[NonEmptyList[A]] =
+    graphDecodeList[A].emap {
+      case head :: tail => Right(NonEmptyList(head, tail))
+      case _            => Left(s"Unable to decode node as a NonEmptyList")
     }
 }
 
