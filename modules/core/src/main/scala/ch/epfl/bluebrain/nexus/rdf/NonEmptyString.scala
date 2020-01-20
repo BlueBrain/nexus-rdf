@@ -20,12 +20,21 @@ final case class NonEmptyString(head: Char, rest: String) {
 object NonEmptyString {
 
   /**
-    * Attempts to create a [[NonEmptyString]]
+    * Attempts to create a [[NonEmptyString]].
     *
     * @param string the passed string value
     * @return Some(nonEmptyString) if the passed string is not empty, None otherwise
     */
   def apply(string: String): Option[NonEmptyString] =
     if (string.isBlank) None
-    else Some(NonEmptyString(string.head, string.drop(1)))
+    else Some(unsafe(string.trim))
+
+  /**
+    * Constructs a [[NonEmptyString]].
+    *
+    * @param string the passed string value
+    * @return nonEmptyString if the passed string is not empty, throwing otherwise
+    * @throws NoSuchElementException if the string is empty
+    */
+  def unsafe(string: String): NonEmptyString = NonEmptyString(string.trim.head, string.trim.drop(1))
 }
