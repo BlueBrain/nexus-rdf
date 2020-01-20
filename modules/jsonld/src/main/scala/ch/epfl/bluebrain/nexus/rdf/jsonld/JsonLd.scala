@@ -2,13 +2,22 @@ package ch.epfl.bluebrain.nexus.rdf.jsonld
 
 import cats.Monad
 import cats.data.EitherT
-import ch.epfl.bluebrain.nexus.rdf.Iri
-import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
-import io.circe.{Json, JsonObject}
-import io.circe.syntax._
 import cats.implicits._
+import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
+import ch.epfl.bluebrain.nexus.rdf.Node.{BNode, IriNode}
 import ch.epfl.bluebrain.nexus.rdf.jena.Jena
+import ch.epfl.bluebrain.nexus.rdf.jena.syntax.all._
 import ch.epfl.bluebrain.nexus.rdf.jsonld.JsonLd.IdRetrievalError.{IdNotFound, InvalidId, Unexpected}
+import ch.epfl.bluebrain.nexus.rdf.jsonld.syntax._
+import ch.epfl.bluebrain.nexus.rdf.{Decoder, DecodingError, Graph, Iri, Node}
+import com.github.jsonldjava.core.JsonLdOptions
+import io.circe.parser.parse
+import io.circe.syntax._
+import io.circe.{Json, JsonObject}
+import org.apache.jena.query.DatasetFactory
+import org.apache.jena.riot.{JsonLDWriteContext, RDFFormat, RDFWriter}
+
+import scala.util.Try
 
 object JsonLd {
 
@@ -256,6 +265,72 @@ object JsonLd {
 
     inner(contextValue(json))
   }
+
+  /**
+    * Create and instance of [[Decoder]] to decode [[Graph]] to [[Json]]
+    * @param  context the context to apply
+    * @return [[Decoder]] instance
+    */
+  def toJsonDecoder(context: Json): Decoder[Json] =
+    Decoder.instance { c =>
+      toJson(c.graph, context).leftMap(str => DecodingError(str, c.top.history))
+    }
+
+  /**
+    * Convert [[Graph]] to [[Json]] by applying provided context.
+    *
+    * @param graph   [[Graph]] to convert to [[Json]]
+    * @param context the context to apply
+    * @return [[Json]] representation of the graph or error message
+    */
+  def toJson(graph: Graph, context: Json = Json.obj()): Either[String, Json] = {
+    val jenaCleanup: JenaWriterCleanup = new JenaWriterCleanup(context)
+
+    def writeFramed: Either[String, Json] = {
+      val opts = new JsonLdOptions()
+      opts.setEmbed(true)
+      opts.setProcessingMode(JsonLdOptions.JSON_LD_1_1)
+      opts.setCompactArrays(true)
+      opts.setPruneBlankNodeIdentifiers(true)
+      val frame =
+        Json.obj("@id" -> Json.fromString(graph.root.toString)).appendContextOf(jenaCleanup.cleanFromCtx)
+      val ctx = new JsonLDWriteContext
+      ctx.setFrame(frame.noSpaces)
+      ctx.setOptions(opts)
+      val jenaModel = graph.asJena
+      Try {
+        val g = DatasetFactory.wrap(jenaModel).asDatasetGraph
+        RDFWriter.create().format(RDFFormat.JSONLD_FRAME_FLAT).source(g).context(ctx).build().asString()
+      }.toEither match {
+        case Right(jsonString) =>
+          val parsedOrErr =
+            parse(jsonString).left.map(_.message)
+          parsedOrErr
+            .map(jenaCleanup.removeSingleGraph)
+            .map(jenaCleanup.cleanFromJson(_, graph))
+            .map(_ deepMerge context)
+        case Left(message) => Left(s"error while writing Json-LD. Reason '$message'")
+      }
+    }
+
+    if (graph.triples.isEmpty)
+      Right(Json.obj())
+    else
+      graph.root match {
+        case IriNode(JenaWriterCleanup.reservedId) => writeFramed.map(removeKeys(_, "@id"))
+        case _: IriNode                            => writeFramed
+        case blank: BNode                          => toJson(graph.replaceNode(blank, JenaWriterCleanup.reservedId), context)
+        case _                                     => toJson(graph.withRoot(JenaWriterCleanup.reservedId), context)
+      }
+  }
+
+  /**
+    * Convert [[Json]] object to graph
+    * @param json [[Json]] to convert
+    * @param node [[Node]] to use as root node of the [[Graph]]
+    * @return [[Graph]] representation of this [[Json]] or error message.
+    */
+  def toGraph(json: Json, node: Node): Either[String, Graph] = Jena.parse(json.noSpaces).flatMap(_.asRdfGraph(node))
 
   private def removeEmpty(arr: Seq[Json]): Seq[Json] =
     arr.filter(j => j != Json.obj() && j != Json.fromString("") && j != Json.arr())

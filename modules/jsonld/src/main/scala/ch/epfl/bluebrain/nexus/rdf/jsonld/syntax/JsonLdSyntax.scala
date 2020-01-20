@@ -4,10 +4,22 @@ import cats.Monad
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.jsonld.JsonLd
 import ch.epfl.bluebrain.nexus.rdf.jsonld.JsonLd.{ContextResolutionError, IdRetrievalError}
+import ch.epfl.bluebrain.nexus.rdf.{Graph, Node}
 import io.circe.Json
 
 trait JsonLdSyntax {
   implicit final def contextSyntax(json: Json): JsonLdOps = new JsonLdOps(json)
+  implicit final def graphSyntax(graph: Graph): GraphOps  = new GraphOps(graph)
+}
+
+final class GraphOps(private val graph: Graph) extends AnyVal {
+
+  /**
+    * Convert [[Graph]] to [[Json]] by applying provided context.
+    * @param context  the context to apply
+    * @return [[Json]] representation of the graph or error message
+    */
+  def toJson(context: Json = Json.obj()): Either[String, Json] = JsonLd.toJson(graph, context)
 }
 
 final class JsonLdOps(private val json: Json) extends AnyVal {
@@ -100,5 +112,12 @@ final class JsonLdOps(private val json: Json) extends AnyVal {
     * @return a set of aliases found for the given keyword
     */
   def contextAliases(keyword: String): Set[String] = JsonLd.contextAliases(json, keyword)
+
+  /**
+    * Convert [[Json]] object to graph
+    * @param node [[Node]] to use as root node of the [[Graph]]
+    * @return [[Graph]] representation of this [[Json]] or error message.
+    */
+  def toGraph(node: Node): Either[String, Graph] = JsonLd.toGraph(json, node)
 
 }
