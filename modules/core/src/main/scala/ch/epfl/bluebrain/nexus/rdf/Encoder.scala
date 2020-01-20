@@ -3,6 +3,7 @@ package ch.epfl.bluebrain.nexus.rdf
 import java.time.{Instant, Period}
 import java.util.UUID
 
+import cats.data.{NonEmptyList, NonEmptySet, NonEmptyVector}
 import cats.{Contravariant, Foldable}
 import ch.epfl.bluebrain.nexus.rdf.Graph.{OptionalGraph, SetGraph}
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
@@ -91,14 +92,15 @@ object Encoder
 
 trait PrimitiveEncoderInstances {
   import Encoder.instance
-  implicit final val graphEncodeBoolean: Encoder[Boolean] = instance(value => Graph(value))
-  implicit final val graphEncodeByte: Encoder[Byte]       = instance(value => Graph(value))
-  implicit final val graphEncodeShort: Encoder[Short]     = instance(value => Graph(value))
-  implicit final val graphEncodeInt: Encoder[Int]         = instance(value => Graph(value))
-  implicit final val graphEncodeLong: Encoder[Long]       = instance(value => Graph(value))
-  implicit final val graphEncodeFloat: Encoder[Float]     = instance(value => Graph(value))
-  implicit final val graphEncodeDouble: Encoder[Double]   = instance(value => Graph(value))
-  implicit final val graphEncodeString: Encoder[String]   = instance(value => Graph(value))
+  implicit final val graphEncodeBoolean: Encoder[Boolean]               = instance(value => Graph(value))
+  implicit final val graphEncodeByte: Encoder[Byte]                     = instance(value => Graph(value))
+  implicit final val graphEncodeShort: Encoder[Short]                   = instance(value => Graph(value))
+  implicit final val graphEncodeInt: Encoder[Int]                       = instance(value => Graph(value))
+  implicit final val graphEncodeLong: Encoder[Long]                     = instance(value => Graph(value))
+  implicit final val graphEncodeFloat: Encoder[Float]                   = instance(value => Graph(value))
+  implicit final val graphEncodeDouble: Encoder[Double]                 = instance(value => Graph(value))
+  implicit final val graphEncodeString: Encoder[String]                 = instance(value => Graph(value))
+  implicit final val graphEncodeNonEmptyString: Encoder[NonEmptyString] = instance(value => Graph(value.asString))
 }
 
 trait StandardEncoderInstances {
@@ -133,6 +135,13 @@ trait StandardEncoderInstances {
         case Right(b) => B(b)
       }
     }
+
+  implicit final def graphEncodeNonEmptySet[A](implicit A: Encoder[A]): Encoder[NonEmptySet[A]] =
+    graphEncodeSet[A].contramap(_.toSortedSet)
+  implicit final def graphEncodeNonEmptyList[A](implicit A: Encoder[A]): Encoder[NonEmptyList[A]] =
+    graphEncodeList[A].contramap(_.toList)
+  implicit final def graphEncodeNonEmptyVector[A](implicit A: Encoder[A]): Encoder[NonEmptyVector[A]] =
+    graphEncodeVector[A].contramap(_.toVector)
 }
 
 trait RdfEncoderInstances {
@@ -141,6 +150,7 @@ trait RdfEncoderInstances {
 }
 
 trait LowPriorityEncoderInstances {
+
   implicit final def encodeIterable[C[_], A](implicit A: Encoder[A], ev: C[A] => Iterable[A]): Encoder[C[A]] =
     Encoder[C, A](ca => ev(ca).iterator)
 
