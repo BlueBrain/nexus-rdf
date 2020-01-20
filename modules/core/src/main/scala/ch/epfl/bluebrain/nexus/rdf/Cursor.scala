@@ -96,6 +96,11 @@ sealed abstract class Cursor(private val lastCursor: Cursor, private val lastOp:
     */
   def as[A](implicit A: Decoder[A]): Decoder.Result[A] =
     A(this)
+
+  /**
+    * Returns the Graph associated with this cursor.
+    */
+  def graph: Graph = g
 }
 
 object Cursor {
