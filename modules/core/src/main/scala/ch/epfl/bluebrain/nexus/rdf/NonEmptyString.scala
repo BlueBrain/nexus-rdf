@@ -6,7 +6,7 @@ package ch.epfl.bluebrain.nexus.rdf
   * @param head the head character
   * @param rest the rest of the string
   */
-final case class NonEmptyString(head: Char, rest: String) {
+final case class NonEmptyString private (head: Char, rest: String) {
 
   /**
     * Returns the underlying string representation

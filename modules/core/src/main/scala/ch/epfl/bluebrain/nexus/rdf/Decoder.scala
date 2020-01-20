@@ -167,7 +167,7 @@ trait PrimitiveDecoderInstances {
   }
 
   implicit final val graphDecodeNonEmptyString: Decoder[NonEmptyString] =
-    graphDecodeString.emap(NonEmptyString(_).toRight(s"Unable to decode node as a empty String"))
+    graphDecodeString.emap(NonEmptyString(_).toRight(s"Unable to decode node as a NonEmptyString"))
 
   implicit final val graphDecodeBoolean: Decoder[Boolean] = Decoder.instance { c =>
     c.narrow.focus match {
@@ -297,20 +297,20 @@ trait StandardDecoderInstances { this: PrimitiveDecoderInstances =>
     graphDecodeSet[A].emap { set =>
       set.headOption match {
         case Some(head) => Right(NonEmptySet(head, SortedSet(set.drop(1).toSeq: _*)))
-        case None       => Left(s"Unable to decode node as a empty Set")
+        case None       => Left(s"Unable to decode node as a NonEmptySet")
       }
     }
 
   implicit final def graphDecodeNonEmptyVector[A: Decoder]: Decoder[NonEmptyVector[A]] =
     graphDecodeVector[A].emap {
       case head +: tail => Right(NonEmptyVector(head, tail))
-      case _            => Left(s"Unable to decode node as a empty Vector")
+      case _            => Left(s"Unable to decode node as a NonEmptyVector")
     }
 
   implicit final def graphDecodeNonEmptyList[A: Decoder]: Decoder[NonEmptyList[A]] =
     graphDecodeList[A].emap {
       case head :: tail => Right(NonEmptyList(head, tail))
-      case _            => Left(s"Unable to decode node as a empty List")
+      case _            => Left(s"Unable to decode node as a NonEmptyList")
     }
 }
 

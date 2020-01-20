@@ -35,7 +35,7 @@ class MagnoliaDecoderSpec extends RdfSpec {
       val id        = url"http://example.com/id"
       val emptyp    = nxv.base + "empty"
       val nonEmptyp = nxv.base + "nonEmpty"
-      val idxs      = Array("String", "List", "Set")
+      val errTypes  = Array("NonEmptyString", "NonEmptyList", "NonEmptySet")
       val list = List(
         Graph(id, Set((id, rdf.tpe, nxv.base + "StringValue"), (id, emptyp, ""), (id, nonEmptyp, ""))),
         Graph(id, Set((id, rdf.tpe, nxv.base + "ListValue"), (id, emptyp, rdf.nil), (id, nonEmptyp, rdf.nil))),
@@ -44,7 +44,7 @@ class MagnoliaDecoderSpec extends RdfSpec {
       forAll(list.zipWithIndex) {
         case (graph, i) =>
           val err = Decoder[Values].apply(graph.cursor).leftValue
-          err.message shouldEqual s"Unable to decode node as a empty ${idxs(i)}"
+          err.message shouldEqual s"Unable to decode node as a ${errTypes(i)}"
       }
     }
 
