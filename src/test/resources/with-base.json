@@ -1,8 +1,0 @@
-{
-  "@context": {
-    "@base": "http://nexus.example.com/",
-    "@vocab": "http://example.com/vocab/"
-  },
-  "@id": "john-doe",
-  "@type": "Person"
-}
