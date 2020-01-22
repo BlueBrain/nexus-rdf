@@ -1,6 +1,7 @@
 package ch.epfl.bluebrain.nexus.rdf.akka
 
 import akka.http.scaladsl.model.Uri
+import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 import ch.epfl.bluebrain.nexus.rdf.Node.{BNode, IriNode, Literal}
 import ch.epfl.bluebrain.nexus.rdf.RdfSpec
 import ch.epfl.bluebrain.nexus.rdf.akka.syntax.all._
@@ -43,6 +44,24 @@ class AkkaConvertersSpec extends RdfSpec {
     }
     "convert to IriNode" in {
       Uri("http://example.com/path").asRdfNode shouldEqual IriNode(url"http://example.com/path")
+    }
+  }
+
+  "An Uri.Path" should {
+    "be converted to Iri.Path" in {
+      Uri.Path("/a/b/c/ Æ").asIriPath shouldEqual Path("/a/b/c/%20Æ").rightValue
+      Uri.Path("/a/b/c/d/").asIriPath shouldEqual Path("/a/b/c/d/").rightValue
+      Uri.Path("/").asIriPath shouldEqual Path("/").rightValue
+      Uri.Path("").asIriPath shouldEqual Path("").rightValue
+    }
+  }
+
+  "An Iri.Path" should {
+    "be converted to Uri.Path" in {
+      Path("/a/b/Æ").rightValue.asAkka shouldEqual Uri.Path("/a/b/%C3%86")
+      Path("/a/b/c/d/").rightValue.asAkka shouldEqual Uri.Path("/a/b/c/d/")
+      Path("/").rightValue.asAkka shouldEqual Uri.Path("/")
+      Path("").rightValue.asAkka shouldEqual Uri.Path("")
     }
   }
 
