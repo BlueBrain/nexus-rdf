@@ -3,8 +3,8 @@ package ch.epfl.bluebrain.nexus.rdf.akka
 import akka.http.scaladsl.model.Uri
 import cats.implicits._
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
-import ch.epfl.bluebrain.nexus.rdf.Node
 import ch.epfl.bluebrain.nexus.rdf.Node.IriNode
+import ch.epfl.bluebrain.nexus.rdf.{Iri, Node}
 
 /**
   * Conversions from rdf data types and Akka [[akka.http.scaladsl.model.Uri]].
@@ -25,4 +25,8 @@ trait ToAkkaConverters {
   def asAkka(iri: AbsoluteIri): Uri =
     Uri(iri.asUri)
 
+  /**
+    * Attempts to convert argument [[Iri.Path]] to Akka [[Uri.Path]]
+    */
+  def asAkka(path: Iri.Path): Uri.Path = Uri.Path(path.pctEncoded)
 }

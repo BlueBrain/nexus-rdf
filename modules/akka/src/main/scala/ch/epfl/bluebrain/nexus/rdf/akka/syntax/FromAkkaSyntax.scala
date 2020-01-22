@@ -1,6 +1,7 @@
 package ch.epfl.bluebrain.nexus.rdf.akka.syntax
 
 import akka.http.scaladsl.model.Uri
+import ch.epfl.bluebrain.nexus.rdf.Iri
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.Node.IriNode
 
@@ -19,6 +20,14 @@ trait FromAkkaSyntax {
       * Converts a [[Uri]] to [[AbsoluteIri]].
       */
     def asAbsoluteIri: AbsoluteIri = conv.asAbsoluteIri(uri)
+  }
+
+  implicit class AkkaPathAsIriPath(path: Uri.Path) {
+
+    /**
+      * Converts Akka [[Uri.Path]] to [[Iri.Path]]
+      */
+    def asIriPath: Iri.Path = conv.asIriPath(path)
   }
 
 }
