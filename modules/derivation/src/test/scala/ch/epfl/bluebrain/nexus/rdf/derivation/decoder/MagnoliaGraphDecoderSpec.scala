@@ -11,7 +11,7 @@ import ch.epfl.bluebrain.nexus.rdf.derivation.Fixture.{mapping, Values, View}
 import ch.epfl.bluebrain.nexus.rdf.syntax.all._
 import ch.epfl.bluebrain.nexus.rdf._
 
-class MagnoliaDecoderSpec extends RdfSpec {
+class MagnoliaGraphDecoderSpec extends RdfSpec {
 
   "A MagnoliaDecoder" should {
     "derive a Decoder for fixed ElasticSearchView" in {
@@ -28,7 +28,7 @@ class MagnoliaDecoderSpec extends RdfSpec {
         sourceAsText = Some(false)
       )
 
-      Decoder[View].apply(graph.cursor) shouldEqual Right(expected)
+      GraphDecoder[View].apply(graph.cursor) shouldEqual Right(expected)
     }
 
     "fail to Decoder Value with non allowed empty fields" in {
@@ -43,7 +43,7 @@ class MagnoliaDecoderSpec extends RdfSpec {
       )
       forAll(list.zipWithIndex) {
         case (graph, i) =>
-          val err = Decoder[Values].apply(graph.cursor).leftValue
+          val err = GraphDecoder[Values].apply(graph.cursor).leftValue
           err.message shouldEqual s"Unable to decode node as a ${errTypes(i)}"
       }
     }
@@ -62,7 +62,7 @@ class MagnoliaDecoderSpec extends RdfSpec {
       // format: on
       forAll(list) {
         case (graph, expected) =>
-          Decoder[Values].apply(graph.cursor).rightValue shouldEqual expected
+          GraphDecoder[Values].apply(graph.cursor).rightValue shouldEqual expected
       }
     }
 
@@ -80,7 +80,7 @@ class MagnoliaDecoderSpec extends RdfSpec {
         )
       )
 
-      Decoder[View].apply(graph.cursor) shouldEqual Right(expected)
+      GraphDecoder[View].apply(graph.cursor) shouldEqual Right(expected)
     }
   }
 }

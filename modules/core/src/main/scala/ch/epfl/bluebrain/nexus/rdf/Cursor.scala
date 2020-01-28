@@ -94,7 +94,7 @@ sealed abstract class Cursor(private val lastCursor: Cursor, private val lastOp:
   /**
     * Attempts to decode the current focus or values a an `A`.
     */
-  def as[A](implicit A: Decoder[A]): Decoder.Result[A] =
+  def as[A](implicit A: GraphDecoder[A]): GraphDecoder.Result[A] =
     A(this)
 
   /**

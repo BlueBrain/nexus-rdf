@@ -1,12 +1,12 @@
 package ch.epfl.bluebrain.nexus.rdf.derivation
 
 import ch.epfl.bluebrain.nexus.rdf.Node.{BNode, IriNode, IriOrBNode}
-import ch.epfl.bluebrain.nexus.rdf.{Encoder, Graph}
+import ch.epfl.bluebrain.nexus.rdf.{Graph, GraphEncoder}
 import magnolia.{CaseClass, SealedTrait}
 
-private[derivation] object MagnoliaEncoder {
+private[derivation] object MagnoliaGraphEncoder {
 
-  def combine[A](caseClass: CaseClass[Encoder, A])(implicit config: Configuration): Encoder[A] = {
+  def combine[A](caseClass: CaseClass[GraphEncoder, A])(implicit config: Configuration): GraphEncoder[A] = {
     val paramPredicateLookup = caseClass.parameters.map { p =>
       val idAnnotation = p.annotations.collectFirst {
         case ann: id => ann
@@ -25,7 +25,7 @@ private[derivation] object MagnoliaEncoder {
     paramIdLookup match {
       case Some(id) =>
         val rest = caseClass.parameters.filterNot(_ == id)
-        new Encoder[A] {
+        new GraphEncoder[A] {
           override def apply(a: A): Graph = {
             rest.foldLeft(id.typeclass.apply(id.dereference(a))) {
               case (g, field) =>
@@ -36,7 +36,7 @@ private[derivation] object MagnoliaEncoder {
           }
         }
       case None =>
-        new Encoder[A] {
+        new GraphEncoder[A] {
           override def apply(a: A): Graph = {
             caseClass.parameters.foldLeft(Graph(BNode())) {
               case (g, field) =>
@@ -49,8 +49,8 @@ private[derivation] object MagnoliaEncoder {
     }
   }
 
-  def dispatch[A](sealedTrait: SealedTrait[Encoder, A])(implicit config: Configuration): Encoder[A] =
-    new Encoder[A] {
+  def dispatch[A](sealedTrait: SealedTrait[GraphEncoder, A])(implicit config: Configuration): GraphEncoder[A] =
+    new GraphEncoder[A] {
       override def apply(a: A): Graph =
         sealedTrait.dispatch(a) { subType =>
           val g = subType.typeclass.apply(subType.cast(a))

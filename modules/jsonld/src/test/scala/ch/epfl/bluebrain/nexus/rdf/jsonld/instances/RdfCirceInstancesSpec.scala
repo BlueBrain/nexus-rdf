@@ -1,8 +1,9 @@
 package ch.epfl.bluebrain.nexus.rdf.jsonld.instances
 
 import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Path, RelativeIri, Url, Urn}
-import ch.epfl.bluebrain.nexus.rdf.{Iri, RdfSpec}
+import ch.epfl.bluebrain.nexus.rdf._
 import io.circe.Json
+import io.circe.literal._
 import io.circe.syntax._
 
 class RdfCirceInstancesSpec extends RdfSpec {
@@ -86,6 +87,21 @@ class RdfCirceInstancesSpec extends RdfSpec {
     }
     "fail to decode" in {
       Json.fromString("https://example.com").as[RelativeIri].left
+    }
+  }
+
+  "A Json" should {
+    "be encoded" in {
+      val json = json"""{"value": 3}"""
+      GraphEncoder[Json].apply(json) shouldEqual Graph("""{"value":3}""")
+    }
+    "be decoded" in {
+      val graph = Graph("""{"value":3}""")
+      GraphDecoder[Json].apply(graph.cursor).rightValue shouldEqual Json.obj("value" -> Json.fromInt(3))
+    }
+    "fail to decode" in {
+      val graph = Graph("""{"value":3, incorrect}""")
+      GraphDecoder[Json].apply(graph.cursor).leftValue
     }
   }
 }
