@@ -1,13 +1,13 @@
 package ch.epfl.bluebrain.nexus.rdf.derivation
 
-import ch.epfl.bluebrain.nexus.rdf.Decoder.Result
+import ch.epfl.bluebrain.nexus.rdf.GraphDecoder.Result
 import ch.epfl.bluebrain.nexus.rdf.Node.IriNode
-import ch.epfl.bluebrain.nexus.rdf.{Cursor, Decoder, DecodingError}
+import ch.epfl.bluebrain.nexus.rdf.{Cursor, DecodingError, GraphDecoder}
 import magnolia.{CaseClass, SealedTrait}
 
-private[derivation] object MagnoliaDecoder {
+private[derivation] object MagnoliaGraphDecoder {
 
-  def combine[A](caseClass: CaseClass[Decoder, A])(implicit config: Configuration): Decoder[A] = {
+  def combine[A](caseClass: CaseClass[GraphDecoder, A])(implicit config: Configuration): GraphDecoder[A] = {
     val paramPredicateLookup = caseClass.parameters.map { p =>
       val idAnnotation = p.annotations.collectFirst {
         case ann: id => ann
@@ -22,7 +22,7 @@ private[derivation] object MagnoliaDecoder {
       throw DerivationError("Duplicate key detected after applying transformation function for case class parameters")
     }
 
-    new Decoder[A] {
+    new GraphDecoder[A] {
       override def apply(cursor: Cursor): Result[A] =
         caseClass.constructMonadic { p =>
           if (p.label == config.idMemberName) p.typeclass.apply(cursor)
@@ -34,8 +34,8 @@ private[derivation] object MagnoliaDecoder {
     }
   }
 
-  def dispatch[A](sealedTrait: SealedTrait[Decoder, A])(implicit config: Configuration): Decoder[A] =
-    new Decoder[A] {
+  def dispatch[A](sealedTrait: SealedTrait[GraphDecoder, A])(implicit config: Configuration): GraphDecoder[A] =
+    new GraphDecoder[A] {
       override def apply(c: Cursor): Result[A] = {
         c.downSet(IriNode(config.discriminatorPredicate)).values match {
           case Some(values) =>

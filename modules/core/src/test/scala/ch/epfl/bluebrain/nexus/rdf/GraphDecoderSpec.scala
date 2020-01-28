@@ -12,7 +12,7 @@ import ch.epfl.bluebrain.nexus.rdf.syntax.all._
 
 import scala.concurrent.duration.{Duration, FiniteDuration}
 
-class DecoderSpec extends RdfSpec {
+class GraphDecoderSpec extends RdfSpec {
 
   private val id    = url"http://example.com/id"
   private val model = toJenaModel(jsonWithContext("/decoder.json"))
@@ -103,64 +103,73 @@ class DecoderSpec extends RdfSpec {
       Graph(Literal("", xsd.boolean)).cursor.as[Boolean].leftValue // illegal typed boolean
     }
     "or" in {
-      val withDefault: Decoder[String] = Decoder.graphDecodeString or Decoder.instance(_ => Right("default"))
+      val withDefault: GraphDecoder[String] = GraphDecoder.graphDecodeString or GraphDecoder.instance(
+        _ => Right("default")
+      )
       c.down(nxv"string").as[String](withDefault).rightValue shouldEqual "some string"
       c.down(nxv"int").as[String](withDefault).rightValue shouldEqual "default"
     }
     "combineK" in {
-      val withDefault = SemigroupK[Decoder].combineK(Decoder.graphDecodeString, Decoder.instance(_ => Right("default")))
+      val withDefault =
+        SemigroupK[GraphDecoder].combineK(GraphDecoder.graphDecodeString, GraphDecoder.instance(_ => Right("default")))
       c.down(nxv"string").as[String](withDefault).rightValue shouldEqual "some string"
       c.down(nxv"int").as[String](withDefault).rightValue shouldEqual "default"
     }
     "const" in {
-      Applicative[Decoder].pure(1).apply(c).rightValue shouldEqual 1
+      Applicative[GraphDecoder].pure(1).apply(c).rightValue shouldEqual 1
     }
     "map" in {
-      Functor[Decoder].map(Decoder.graphDecodeString)(_.head).apply(c.down(nxv"string")).rightValue shouldEqual 's'
+      Functor[GraphDecoder]
+        .map(GraphDecoder.graphDecodeString)(_.head)
+        .apply(c.down(nxv"string"))
+        .rightValue shouldEqual 's'
     }
     "flatMap" in {
-      implicit val customUrnDecoder: Decoder[Urn] =
-        FlatMap[Decoder].flatMap(Decoder.graphDecodeString) { str =>
-          if (str.startsWith("urn:")) Decoder.graphDecodeUrn
-          else Decoder.failed(DecodingError("String does not start with 'urn:'", Nil))
+      implicit val customUrnDecoder: GraphDecoder[Urn] =
+        FlatMap[GraphDecoder].flatMap(GraphDecoder.graphDecodeString) { str =>
+          if (str.startsWith("urn:")) GraphDecoder.graphDecodeUrn
+          else GraphDecoder.failed(DecodingError("String does not start with 'urn:'", Nil))
         }
       c.down(nxv"urn").as[Urn].rightValue
       c.down(nxv"string").as[Urn].leftValue
       c.down(nxv"int").as[Urn].leftValue
     }
     "product" in {
-      implicit val intShort: Decoder[(Int, Short)] =
-        Applicative[Decoder].product(Decoder.graphDecodeInt, Decoder.graphDecodeShort)
+      implicit val intShort: GraphDecoder[(Int, Short)] =
+        Applicative[GraphDecoder].product(GraphDecoder.graphDecodeInt, GraphDecoder.graphDecodeShort)
       c.down(nxv"int").as[(Int, Short)].rightValue shouldEqual (1 -> 1.toShort)
     }
     "raiseError" in {
       val expected = DecodingError("msg", Nil)
-      MonadError[Decoder, DecodingError].raiseError(expected).apply(c.down(nxv"int")).leftValue shouldEqual expected
+      MonadError[GraphDecoder, DecodingError]
+        .raiseError(expected)
+        .apply(c.down(nxv"int"))
+        .leftValue shouldEqual expected
     }
     "handleError" in {
-      val failed = Decoder.failed[Int](DecodingError("msg", Nil))
-      val handled = MonadError[Decoder, DecodingError].handleErrorWith(failed) { _ =>
-        Decoder.const(1)
+      val failed = GraphDecoder.failed[Int](DecodingError("msg", Nil))
+      val handled = MonadError[GraphDecoder, DecodingError].handleErrorWith(failed) { _ =>
+        GraphDecoder.const(1)
       }
       handled(c.down(nxv"string")).rightValue shouldEqual 1
     }
     "return left for DecodingError in tailrecM" in {
-      val failed  = Decoder.failed[Either[Int, String]](DecodingError("fail", Nil))
-      val decoder = MonadError[Decoder, DecodingError].tailRecM(1)(_ => failed)
+      val failed  = GraphDecoder.failed[Either[Int, String]](DecodingError("fail", Nil))
+      val decoder = MonadError[GraphDecoder, DecodingError].tailRecM(1)(_ => failed)
       decoder(c).leftValue
     }
     "return right for successful tailrecM" in {
-      val success = Decoder.const[Either[Int, String]](Right("success"))
-      val decoder = MonadError[Decoder, DecodingError].tailRecM(1)(_ => success)
+      val success = GraphDecoder.const[Either[Int, String]](Right("success"))
+      val decoder = MonadError[GraphDecoder, DecodingError].tailRecM(1)(_ => success)
       decoder(c).rightValue shouldEqual "success"
     }
     "recurse until right in tailrecM" in {
-      val succeedsThirdTime: Int => Decoder[Either[Int, String]] =
+      val succeedsThirdTime: Int => GraphDecoder[Either[Int, String]] =
         int =>
-          Decoder.instance { _ =>
+          GraphDecoder.instance { _ =>
             if (int == 3) Right(Right("success")) else Right(Left(int + 1))
           }
-      val decoder = MonadError[Decoder, DecodingError].tailRecM(1)(int => succeedsThirdTime(int))
+      val decoder = MonadError[GraphDecoder, DecodingError].tailRecM(1)(int => succeedsThirdTime(int))
       decoder(c).rightValue shouldEqual "success"
     }
   }

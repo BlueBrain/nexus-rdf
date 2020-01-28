@@ -6,7 +6,7 @@ import java.util.concurrent.TimeUnit
 
 import cats.Contravariant
 import cats.implicits._
-import ch.epfl.bluebrain.nexus.rdf.EncoderSpec.IntValue
+import ch.epfl.bluebrain.nexus.rdf.GraphEncoderSpec.IntValue
 import ch.epfl.bluebrain.nexus.rdf.Graph.Triple
 import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Url}
 import ch.epfl.bluebrain.nexus.rdf.Node.{IriNode, Literal}
@@ -15,50 +15,50 @@ import ch.epfl.bluebrain.nexus.rdf.syntax.all._
 
 import scala.concurrent.duration.{Duration, FiniteDuration}
 
-class EncoderSpec extends RdfSpec {
+class GraphEncoderSpec extends RdfSpec {
 
   private val example    = "http://example.com/"
   private val exampleIri = Url.unsafe(example)
 
   "An Encoder" should {
     "contramap" in {
-      val encoder: Encoder[Int] = Contravariant[Encoder].contramap(Encoder[String])(_.toString)
-      val g                     = encoder(1)
+      val encoder: GraphEncoder[Int] = Contravariant[GraphEncoder].contramap(GraphEncoder[String])(_.toString)
+      val g                          = encoder(1)
       g.root shouldEqual Literal("1")
       g.triples.isEmpty shouldEqual true
     }
     "correctly encode primitives" in {
-      Encoder[Byte].apply(1.toByte) shouldEqual Graph(1.toByte)
-      Encoder[Short].apply(1.toShort) shouldEqual Graph(1.toShort)
-      Encoder[Int].apply(1) shouldEqual Graph(1)
-      Encoder[Long].apply(1L) shouldEqual Graph(1L)
-      Encoder[Double].apply(1.0) shouldEqual Graph(1.0)
-      Encoder[Float].apply(1.0f) shouldEqual Graph(1.0f)
-      Encoder[Boolean].apply(true) shouldEqual Graph(true)
-      Encoder[String].apply("asd") shouldEqual Graph("asd")
+      GraphEncoder[Byte].apply(1.toByte) shouldEqual Graph(1.toByte)
+      GraphEncoder[Short].apply(1.toShort) shouldEqual Graph(1.toShort)
+      GraphEncoder[Int].apply(1) shouldEqual Graph(1)
+      GraphEncoder[Long].apply(1L) shouldEqual Graph(1L)
+      GraphEncoder[Double].apply(1.0) shouldEqual Graph(1.0)
+      GraphEncoder[Float].apply(1.0f) shouldEqual Graph(1.0f)
+      GraphEncoder[Boolean].apply(true) shouldEqual Graph(true)
+      GraphEncoder[String].apply("asd") shouldEqual Graph("asd")
     }
     "correctly encode UUIDs" in {
       val uuid = UUID.randomUUID()
-      Encoder[UUID].apply(uuid) shouldEqual Graph(uuid.toString)
+      GraphEncoder[UUID].apply(uuid) shouldEqual Graph(uuid.toString)
     }
     "correctly encode FiniteDuration" in {
       val duration = FiniteDuration(3, TimeUnit.DAYS)
-      Encoder[FiniteDuration].apply(duration) shouldEqual Graph(duration.toString())
+      GraphEncoder[FiniteDuration].apply(duration) shouldEqual Graph(duration.toString())
     }
     "correctly encode Duration" in {
       val duration = Duration.Inf
-      Encoder[Duration].apply(duration) shouldEqual Graph(duration.toString())
+      GraphEncoder[Duration].apply(duration) shouldEqual Graph(duration.toString())
     }
     "correctly encode Instant" in {
       val instant = Instant.now()
-      Encoder[Instant].apply(instant) shouldEqual Graph(instant.toString())
+      GraphEncoder[Instant].apply(instant) shouldEqual Graph(instant.toString())
     }
     "correctly encode Period" in {
       val period = Period.ofDays(3)
-      Encoder[Period].apply(period) shouldEqual Graph(period.toString())
+      GraphEncoder[Period].apply(period) shouldEqual Graph(period.toString())
     }
     "correctly encode AbsoluteIris" in {
-      Encoder[AbsoluteIri].apply(schema.value) shouldEqual Graph(schema.value)
+      GraphEncoder[AbsoluteIri].apply(schema.value) shouldEqual Graph(schema.value)
     }
 
     "correctly encode Sets" when {
@@ -73,12 +73,12 @@ class EncoderSpec extends RdfSpec {
           (url"${example}2", schema.value, 2),
           (url"${example}3", schema.value, 3)
         )
-        val g = Encoder[Set[IntValue]].apply(set)
+        val g = GraphEncoder[Set[IntValue]].apply(set)
         g.triples shouldEqual expected
       }
       "the values are primitives" in {
         val set = Set(1, 2, 3)
-        val g   = Encoder[Set[Int]].apply(set)
+        val g   = GraphEncoder[Set[Int]].apply(set)
         // a set graph of primitives has no triples
         g.triples.isEmpty shouldEqual true
         // one of the nodes is selected as the root
@@ -96,7 +96,7 @@ class EncoderSpec extends RdfSpec {
       }
       "the set contains a single primitive" in {
         val set = Set(1)
-        val g   = Encoder[Set[Int]].apply(set)
+        val g   = GraphEncoder[Set[Int]].apply(set)
         // a set graph of primitives has no triples
         g.triples.isEmpty shouldEqual true
         g.root shouldEqual Literal(1)
@@ -104,31 +104,31 @@ class EncoderSpec extends RdfSpec {
       "the set contains a single object" in {
         val set      = Set(IntValue(url"${example}1", 1))
         val expected = Set[Triple]((url"${example}1", schema.value, 1))
-        val g        = Encoder[Set[IntValue]].apply(set)
+        val g        = GraphEncoder[Set[IntValue]].apply(set)
         g.triples shouldEqual expected
         g.root shouldEqual (url"${example}1": IriNode)
       }
       "the set is empty" in {
-        Encoder[Set[IntValue]].apply(Set.empty).triples.isEmpty shouldEqual true
-        Encoder[Set[IntValue]].apply(Set.empty).root.isBlank shouldEqual true
-        Encoder[Set[Int]].apply(Set.empty).root.isBlank shouldEqual true
-        Encoder[Set[Int]].apply(Set.empty).triples.isEmpty shouldEqual true
+        GraphEncoder[Set[IntValue]].apply(Set.empty).triples.isEmpty shouldEqual true
+        GraphEncoder[Set[IntValue]].apply(Set.empty).root.isBlank shouldEqual true
+        GraphEncoder[Set[Int]].apply(Set.empty).root.isBlank shouldEqual true
+        GraphEncoder[Set[Int]].apply(Set.empty).triples.isEmpty shouldEqual true
       }
     }
 
     "correctly encode a Some" in {
-      val g = Encoder[Option[IntValue]].apply(Some(IntValue(exampleIri, 1)))
+      val g = GraphEncoder[Option[IntValue]].apply(Some(IntValue(exampleIri, 1)))
       g.root shouldEqual (exampleIri: IriNode)
       g.triples shouldEqual Set[Triple]((exampleIri, schema.value, 1))
     }
     "correctly encode a None" in {
-      val g = Encoder[Option[IntValue]].apply(None)
+      val g = GraphEncoder[Option[IntValue]].apply(None)
       g.triples.isEmpty shouldEqual true
       g.root.isBlank shouldEqual true
     }
     "correctly encode Either" in {
-      Encoder[Either[Int, Boolean]].apply(Left(1)).root shouldEqual Literal(1)
-      Encoder[Either[Int, Boolean]].apply(Right(true)).root shouldEqual Literal(true)
+      GraphEncoder[Either[Int, Boolean]].apply(Left(1)).root shouldEqual Literal(1)
+      GraphEncoder[Either[Int, Boolean]].apply(Right(true)).root shouldEqual Literal(true)
     }
 
     "correctly encode sequences of objects" when {
@@ -168,57 +168,57 @@ class EncoderSpec extends RdfSpec {
       )
 
       "collection type is a Seq" in {
-        val g = toJenaModel(Encoder[Seq[IntValue]].apply(seq))
+        val g = toJenaModel(GraphEncoder[Seq[IntValue]].apply(seq))
         g isIsomorphicWith seqExpected shouldEqual true
       }
       "collection type is a Seq with one element" in {
-        val g = toJenaModel(Encoder[Seq[IntValue]].apply(oneSeq))
+        val g = toJenaModel(GraphEncoder[Seq[IntValue]].apply(oneSeq))
         g isIsomorphicWith oneSeqExpected shouldEqual true
       }
       "collection type is a Seq with no elements" in {
-        val g = Encoder[Seq[IntValue]].apply(Seq.empty)
+        val g = GraphEncoder[Seq[IntValue]].apply(Seq.empty)
         g shouldEqual Graph(rdf.nil, Set.empty)
       }
       "collection type is a List" in {
-        val g = toJenaModel(Encoder[List[IntValue]].apply(seq.toList))
+        val g = toJenaModel(GraphEncoder[List[IntValue]].apply(seq.toList))
         g isIsomorphicWith seqExpected shouldEqual true
       }
       "collection type is a List with one element" in {
-        val g = toJenaModel(Encoder[List[IntValue]].apply(oneSeq.toList))
+        val g = toJenaModel(GraphEncoder[List[IntValue]].apply(oneSeq.toList))
         g isIsomorphicWith oneSeqExpected shouldEqual true
       }
       "collection type is a List with no elements" in {
-        val g = Encoder[List[IntValue]].apply(Nil)
+        val g = GraphEncoder[List[IntValue]].apply(Nil)
         g shouldEqual Graph(rdf.nil, Set.empty)
       }
       "collection type is a Vector" in {
-        val g = toJenaModel(Encoder[Vector[IntValue]].apply(seq.toVector))
+        val g = toJenaModel(GraphEncoder[Vector[IntValue]].apply(seq.toVector))
         g isIsomorphicWith seqExpected shouldEqual true
       }
       "collection type is a Vector with one element" in {
-        val g = toJenaModel(Encoder[Vector[IntValue]].apply(oneSeq.toVector))
+        val g = toJenaModel(GraphEncoder[Vector[IntValue]].apply(oneSeq.toVector))
         g isIsomorphicWith oneSeqExpected shouldEqual true
       }
       "collection type is a Vector with no elements" in {
-        val g = Encoder[Vector[IntValue]].apply(Vector.empty)
+        val g = GraphEncoder[Vector[IntValue]].apply(Vector.empty)
         g shouldEqual Graph(rdf.nil, Set.empty)
       }
       "collection type is an Array" in {
-        val g = toJenaModel(Encoder[Array[IntValue]].apply(seq.toArray))
+        val g = toJenaModel(GraphEncoder[Array[IntValue]].apply(seq.toArray))
         g isIsomorphicWith seqExpected shouldEqual true
       }
       "collection type is an Array with one element" in {
-        val g = toJenaModel(Encoder[Array[IntValue]].apply(oneSeq.toArray))
+        val g = toJenaModel(GraphEncoder[Array[IntValue]].apply(oneSeq.toArray))
         g isIsomorphicWith oneSeqExpected shouldEqual true
       }
       "collection type is a Array with no elements" in {
-        val g = Encoder[Array[IntValue]].apply(Array.empty)
+        val g = GraphEncoder[Array[IntValue]].apply(Array.empty)
         g shouldEqual Graph(rdf.nil, Set.empty)
       }
 
       "collection has a Foldable" in {
-        val encoder: Encoder[List[IntValue]] = Encoder.encodeFoldable[List, IntValue]
-        val g                                = toJenaModel(encoder(seq.toList))
+        val encoder: GraphEncoder[List[IntValue]] = GraphEncoder.encodeFoldable[List, IntValue]
+        val g                                     = toJenaModel(encoder(seq.toList))
         g isIsomorphicWith seqExpected shouldEqual true
       }
     }
@@ -250,67 +250,67 @@ class EncoderSpec extends RdfSpec {
       )
 
       "collection type is a Seq" in {
-        val g = toJenaModel(Encoder[Seq[Int]].apply(seq))
+        val g = toJenaModel(GraphEncoder[Seq[Int]].apply(seq))
         g isIsomorphicWith seqExpected shouldEqual true
       }
       "collection type is a Seq with one element" in {
-        val g = toJenaModel(Encoder[Seq[Int]].apply(oneSeq))
+        val g = toJenaModel(GraphEncoder[Seq[Int]].apply(oneSeq))
         g isIsomorphicWith oneSeqExpected shouldEqual true
       }
       "collection type is a Seq with no elements" in {
-        val g = Encoder[Seq[Int]].apply(Seq.empty)
+        val g = GraphEncoder[Seq[Int]].apply(Seq.empty)
         g shouldEqual Graph(rdf.nil, Set.empty)
       }
       "collection type is a List" in {
-        val g = toJenaModel(Encoder[List[Int]].apply(seq.toList))
+        val g = toJenaModel(GraphEncoder[List[Int]].apply(seq.toList))
         g isIsomorphicWith seqExpected shouldEqual true
       }
       "collection type is a List with one element" in {
-        val g = toJenaModel(Encoder[List[Int]].apply(oneSeq.toList))
+        val g = toJenaModel(GraphEncoder[List[Int]].apply(oneSeq.toList))
         g isIsomorphicWith oneSeqExpected shouldEqual true
       }
       "collection type is a List with no elements" in {
-        val g = Encoder[List[Int]].apply(Nil)
+        val g = GraphEncoder[List[Int]].apply(Nil)
         g shouldEqual Graph(rdf.nil, Set.empty)
       }
       "collection type is a Vector" in {
-        val g = toJenaModel(Encoder[Vector[Int]].apply(seq.toVector))
+        val g = toJenaModel(GraphEncoder[Vector[Int]].apply(seq.toVector))
         g isIsomorphicWith seqExpected shouldEqual true
       }
       "collection type is a Vector with one element" in {
-        val g = toJenaModel(Encoder[Vector[Int]].apply(oneSeq.toVector))
+        val g = toJenaModel(GraphEncoder[Vector[Int]].apply(oneSeq.toVector))
         g isIsomorphicWith oneSeqExpected shouldEqual true
       }
       "collection type is a Vector with no elements" in {
-        val g = Encoder[Vector[Int]].apply(Vector.empty)
+        val g = GraphEncoder[Vector[Int]].apply(Vector.empty)
         g shouldEqual Graph(rdf.nil, Set.empty)
       }
       "collection type is an Array" in {
-        val g = toJenaModel(Encoder[Array[Int]].apply(seq.toArray))
+        val g = toJenaModel(GraphEncoder[Array[Int]].apply(seq.toArray))
         g isIsomorphicWith seqExpected shouldEqual true
       }
       "collection type is an Array with one element" in {
-        val g = toJenaModel(Encoder[Array[Int]].apply(oneSeq.toArray))
+        val g = toJenaModel(GraphEncoder[Array[Int]].apply(oneSeq.toArray))
         g isIsomorphicWith oneSeqExpected shouldEqual true
       }
       "collection type is a Array with no elements" in {
-        val g = Encoder[Array[Int]].apply(Array.empty)
+        val g = GraphEncoder[Array[Int]].apply(Array.empty)
         g shouldEqual Graph(rdf.nil, Set.empty)
       }
 
       "collection has a Foldable" in {
-        val encoder: Encoder[List[Int]] = Encoder.encodeFoldable[List, Int]
-        val g                           = toJenaModel(encoder(seq.toList))
+        val encoder: GraphEncoder[List[Int]] = GraphEncoder.encodeFoldable[List, Int]
+        val g                                = toJenaModel(encoder(seq.toList))
         g isIsomorphicWith seqExpected shouldEqual true
       }
     }
   }
 }
 
-object EncoderSpec {
+object GraphEncoderSpec {
   final case class IntValue(id: AbsoluteIri, value: Int)
   object IntValue {
-    implicit val intValueEncoder: Encoder[IntValue] = Encoder.instance {
+    implicit val intValueEncoder: GraphEncoder[IntValue] = GraphEncoder.instance {
       case IntValue(id, value) => Graph(id, Set((id, schema.value, value)))
     }
   }

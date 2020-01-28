@@ -5,9 +5,9 @@ import java.util.UUID
 import ch.epfl.bluebrain.nexus.rdf.derivation.Fixture.View.{AggregateElasticSearchView, ElasticSearchView, ViewRef}
 import ch.epfl.bluebrain.nexus.rdf.derivation.Fixture.{mapping, View}
 import ch.epfl.bluebrain.nexus.rdf.syntax.all._
-import ch.epfl.bluebrain.nexus.rdf.{Encoder, RdfSpec}
+import ch.epfl.bluebrain.nexus.rdf.{GraphEncoder, RdfSpec}
 
-class MagnoliaEncoderSpec extends RdfSpec {
+class MagnoliaGraphEncoderSpec extends RdfSpec {
 
   "A MagnoliaEncoder" should {
     "derive an Encoder for fixed ElasticSearchView" in {
@@ -20,7 +20,7 @@ class MagnoliaEncoderSpec extends RdfSpec {
         resourceTag = Some("one"),
         sourceAsText = Some(false)
       )
-      val graph    = Encoder[View].apply(view)
+      val graph    = GraphEncoder[View].apply(view)
       val model    = toJenaModel(graph)
       val expected = toJenaModel(jsonWithContext("/elasticsearch-view.json"))
 
@@ -37,7 +37,7 @@ class MagnoliaEncoderSpec extends RdfSpec {
           ViewRef("account1/project4", url"http://example.com/view4")
         )
       )
-      val graph    = Encoder[View].apply(view)
+      val graph    = GraphEncoder[View].apply(view)
       val model    = toJenaModel(graph)
       val expected = toJenaModel(jsonWithContext("/aggregate-elasticsearch-view.json"))
 

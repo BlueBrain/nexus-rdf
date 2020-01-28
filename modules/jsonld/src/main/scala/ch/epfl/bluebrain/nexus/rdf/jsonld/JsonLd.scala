@@ -9,7 +9,7 @@ import ch.epfl.bluebrain.nexus.rdf.jena.Jena
 import ch.epfl.bluebrain.nexus.rdf.jena.syntax.all._
 import ch.epfl.bluebrain.nexus.rdf.jsonld.JsonLd.IdRetrievalError.{IdNotFound, InvalidId, Unexpected}
 import ch.epfl.bluebrain.nexus.rdf.jsonld.syntax._
-import ch.epfl.bluebrain.nexus.rdf.{Decoder, DecodingError, Graph, Iri, Node}
+import ch.epfl.bluebrain.nexus.rdf.{DecodingError, Graph, GraphDecoder, Iri, Node}
 import com.github.jsonldjava.core.JsonLdOptions
 import io.circe.parser.parse
 import io.circe.syntax._
@@ -267,12 +267,13 @@ object JsonLd {
   }
 
   /**
-    * Create and instance of [[Decoder]] to decode [[Graph]] to [[Json]]
+    * Create and instance of [[GraphDecoder]] to decode [[Graph]] to [[Json]]
+    *
     * @param  context the context to apply
-    * @return [[Decoder]] instance
+    * @return [[GraphDecoder]] instance
     */
-  def toJsonDecoder(context: Json): Decoder[Json] =
-    Decoder.instance { c =>
+  def toJsonDecoder(context: Json): GraphDecoder[Json] =
+    GraphDecoder.instance { c =>
       toJson(c.graph, context).leftMap(str => DecodingError(str, c.top.history))
     }
 
