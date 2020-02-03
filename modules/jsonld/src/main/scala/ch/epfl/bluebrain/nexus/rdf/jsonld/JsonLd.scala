@@ -7,9 +7,10 @@ import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.Node.{BNode, IriNode}
 import ch.epfl.bluebrain.nexus.rdf.jena.Jena
 import ch.epfl.bluebrain.nexus.rdf.jena.syntax.all._
+import ch.epfl.bluebrain.nexus.rdf.jsonld.JenaWriterCleanup.reservedId
 import ch.epfl.bluebrain.nexus.rdf.jsonld.JsonLd.IdRetrievalError.{IdNotFound, InvalidId, Unexpected}
 import ch.epfl.bluebrain.nexus.rdf.jsonld.syntax._
-import ch.epfl.bluebrain.nexus.rdf.{DecodingError, Graph, GraphDecoder, Iri, Node}
+import ch.epfl.bluebrain.nexus.rdf._
 import com.github.jsonldjava.core.JsonLdOptions
 import io.circe.parser.parse
 import io.circe.syntax._
@@ -286,16 +287,20 @@ object JsonLd {
     */
   def toJson(graph: Graph, context: Json = Json.obj()): Either[String, Json] = {
     val jenaCleanup: JenaWriterCleanup = new JenaWriterCleanup(context)
+    val justContextObj = {
+      val value = context.hcursor.downField("@context").as[Json].getOrElse(Json.obj())
+      if (value == Json.obj() || value == Json.arr()) Json.obj()
+      else Json.obj("@context" -> value)
+    }
 
-    def writeFramed: Either[String, Json] = {
+    def writeFramed(id: AbsoluteIri): Either[String, Json] = {
       val opts = new JsonLdOptions()
       opts.setEmbed(true)
       opts.setProcessingMode(JsonLdOptions.JSON_LD_1_1)
       opts.setCompactArrays(true)
       opts.setPruneBlankNodeIdentifiers(true)
-      val frame =
-        Json.obj("@id" -> Json.fromString(graph.root.toString)).appendContextOf(jenaCleanup.cleanFromCtx)
-      val ctx = new JsonLDWriteContext
+      val frame = Json.obj("@id" -> Json.fromString(id.asUri)).appendContextOf(jenaCleanup.cleanFromCtx)
+      val ctx   = new JsonLDWriteContext
       ctx.setFrame(frame.noSpaces)
       ctx.setOptions(opts)
       val jenaModel = graph.asJena
@@ -304,24 +309,26 @@ object JsonLd {
         RDFWriter.create().format(RDFFormat.JSONLD_FRAME_FLAT).source(g).context(ctx).build().asString()
       }.toEither match {
         case Right(jsonString) =>
-          val parsedOrErr =
-            parse(jsonString).left.map(_.message)
+          val parsedOrErr = parse(jsonString).left.map(_.message)
           parsedOrErr
             .map(jenaCleanup.removeSingleGraph)
             .map(jenaCleanup.cleanFromJson(_, graph))
-            .map(_ deepMerge context)
+            .map(_ deepMerge justContextObj)
         case Left(message) => Left(s"error while writing Json-LD. Reason '$message'")
       }
     }
 
     if (graph.triples.isEmpty)
-      Right(Json.obj())
+      Right(graph.root match {
+        case IriNode(value) => Json.obj("@id" -> Json.fromString(value.asUri))
+        case _              => Json.obj()
+      })
     else
       graph.root match {
-        case IriNode(JenaWriterCleanup.reservedId) => writeFramed.map(removeKeys(_, "@id"))
-        case _: IriNode                            => writeFramed
-        case blank: BNode                          => toJson(graph.replaceNode(blank, JenaWriterCleanup.reservedId), context)
-        case _                                     => toJson(graph.withRoot(JenaWriterCleanup.reservedId), context)
+        case IriNode(`reservedId`) => writeFramed(reservedId).map(removeKeys(_, "@id"))
+        case IriNode(value)        => writeFramed(value)
+        case blank: BNode          => toJson(graph.replaceNode(blank, reservedId), context)
+        case _                     => toJson(graph.withRoot(reservedId), context)
       }
   }
 
