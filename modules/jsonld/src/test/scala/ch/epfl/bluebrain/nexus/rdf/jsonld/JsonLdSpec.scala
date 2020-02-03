@@ -2,7 +2,8 @@ package ch.epfl.bluebrain.nexus.rdf.jsonld
 
 import cats.implicits._
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
-import ch.epfl.bluebrain.nexus.rdf.RdfSpec
+import ch.epfl.bluebrain.nexus.rdf.Node.BNode
+import ch.epfl.bluebrain.nexus.rdf.{Graph, RdfSpec}
 import ch.epfl.bluebrain.nexus.rdf.jsonld.JsonLd._
 import ch.epfl.bluebrain.nexus.rdf.jsonld.syntax._
 import ch.epfl.bluebrain.nexus.rdf.syntax.all._
@@ -515,6 +516,92 @@ class JsonLdSpec extends RdfSpec {
       "find top level @id in Json" in {
         jsonContentOf("/context/simple-iri-context.json").id.rightValue shouldEqual url"http://nexus.example.com/john-doé"
       }
+    }
+
+    "convert graph to JSON" when {
+
+      "root node is an IriNode" in {
+
+        val rootNode = url"http://exampe.com/rootId"
+        val property = url"http://example.com/property"
+
+        val context =
+          json"""
+          {
+            "@context": {
+              "property": "http://example.com/property"
+            },
+            "@id": "http://exampe.com/contextId"
+          }
+          """
+
+        val graph = Graph(rootNode, Set((rootNode, property, "value")))
+
+        val expected =
+          json"""
+          {
+             "@context": {
+              "property": "http://example.com/property"
+            },
+            "@id": "http://exampe.com/rootId",
+            "property": "value"
+          }
+          """
+
+        graph.toJson(context).rightValue shouldEqual expected
+      }
+
+      "root node is a BNode" in {
+
+        val rootNode = BNode()
+        val property = url"http://example.com/property"
+
+        val context =
+          json"""
+          {
+            "@context": {
+              "property": "http://example.com/property"
+            },
+          "@id": "http://exampe.com/contextId"
+          }
+          """
+
+        val graph = Graph(rootNode, Set((rootNode, property, "value")))
+
+        val expected =
+          json"""
+          {
+            "@context": {
+              "property": "http://example.com/property"
+            },
+            "property": "value"
+          }
+          """
+
+        graph.toJson(context).rightValue shouldEqual expected
+      }
+
+      "root node is an IRINode and the graph is empty" in {
+
+        val graph = Graph(url"http://exampe.com/rootId")
+
+        val expected =
+          json"""
+          {
+            "@id": "http://exampe.com/rootId"
+          }
+          """
+
+        graph.toJson().rightValue shouldEqual expected
+      }
+
+      "root node is a BNode and the graph is empty" in {
+        val graph    = Graph(BNode())
+        val expected = Json.obj()
+
+        graph.toJson().rightValue shouldEqual expected
+      }
+
     }
   }
 }
